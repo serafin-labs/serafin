@@ -9,6 +9,7 @@ var Promise = require('bluebird');
 // Gulp dependencies
 var gulp = require('gulp');
 var plugins = require('gulp-load-plugins')();
+var jsonSchemaToTypescript = require('@serafin/gulp-serafin-json-schema-to-typescript');
 var del = require('del');
 var merge = require('merge-stream');
 
@@ -124,4 +125,14 @@ gulp.task('build-typescript', function () {
     jsStream = merge(jsStream, dtsStream);
     jsStream.on('end', () => buildDone());
     return jsStream;
+});
+
+/**
+ * Build json schemas
+ * For testing
+ */
+gulp.task('build-json-schema', function () {
+    return gulp.src(sourceDirectory + '/model/**/*.json')
+        .pipe(jsonSchemaToTypescript("model.ts"))
+        .pipe(gulp.dest(sourceDirectory + '/model/'))
 });
