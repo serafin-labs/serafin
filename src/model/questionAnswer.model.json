@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "id": "/model/questionAnswer.json",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "questionId": {
+            "type": "string"
+        },
+        "title": {
+            "type": "string"
+        },
+        "score": {
+            "type": "number"
+        },
+        "activities": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "id",
+        "questionId",
+        "title",
+        "score",
+        "activities"
+    ]
+}

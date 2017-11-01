@@ -1,0 +1,20 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "id": "/model/userAnswer.json",
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "idAnswer": {
+            "type": "string"
+        },
+        "idUser": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "idQuestionAnswer",
+        "idUser"
+    ]
+}

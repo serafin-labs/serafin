@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "node",
+            "request": "attach",
+            "port": 5858,
+            "timeout": 30000,
+            "address": "localhost",
+            "restart": true,
+            "sourceMaps": true,
+            "smartStep": true,
+            "skipFiles": [
+                "${workspaceRoot}/node_modules/**/*.js",
+                "${workspaceRoot}/lib/**/*.js",
+                "<node_internals>/**/*.js"
+            ],
+            "outFiles": [
+                "${workspaceRoot}/lib/**"
+            ],
+            "localRoot": "${workspaceRoot}",
+            "remoteRoot": "/srv"
+        }
+    ]
+}

@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "declaration": true,
+        "removeComments": true,
+        "target": "es5",
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "lib": [
+            "es5",
+            "es6",
+            "es2015",
+            "es7",
+            "es2016",
+            "es2017",
+            "dom",
+            "es2015.promise"
+        ],
+        "outDir": "../lib"
+    },
+    "include": [
+        "./**/*"
+    ]
+}

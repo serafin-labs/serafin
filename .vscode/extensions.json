@@ -1,0 +1,11 @@
+{
+	"recommendations": [
+		"rbbit.typescript-hero",
+		"PeterJausovec.vscode-docker",
+		"donjayamanne.githistory",
+		"xyz.local-history",
+		"chrmarti.regex",
+		"roblourens.unittest-navigate",
+		"ryanluker.vscode-coverage-gutters"
+	]
+}

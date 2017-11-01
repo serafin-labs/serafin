@@ -1,0 +1,14 @@
+version: "2"
+services:
+  app:
+    image: serafinframework/nodejs:dev
+    command: "npm run-script dev"
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "5858:5858"
+    volumes:
+      - .:/srv
+      - ~/.ssh/id_rsa:/home/node/.ssh/id_rsa:ro
+      - ~/.gitconfig:/home/node/.gitconfig:ro
+      - ~/.npmrc:/home/node/.npmrc:ro
