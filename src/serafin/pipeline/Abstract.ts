@@ -1,6 +1,7 @@
 import * as util from 'util';
 import * as Promise from 'bluebird';
 import * as Model from './model/Resource';
+import { PipelineSchemaHelper } from './schema/Helper'
 export { option, description } from './Decorators'
 
 /**
@@ -20,35 +21,21 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
     /**
      * Contains a definition this pipeline metadata
      */
-    public schema: {
-        title: string,
-        type: 'object',
-        properties: { description: string, methods: { 'type': 'object', properties: Object } },
-        definitions?: any
-    };
+    protected schemaHelper: PipelineSchemaHelper;
 
     constructor() {
-        this.schema = {
-            title: Object.getPrototypeOf(this).constructor.name,
-            type: 'object',
-            properties: {
-                description: Object.getPrototypeOf(this).constructor['description'] || undefined,
-                methods: { 'type': 'object', properties: {} }
-            }
-        };
-
+        this.schemaHelper = new PipelineSchemaHelper(Object.getPrototypeOf(this).constructor.name, Object.getPrototypeOf(this).constructor['description'] || undefined)
         let thisPrototype = Object.getPrototypeOf(this);
 
         for (const key of PipelineAbstract.getCRUDMethods()) {
             if (typeof Object.getOwnPropertyDescriptor(thisPrototype, key) != 'undefined') {
-                this.schema.properties.methods.properties[key] = { 'type': 'object', 'properties': {} };
                 let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'params');
                 if (paramsDescriptor && Array.isArray(paramsDescriptor.value)) {
-                    this.schema.properties.methods.properties[key]['properties'] = Object.assign(this.schema.properties.methods.properties[key]['properties'], paramsDescriptor.value);
+                    this.schemaHelper.setMethodProperties(key, paramsDescriptor.value);
                 }
                 let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
                 if (descriptionDescriptor) {
-                    this.schema.properties.methods.properties[key]['properties']['description'] = descriptionDescriptor.value;
+                    this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
                 }
             }
         }
@@ -100,12 +87,11 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
      */
     describe(): any[] {
         let recursiveSchema = (this.parent) ? this.parent.describe() : [];
-        recursiveSchema.push(this.schema);
+        recursiveSchema.push(this.schemaHelper.schema);
         return recursiveSchema;
     }
 
     public static getCRUDMethods() {
-        // Object.keys(this.prototype) doesn't seem to work the same...
         return ['create', 'read', 'update', 'delete'];
     }
 

@@ -1,4 +1,5 @@
 import * as Promise from 'bluebird';
+import { PipelineSchemaHelper } from './schema/Helper';
 import { PipelineAbstract } from './Abstract';
 import * as Model from './model/Resource';
 
@@ -26,35 +27,7 @@ export abstract class PipelineSourceAbstract<T,
     constructor(model: Model.Definition & { Resource: { new(): T } }) {
         super();
         this.parent = null;
-
-        this.schema['definitions'] = { model: model.schema };
-        this.schema['properties'] = {
-            description: null,
-            methods: { type: 'object', properties: {} }
-        };
-
-        for (const key of PipelineAbstract.getCRUDMethods()) {
-            if (Object.getOwnPropertyDescriptor(this[key], METHOD_NOT_IMPLEMENTED)) {
-                delete (this.schema.properties['methods']['properties'][key]);
-            } else if (key == 'create') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': { 'resource': { "$ref": "#/definitions/model" } }, 'required': ['resource']
-                };
-            } else if (key == 'read' || key == 'delete') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } }
-                    }
-                };
-            } else if (key == 'update') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } },
-                        'values': { "anyOf": { "$ref": "#/definitions/model/properties" } }
-                    }
-                };
-            }
-        }
+        this.schemaHelper.setSourceDefaultMethods(model, PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
 
     @PipelineSourceAbstract.notImplemented
@@ -68,12 +41,12 @@ export abstract class PipelineSourceAbstract<T,
     }
 
     @PipelineSourceAbstract.notImplemented
-    update(query: Model.ResourcePartial<T>, values: UpdateValues, options?: {}): Promise<Model.ResourceIdentified<T>[]> {
+    update(query: Model.ResourcePartial<T>, values: UpdateValues, options?: UpdateOptions): Promise<Model.ResourceIdentified<T>[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    delete(query: Model.ResourcePartial<T>, options?: {}): Promise<Model.ResourceIdentified<T>[]> {
+    delete(query: Model.ResourcePartial<T>, options?: DeleteOptions): Promise<Model.ResourceIdentified<T>[]> {
         throw new Error("Not implemented");
     }
 
