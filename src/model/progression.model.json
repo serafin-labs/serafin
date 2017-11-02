@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "id": "/model/progression.json",
+    "id": "/progression",
     "type": "object",
     "properties": {
         "id": {
@@ -11,6 +11,8 @@
         }
     },
     "required": [
+        "id",
         "status"
-    ]
+    ],
+    "additionalProperties": false
 }

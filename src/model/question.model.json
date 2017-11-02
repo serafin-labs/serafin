@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "id": "/model/question.json",
+    "id": "/question",
     "type": "object",
     "properties": {
         "id": {
@@ -9,7 +9,7 @@
         "number": {
             "type": "string"
         },
-        "learningArea": {
+        "area": {
             "type": "string"
         },
         "title": {
@@ -22,8 +22,9 @@
     "required": [
         "id",
         "number",
-        "learningArea",
+        "area",
         "title",
         "answer"
-    ]
+    ],
+    "additionalProperties": false
 }

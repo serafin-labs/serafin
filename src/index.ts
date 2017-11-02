@@ -1,9 +1,11 @@
 import * as express from 'express';
 import { Api } from './serafin/http/Api';
-import * as Models from './model/Models';
+import { User } from './model/model';
 import { PipelineSourceObject } from './pipeline/source/Object';
 import { Paginate } from './pipeline/Paginate';
 import { UpdateTime } from './pipeline/UpdateTime';
+
+var userSchema = require('./model/user.model.json');
 
 const util = require('util')
 
@@ -11,7 +13,7 @@ async function main() {
     let api = new Api(express());
     api.prepareApplication();
 
-    let pipeline = (new PipelineSourceObject(Models.User))
+    let pipeline = (new PipelineSourceObject<User>(userSchema))
         .pipe(new UpdateTime)
         .pipe(new Paginate);
 
@@ -24,7 +26,7 @@ async function main() {
     await api.runApplication();
 
     setTimeout(() => {
-        let pipeline2 = new PipelineSourceObject(Models.User)
+        let pipeline2 = new PipelineSourceObject<User>(userSchema)
             //.pipe(new UpdateTime())
             // .pipe(new Paginate())
             ;

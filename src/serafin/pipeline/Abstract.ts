@@ -1,6 +1,6 @@
 import * as util from 'util';
 import * as Promise from 'bluebird';
-import * as Model from './model/Resource';
+import { ReadWrapperInterface } from './model/Resource';
 export { option, description } from './Decorators'
 
 /**
@@ -10,7 +10,7 @@ export { option, description } from './Decorators'
  * A pipeline is a component designed to define and modify a resource access behavior (read, write, delete actions...) using a functional approach.
  * A pipeline is always plugged (piped) to another pipeline except for source pipelines, and can affect one or many of the actions, by overriding them.
  */
-export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {}, ReadWrapper = { results: {}[] }, CreateResources = {}[], CreateOptions = {}, UpdateQuery = {}, UpdateValues = {}, UpdateOptions = {}, DeleteQuery = {}, DeleteOptions = {}> {
+export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {}, ReadWrapper = ReadWrapperInterface, CreateResources = {}, CreateOptions = {}, UpdateQuery = {}, UpdateValues = {}, UpdateOptions = {}, DeleteQuery = {}, DeleteOptions = {}> {
     /**
      * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
@@ -18,7 +18,7 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any>;
 
     /**
-     * Contains a definition this pipeline metadata
+     * Contains a definition of this pipeline metadata
      */
     public schema: {
         title: string,
@@ -60,7 +60,7 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    create(resources: CreateResources, options?: CreateOptions): Promise<T[]> {
+    create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         return this.parent.create(resources, options);
     }
 
@@ -143,6 +143,6 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
 /**
  * Type definition of a Projection Pipeline. It has to be used when the pipeline fondamentaly changes the nature of the data it provides : T -> N
  */
-export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper = { results: T[] }, CreateResources = {}, CreateOptions = {}, UpdateQuery = {}, UpdateValues = {}, UpdateOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateQuery = UpdateQuery, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions> {
+export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper = ReadWrapperInterface<T>, CreateResources = {}, CreateOptions = {}, UpdateQuery = {}, UpdateValues = {}, UpdateOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateQuery = UpdateQuery, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions> {
 
 }

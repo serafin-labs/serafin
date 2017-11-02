@@ -1,6 +1,7 @@
 import * as Promise from 'bluebird';
 import { PipelineAbstract } from './Abstract';
-import * as Model from './model/Resource';
+import { SchemaInterface } from './model/SchemaInterface';
+import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
 
 export { option, description } from './Decorators'
 
@@ -10,24 +11,24 @@ const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
  * Base class for a source pipeline. A source pipeline is supposed to be the initial pipeline, 
  * that directly connects to the data source to make actions persistent.
  */
-export abstract class PipelineSourceAbstract<T,
-    ReadQuery = Model.ResourcePartial<T>,
+export abstract class PipelineSourceAbstract<T extends ResourceIdentityInterface,
+    ReadQuery = Partial<T>,
     ReadOptions = {},
-    ReadWrapper = { results: Model.ResourceIdentified<T>[] },
-    CreateResources = Model.Resource<T>[],
+    ReadWrapper = ReadWrapperInterface<T>,
+    CreateResources = Partial<T>,
     CreateOptions = {},
-    UpdateQuery = Model.ResourcePartial<T>,
-    UpdateValues = Model.ResourcePartial<T>,
+    UpdateQuery = Partial<T>,
+    UpdateValues = Partial<T>,
     UpdateOptions = {},
-    DeleteQuery = Model.ResourcePartial<T>,
+    DeleteQuery = Partial<T>,
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateQuery, UpdateValues, UpdateOptions, DeleteQuery, DeleteOptions>
 {
-    constructor(model: Model.Definition & { Resource: { new(): T } }) {
+    constructor(schema: SchemaInterface) {
         super();
         this.parent = null;
 
-        this.schema['definitions'] = { model: model.schema };
+        this.schema['definitions'] = { model: schema };
         this.schema['properties'] = {
             description: null,
             methods: { type: 'object', properties: {} }
@@ -63,17 +64,17 @@ export abstract class PipelineSourceAbstract<T,
     }
 
     @PipelineSourceAbstract.notImplemented
-    create(resources: CreateResources, options?: CreateOptions): Promise<Model.ResourceIdentified<T>[]> {
+    create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    update(query: Model.ResourcePartial<T>, values: UpdateValues, options?: {}): Promise<Model.ResourceIdentified<T>[]> {
+    update(query: UpdateQuery, values: UpdateValues, options?: {}): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    delete(query: Model.ResourcePartial<T>, options?: {}): Promise<Model.ResourceIdentified<T>[]> {
+    delete(query: DeleteQuery, options?: {}): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
