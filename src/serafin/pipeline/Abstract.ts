@@ -117,7 +117,14 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
     }
 
     /**
-     * Combine the given pipeline with this one. The resulting object structure is a simple linked list.
+     * Project the current pipeline changing the underlying resource.
+     * /!\ the provided projection MUST NOT be reused somewhere else. The `parent` property can be assigned only once. 
+     * 
+     * @param pipeline The pipeline to link with this one
+     */
+    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateQuery, UpdateValues, UpdateOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions>
+    /**
+     * Combine the given pipeline with this one.
      * /!\ the provided pipeline MUST NOT be reused somewhere else. The `parent` property can be assigned only once.
      * 
      * @param pipeline The pipeline to link with this one
@@ -130,20 +137,6 @@ export abstract class PipelineAbstract<T = {}, ReadQuery = {}, ReadOptions = {},
         // cast the pipeline and combine all interfaces
         var chainedPipeline: PipelineAbstract<T, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateQuery & NUpdateQuery, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
         return chainedPipeline;
-    }
-
-    /**
-     * Project the current pipeline changing the underlying data structure.
-     * /!\ the provided projection MUST NOT be reused somewhere else. The `parent` property can be assigned only once. 
-     * 
-     * @param pipeline The pipeline to link with this one
-     */
-    projection<N extends Partial<T>, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateQuery, UpdateValues, UpdateOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateQuery, NUpdateValues, NUpdateOptions, NDeleteQuery, NDeleteOptions> {
-        if (pipeline.parent) {
-            throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
-        }
-        pipeline.parent = this;
-        return pipeline;
     }
 }
 
