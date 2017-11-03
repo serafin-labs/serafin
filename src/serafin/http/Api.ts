@@ -5,8 +5,6 @@ import * as P from "bluebird"
 import * as bodyParser from "body-parser"
 import * as compression from "compression"
 import { PipelineAbstract } from "../pipeline/Abstract"
-import { routerStore } from "./routerStore"
-import { routerApi } from "./routerApi"
 
 
 /**
