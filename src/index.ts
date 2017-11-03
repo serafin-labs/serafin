@@ -10,7 +10,34 @@ var userSchema = require('./model/user.model.json');
 const util = require('util')
 
 async function main() {
-    let api = new Api(express());
+    let api = new Api(express(), {
+        "swagger": "2.0",
+        "info": {
+            "version": "1.0.0",
+            "title": "Sample Api",
+            "description": "A sample API ",
+            "termsOfService": "None",
+            "contact": {
+                "name": "bob",
+                "email": "bob@example.com"
+            },
+            "license": {
+                "name": "MIT",
+                "url": "http://github.com/gruntjs/grunt/blob/master/LICENSE-MIT"
+            }
+        },
+        "host": "127.0.0.1",
+        "schemes": [
+            "http"
+        ],
+        "consumes": [
+            "application/json"
+        ],
+        "produces": [
+            "application/json"
+        ],
+        paths: {}
+    });
     api.prepareApplication();
 
     let pipeline = (new PipelineSourceObject<User>(userSchema))
@@ -21,7 +48,8 @@ async function main() {
 
     console.log(pipeline.toString());
 
-    api.expose(pipeline, 'user');
+    api.use(pipeline, 'user');
+    console.log(JSON.stringify(api["openApi"], null, 4));
 
     await api.runApplication();
 
