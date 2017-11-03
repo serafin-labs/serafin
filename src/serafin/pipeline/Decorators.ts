@@ -1,3 +1,5 @@
+import { JSONSchema4 } from "json-schema"
+
 /**
  * Parameter decorator used to declare an action parameter, along with its JSONSchema definition. This parameter will become one of
  * the properties of the JSONSchema representing the pipeline
@@ -6,7 +8,7 @@
  * @param schema JSONSchema definition. Can be an object or a function returning an object
  * @param required true or false
  */
-export function option(property: string, schema: any | (() => any), required: boolean = true) {
+export function option(property: string, schema: JSONSchema4 | (() => JSONSchema4), required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         if (!descriptor.value.params) {
             descriptor.value.params = [];

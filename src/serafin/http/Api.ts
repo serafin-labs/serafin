@@ -8,7 +8,7 @@ import { PipelineAbstract } from "../pipeline/Abstract"
 
 
 /**
- * Api class represents a set of endpoint based on pipelines.
+ * Api class represents a set of endpoints based on pipelines.
  * It will register all routes for the endpoints and for metadata (swagger / open API).
  */
 export class Api {
