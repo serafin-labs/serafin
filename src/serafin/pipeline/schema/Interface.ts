@@ -1,49 +1,21 @@
-export interface SchemaInterface {
-    title: string,
+import {PipelineSchemaPropertiesInterface} from './PropertiesInterface'
+
+export interface PipelineSchemaInterface {
+    title?: string,
     type: string,
-    properties: {
-        description?: string,
-        methods: {
-            'type': string,
-            properties: {
-                'create'?: {
-                    type: string,
-                    properties: {
-                        'resources'?: {
-                            type?: string,
-                            items?: Object
-                            minItems?: number
-                        }
-                    },
-                    required?: string[]
-                },
-                'read'?: {
-                    type: string,
-                    properties: {
-                        'query'?: Object
-                    }
-                },
-                'update'?: {
-                    type: string,
-                    properties: {
-                        'query'?: Object,
-                        'values'?: Object,
-                        "minProperties"?: number
-                    }
-                },
-                required?: string[]
-            },
-            'delete'?: {
-                type: string,
-                properties: {
-                    'query'?: Object
-                },
-                required?: string[]
-            }
-        }
-    },
+    properties: PipelineSchemaPropertiesInterface,
     definitions?: {
         model: Object
     }
 }
 
+export interface PipelineSchemaAllOfInterface {
+    title?: string,
+    type: string,
+    properties: {
+        allOf: [PipelineSchemaPropertiesInterface]
+    },
+    definitions?: {
+        model: Object
+    }
+}
