@@ -25,7 +25,6 @@ export function resourceValue(property: string, schema: Object | (() => Object),
 
 function parameterDecorator(parameterName:string, property: string, schema: Object | (() => Object), required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        console.log(target.schemaHelper);
         if (!descriptor.value['properties']) {
             descriptor.value['properties'] = {
                 type: 'object',
