@@ -126,8 +126,8 @@ export abstract class PipelineAbstract<
         return this.schemaHelper.schema;
     }
 
-    fullSchema(): {allOf: PipelineSchemaInterface[]} {
-        let schemas = (this.parent) ? this.parent.fullSchema() : {allOf: []};
+    fullSchema(): { allOf: PipelineSchemaInterface[] } {
+        let schemas = (this.parent) ? this.parent.fullSchema() : { allOf: [] };
         schemas.allOf.push(this.schema());
         return schemas;
     }
@@ -137,7 +137,7 @@ export abstract class PipelineAbstract<
     }
 
     public static getCRUDMethods() {
-        return ['create', 'read', 'update', 'delete'];
+        return ['create', 'read', 'update', 'patch', 'delete'];
     }
 
     /**
