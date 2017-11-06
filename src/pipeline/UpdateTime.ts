@@ -1,15 +1,12 @@
 import { PipelineAbstract, option, description } from '../serafin/pipeline/Abstract'
+import { ReadWrapperInterface } from '../serafin/pipeline/model/Resource'
 import * as Promise from "bluebird"
 
 @description("Adds creation and update timestamps to the resources")
-export class UpdateTime<T = { createdAt: number, updatedAt: number },
-    ReadQuery = {},
-    ReadOptions = {},
-    ReadWrapper = { lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }>
-    extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper> {
+export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }> {
 
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
-    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
         return this.parent.read(query).then((items) => {
             let lastCreatedAt = null;
             let lastUpdatedAt = null;
@@ -38,7 +35,7 @@ export class UpdateTime<T = { createdAt: number, updatedAt: number },
     }
 
     @description("Sets the creation time")
-    create(resources: any[], options?: {}) {
+    create(resources: {}[], options?: {}) {
         resources.forEach(resource => {
             resource['createdAt'] = Date.now();
         });
@@ -47,8 +44,14 @@ export class UpdateTime<T = { createdAt: number, updatedAt: number },
     }
 
     @description("Sets the update time")
-    update(query: {}, values: {}, options?: {}) {
+    update(id: string, values: {}, options?: {}) {
         values['updatedAt'] = Date.now();
-        return this.parent.update(query, values);
+        return this.parent.update(id, values);
+    }
+
+    @description("Sets the update time")
+    patch(query: {}, values: {}, options?: {}) {
+        values['updatedAt'] = Date.now();
+        return this.parent.patch(query, values, options);
     }
 }

@@ -134,7 +134,7 @@ export class Api {
             // run the query
             pipeline.create([data], options).then(createdResources => {
                 if (createdResources.length !== 1) {
-                    throw new Error(`Api error: unexpected create result for endpoint ${resourcesPath}`)
+                    throw new Error(`Api Error: unexpected create result for endpoint ${resourcesPath}`)
                 }
                 res.status(201).json(createdResources[0])
             }).catch(error => {
@@ -150,7 +150,7 @@ export class Api {
             var id = req.params.id
 
             // run the query
-            pipeline.update({
+            pipeline.patch({
                 id: id
             }, patch, options).then(updatedResources => {
                 if (updatedResources.length === 0) {
@@ -164,7 +164,25 @@ export class Api {
             }).done();
         })
 
-        // put is not supported for now... There's no way to 'replace' an entity using pipelines
+        // put an existing resource
+        router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
+            // extract parameters
+            var options = req.query
+            var data = req.body
+            var id = req.params.id
+
+            // run the query
+            pipeline.update(id, data, options).then(updatedResource => {
+                if (!updatedResource) {
+                    res.status(404)
+                } else {
+                    res.status(200).json(updatedResource)
+                }
+                res.end()
+            }).catch(error => {
+                handleError(error, res)
+            }).done();
+        })
 
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
@@ -269,7 +287,32 @@ export class Api {
             }
         }
 
-        // update by id
+        // put by id
+        this.openApi.paths[resourcesPathWithId]["put"] = {
+            description: `Put a ${_.capitalize(name)} using its id`,
+            operationId: `put${_.capitalize(name)}`,
+            parameters: [/* TODO extract parameters from pipeline metadata */],
+            responses: {
+                200: {
+                    description: `Updated ${_.capitalize(name)}`,
+                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                },
+                400: {
+                    description: "Bad request",
+                    schema: { $ref: '#/definitions/Error' }
+                },
+                404: {
+                    description: "Not Found",
+                    schema: { $ref: '#/definitions/Error' }
+                },
+                default: {
+                    description: "Unexpected error",
+                    schema: { $ref: '#/definitions/Error' }
+                }
+            }
+        }
+
+        // patch by id
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.capitalize(name)} using its id`,
             operationId: `patch${_.capitalize(name)}`,

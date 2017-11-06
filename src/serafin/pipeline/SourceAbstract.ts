@@ -11,18 +11,21 @@ const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
  * Base class for a source pipeline. A source pipeline is supposed to be the initial pipeline, 
  * that directly connects to the data source to make actions persistent.
  */
-export abstract class PipelineSourceAbstract<T extends ResourceIdentityInterface,
-    ReadQuery = Partial<T>,
+export abstract class PipelineSourceAbstract<
+    T extends ResourceIdentityInterface,
+    ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
     ReadOptions = {},
-    ReadWrapper = ReadWrapperInterface<T>,
+    ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>,
     CreateResources = Partial<T>,
     CreateOptions = {},
-    UpdateQuery = Partial<T>,
     UpdateValues = Partial<T>,
     UpdateOptions = {},
-    DeleteQuery = Partial<T>,
+    PatchQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    PatchValues = Partial<T>,
+    PatchOptions = {},
+    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
     DeleteOptions = {}>
-    extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateQuery, UpdateValues, UpdateOptions, DeleteQuery, DeleteOptions>
+    extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
     constructor(schema: SchemaInterface) {
         super();
@@ -59,7 +62,7 @@ export abstract class PipelineSourceAbstract<T extends ResourceIdentityInterface
     }
 
     @PipelineSourceAbstract.notImplemented
-    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         throw new Error("Not implemented");
     }
 
@@ -69,12 +72,17 @@ export abstract class PipelineSourceAbstract<T extends ResourceIdentityInterface
     }
 
     @PipelineSourceAbstract.notImplemented
-    update(query: UpdateQuery, values: UpdateValues, options?: {}): Promise<T[]> {
+    update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    delete(query: DeleteQuery, options?: {}): Promise<T[]> {
+    patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+        throw new Error("Not implemented");
+    }
+
+    @PipelineSourceAbstract.notImplemented
+    delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
