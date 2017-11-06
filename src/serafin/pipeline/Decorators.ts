@@ -51,11 +51,11 @@ function parameterDecorator(parameterName:string, property: string, schema: Obje
  */
 export function description(text: string) {
     return function (targetOrCtor: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
-        if (typeof (descriptor) === 'undefined') {
+    /*    if (typeof (descriptor) === 'undefined') {
             targetOrCtor['description'] = text;
         } else {
             descriptor.value.description = text;
-        }
+        }*/
     };
 }
 
