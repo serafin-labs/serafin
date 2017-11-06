@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "id": "/model/questionAnswer.json",
+    "id": "/questionAnswer",
     "type": "object",
     "properties": {
         "id": {
@@ -25,5 +25,6 @@
         "title",
         "score",
         "activities"
-    ]
+    ],
+    "additionalProperties": false
 }

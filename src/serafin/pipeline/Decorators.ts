@@ -1,3 +1,5 @@
+import { JSONSchema4 } from "json-schema"
+
 /**
  * Option decorator used to declare an action option, along with its JSONSchema definition.
  * 

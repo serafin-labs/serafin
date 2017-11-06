@@ -1,7 +1,12 @@
 import { SchemaInterface } from './SchemaInterface'
-
+/**
+ * Base interface of a resource. It must at least have a string identifier to be used with pipelines
+ */
 export interface ResourceIdentityInterface { id: string }
-export type Resource<T> = T & Partial<ResourceIdentityInterface>;
-export type ResourceIdentified<T> = T & ResourceIdentityInterface;
-export type ResourcePartial<T> = Partial<T> & Partial<ResourceIdentityInterface>;
-export abstract class Definition { schema: SchemaInterface }
+
+/**
+ * Wrapper used for read queries. The results array may not be the only thing returned.
+ */
+export interface ReadWrapperInterface<T = {}> {
+    results: T[]
+}

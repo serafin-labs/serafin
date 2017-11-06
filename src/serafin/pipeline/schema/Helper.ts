@@ -18,21 +18,23 @@ export class PipelineSchemaHelper {
         };
     }
 
-    private createMethod(method:string) {
+    private createMethod(method: string) {
         if (!this.schema.properties.methods.properties[method]) {
             this.schema.properties.methods.properties[method] = { 'type': 'object', 'properties': {} };
         }
     }
 
-    private createMethodProperty(method:string, propertyName:string) {
+    private createMethodProperty(method: string, propertyName: string) {
         this.createMethod(method);
         if (!this.schema.properties.methods.properties[name].properties[propertyName]) {
-            this.schema.properties.methods.properties[name].properties[propertyName] = { 'type': 'object', 'properties': {
-            } };
+            this.schema.properties.methods.properties[name].properties[propertyName] = {
+                'type': 'object', 'properties': {
+                }
+            };
         }
     }
 
-    setMethodProperties(name: string, propertyName:string, properties: {}) {
+    setMethodProperties(name: string, propertyName: string, properties: {}) {
         this.createMethodProperty(name, propertyName);
         this.schema.properties.methods.properties[name].properties[propertyName].properties = properties;
     }
@@ -42,8 +44,8 @@ export class PipelineSchemaHelper {
         this.schema.properties.methods.properties[name].description = description;
     }
 
-    setSourceDefaultMethods(model: Model.Definition, implementedMethods = []) {
-        this.schema.definitions = { model: model.schema };
+    setSourceDefaultMethods(model, implementedMethods = []) {
+        this.schema.definitions = { model: model };
         this.schema.properties.methods = {
             type: 'object',
             properties: _.pick({

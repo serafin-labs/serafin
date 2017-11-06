@@ -1,36 +1,64 @@
 import * as Promise from 'bluebird'
 import { PipelineSourceAbstract, description } from '../../serafin/pipeline/SourceAbstract'
-import * as Model from '../../serafin/pipeline/model/Resource'
+import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/model/Resource';
+import { SchemaInterface } from '../../serafin/pipeline/model/SchemaInterface';
+import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
 @description("Loads and stores resources as objects into memory. Any data is lost upon source uninstanciation. Ideal for unit tests.")
-export class PipelineSourceObject<T> extends PipelineSourceAbstract<T> {
-    protected resources: { [index: string]: Model.ResourceIdentified<T> };
+export class PipelineSourceObject<
+    T extends ResourceIdentityInterface,
+    ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    ReadOptions = {},
+    ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>,
+    CreateResources = Partial<T>,
+    CreateOptions = {},
+    UpdateValues = Partial<T>,
+    UpdateOptions = {},
+    PatchQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    PatchValues = Partial<T>,
+    PatchOptions = {},
+    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    DeleteOptions = {}> extends PipelineSourceAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions> {
+    protected resources: { [index: string]: T };
 
-    constructor(model: Model.Definition & { Resource: { new(): T } }) {
-        super(model);
-        this.resources = {} as { [index: string]: Model.ResourceIdentified<T> };
+    constructor(schema: SchemaInterface) {
+        super(schema);
+        this.resources = {} as { [index: string]: T };
     }
 
     private generateUUID(): string {
         var uid: string = uuid.v4();
-        // cut last 8 random hex digits to make this uid compatible with mongodb ones
-        return uid.split("-").join("").substr(0, 24);
+        return uid.split("-").join("");
     }
 
-    private toIdentifiedResource(resource: Model.Resource<T>): Model.ResourceIdentified<T> {
+    private toIdentifiedResource(resource: Partial<T>): Partial<T> {
         resource.id = resource['id'] || this.generateUUID();
-        return (resource as Model.ResourceIdentified<T>);
+        return resource;
     }
 
-    create(resources: Model.Resource<T>[]) {
-        let createdResources: Model.ResourceIdentified<T>[] = [];
+    private _read(query: any) {
+        let resources = _.filter(this.resources, resource => {
+            for (var property in query) {
+                if (query[property] != resource[property as string]) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        return Promise.resolve({ results: resources } as ReadWrapper);
+    }
+
+    create(resources: Partial<T>[]) {
+        let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
             if (!this.resources[resource.id]) {
-                this.resources[resource.id] = identifiedResource;
-                createdResources.push(identifiedResource);
+                this.resources[resource.id] = <any>identifiedResource;
+                createdResources.push(<any>identifiedResource);
             } else {
                 // Todo: put the conflict test at beginning (for atomicity)
                 return Promise.reject(new Error('Conflict'));
@@ -40,33 +68,38 @@ export class PipelineSourceObject<T> extends PipelineSourceAbstract<T> {
         return Promise.resolve(createdResources);
     }
 
-    read(query?: Model.ResourcePartial<T>) {
-        let resources = _.filter(this.resources, resource => {
-            for (var property in query) {
-                if (query[property] != resource[property]) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        return Promise.resolve({ results: resources });
+    read(query: ReadQuery): Promise<ReadWrapper> {
+        return this._read(query)
     }
 
-    update(query: Model.ResourcePartial<T>, values: Model.ResourcePartial<T>) {
-        return this.read(query).then((resources) => {
-            let updatedResources: Model.ResourceIdentified<T>[] = [];
+
+    update(id: string, values: Partial<T>) {
+        return this._read({
+            id: id
+        }).then((resources) => {
+            if (resources.results.length > 0) {
+                var resource = resources.results[0]
+                if (resource.id && resource.id !== id) {
+                    delete (this.resources[resource.id]);
+                }
+                // in case it wasn't assigned yet
+                resource.id = id
+                this.resources[id] = resource;
+                Promise.resolve(resource);
+            }
+            return Promise.resolve(undefined);
+        });
+    }
+
+    patch(query: PatchQuery, values: Partial<T>) {
+        return this._read(query).then((resources) => {
+            let updatedResources: T[] = [];
 
             resources.results.forEach(resource => {
                 let id = resource.id;
-                if (values.id && values.id != resource.id) {
+                resource = jsonMergePatch(resource, values)
+                if (resource.id !== id) {
                     delete (this.resources[resource.id]);
-                    id = values.id;
-                }
-
-                for (const key in values) {
-                    resource[key] = values[key];
                 }
                 this.resources[id] = resource;
                 updatedResources.push(resource);
@@ -76,9 +109,9 @@ export class PipelineSourceObject<T> extends PipelineSourceAbstract<T> {
         });
     }
 
-    delete(query?: Model.ResourcePartial<T>) {
-        return this.read(query).then((resources) => {
-            let deletedResources: Model.ResourceIdentified<T>[] = [];
+    delete(query?: DeleteQuery) {
+        return this._read(query).then((resources) => {
+            let deletedResources: T[] = [];
 
             resources.results.forEach((resource) => {
                 delete this.resources[resource.id];
