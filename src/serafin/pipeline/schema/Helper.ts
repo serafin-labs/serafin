@@ -1,10 +1,11 @@
-import * as _ from "lodash"
-import * as util from "util"
-import * as Model from "../model/Resource"
-import { SchemaInterface } from "./Interface"
+import { PipelineAbstract } from '../Abstract';
+import * as _ from 'lodash';
+import * as util from 'util';
+import * as Model from '../model/Resource';
+import { PipelineSchemaInterface } from "./Interface"
 
 export class PipelineSchemaHelper {
-    public schema: SchemaInterface;
+    public schema: PipelineSchemaInterface;
 
     constructor(name: string, description?: string) {
         this.schema = {
@@ -17,15 +18,23 @@ export class PipelineSchemaHelper {
         };
     }
 
-    private createMethod(name) {
-        if (!this.schema.properties.methods.properties[name]) {
-            this.schema.properties.methods.properties[name] = { 'type': 'object', 'properties': {} };
+    private createMethod(method:string) {
+        if (!this.schema.properties.methods.properties[method]) {
+            this.schema.properties.methods.properties[method] = { 'type': 'object', 'properties': {} };
         }
     }
 
-    setMethodProperties(name: string, properties: {}) {
-        this.createMethod(name);
-        this.schema.properties.methods.properties[name].properties = properties;
+    private createMethodProperty(method:string, propertyName:string) {
+        this.createMethod(method);
+        if (!this.schema.properties.methods.properties[name].properties[propertyName]) {
+            this.schema.properties.methods.properties[name].properties[propertyName] = { 'type': 'object', 'properties': {
+            } };
+        }
+    }
+
+    setMethodProperties(name: string, propertyName:string, properties: {}) {
+        this.createMethodProperty(name, propertyName);
+        this.schema.properties.methods.properties[name].properties[propertyName].properties = properties;
     }
 
     setMethodDescription(name: string, description: string) {
@@ -52,21 +61,21 @@ export class PipelineSchemaHelper {
                 'read': {
                     type: 'object',
                     properties: {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } }
+                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
                     }
                 },
                 'update': {
                     type: 'object',
                     properties: {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } },
-                        'values': { "anyOf": { "$ref": "#/definitions/model/properties" }, "minProperties": 1 }
+                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
+                        'values': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } }, "minProperties": 1 }
                     },
                     required: ['query', 'values']
                 },
                 'delete': {
                     type: 'object',
                     properties: {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } }
+                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
                     },
                     required: ['query']
                 },
