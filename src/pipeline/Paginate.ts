@@ -9,10 +9,27 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
     @option('offset', { type: "integer" }, false)
     @option('count', { type: "integer" }, false)
     @option('page', { type: "integer" }, false)
-    read(query: {}): Promise<{ count: number, results: {}[] }> {
-        return this.parent.read(query).then((resources) => {
-            let count = resources.results.length;
-            return Promise.resolve({ ...resources, count: count });
+    read(query?: {}, options?: { offset?: number, count?: number }): Promise<{ count: number, results: {}[] }> {
+        return this.parent.read(query, options).then((resources) => {
+            let offset = 0;
+            
+            if (options) {
+                if (options['offset']) {
+                    offset = options['offset'];
+                } else if (options['page'] && options['count']) {
+                    offset = (resources.length / options['count']) * options['page'];
+                }
+                
+                if (options['count']) {
+                    if (offset > resources.length) {
+                        throw new Error("Offset higher than the number of resources");
+                    }
+
+                    resources = resources.slice(offset, offset + options['count']);
+                }
+            }
+            
+            return Promise.resolve({ ...resources, count: resources.length });
         });
     }
 }

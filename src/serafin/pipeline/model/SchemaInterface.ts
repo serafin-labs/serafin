@@ -5,7 +5,7 @@ export interface SchemaInterface {
     description?: string,
     type: string,
     properties: {
-        [field: string]: any
+        [property: string]: any
     },
     required?: string[]
     definitions?: any

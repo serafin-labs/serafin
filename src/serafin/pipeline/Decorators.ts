@@ -1,27 +1,46 @@
 import { JSONSchema4 } from "json-schema"
 
 /**
- * Parameter decorator used to declare an action parameter, along with its JSONSchema definition. This parameter will become one of
- * the properties of the JSONSchema representing the pipeline
+ * Option decorator used to declare an action option, along with its JSONSchema definition.
  * 
- * @param property Name of the parameter
+ * @param property Name of the option
  * @param schema JSONSchema definition. Can be an object or a function returning an object
  * @param required true or false
  */
-export function option(property: string, schema: JSONSchema4 | (() => JSONSchema4), required: boolean = true) {
+export function option(property: string, schema: Object | (() => Object), required: boolean = true) {
+    return parameterDecorator('option', property, schema, required);
+}
+
+export function queryProperty(property: string, schema: Object | (() => Object), required: boolean = true) {
+    return parameterDecorator('query', property, schema, required);
+}
+
+export function resourceProperty(property: string, schema: Object | (() => Object), required: boolean = true) {
+    return parameterDecorator('resources', property, schema, required);
+}
+
+export function resourceValue(property: string, schema: Object | (() => Object), required: boolean = true) {
+    return parameterDecorator('values', property, schema, required);
+}
+
+function parameterDecorator(parameterName:string, property: string, schema: Object | (() => Object), required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        if (!descriptor.value.params) {
-            descriptor.value.params = [];
+        console.log(target.schemaHelper);
+        if (!descriptor.value['properties']) {
+            descriptor.value['properties'] = {
+                type: 'object',
+                properties: {
+
+                }
+            };
         }
 
-        if (!descriptor.value.required) {
-            descriptor.value.required = [];
-        }
-
-        descriptor.value.params[property] = (typeof schema == 'function') ? schema() : schema;
+      //  descriptor.value['properties'].properties[parameterName].properties[property] = (typeof schema == 'function') ? schema() : schema;
         if (required) {
-            descriptor.value.required.push(property);
+           // descriptor.value['properties'].properties[parameterName].required.push(property);
         }
+
+        console.log();
     }
 }
 

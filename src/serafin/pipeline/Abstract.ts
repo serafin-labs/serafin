@@ -2,6 +2,12 @@ import * as util from 'util';
 import * as Promise from 'bluebird';
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
+import * as Model from './model/Resource';
+import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof'
+import { PipelineSchemaInterface } from './schema/Interface';
+import { PipelineSchemaAllOfInterface } from './schema/AllOfInterface';
+import { PipelineSchemaPropertiesInterface } from './schema/PropertiesInterface';
+import { PipelineSchemaHelper } from './schema/Helper'
 export { option, description } from './Decorators'
 
 /**
@@ -34,35 +40,26 @@ export abstract class PipelineAbstract<
     /**
      * Contains a definition of this pipeline metadata
      */
-    public schema: {
-        title: string,
-        type: 'object',
-        properties: { description: string, methods: { 'type': 'object', properties: Object } },
-        definitions?: any
-    };
+    protected schemaHelper: PipelineSchemaHelper;
 
     constructor() {
-        this.schema = {
-            title: Object.getPrototypeOf(this).constructor.name,
-            type: 'object',
-            properties: {
-                description: Object.getPrototypeOf(this).constructor['description'] || undefined,
-                methods: { 'type': 'object', properties: {} }
-            }
-        };
+        this.initSchemaHelper();
+    }
 
+    protected initSchemaHelper() {
+        this.schemaHelper = new PipelineSchemaHelper(Object.getPrototypeOf(this).constructor.name, Object.getPrototypeOf(this).constructor['description'] || undefined)
         let thisPrototype = Object.getPrototypeOf(this);
 
         for (const key of PipelineAbstract.getCRUDMethods()) {
             if (typeof Object.getOwnPropertyDescriptor(thisPrototype, key) != 'undefined') {
-                this.schema.properties.methods.properties[key] = { 'type': 'object', 'properties': {} };
-                let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'params');
-                if (paramsDescriptor && Array.isArray(paramsDescriptor.value)) {
-                    this.schema.properties.methods.properties[key]['properties'] = Object.assign(this.schema.properties.methods.properties[key]['properties'], paramsDescriptor.value);
+                let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'properties');
+                if (paramsDescriptor && typeof(paramsDescriptor.value == 'object')) {
+                //    this.schemaHelper.setMethodProperties(key, paramsDescriptor.value);
                 }
+               
                 let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
                 if (descriptionDescriptor) {
-                    this.schema.properties.methods.properties[key]['properties']['description'] = descriptionDescriptor.value;
+                    this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
                 }
             }
         }
@@ -126,14 +123,93 @@ export abstract class PipelineAbstract<
     /**
      * Get the metadata of this pipeline
      */
-    describe(): any[] {
-        let recursiveSchema = (this.parent) ? this.parent.describe() : [];
-        recursiveSchema.push(this.schema);
-        return recursiveSchema;
+    schemasArray(): PipelineSchemaInterface[] {
+        let schemas = (this.parent) ? this.parent.schemasArray() : [];
+        schemas.push(this.schemaHelper.schema);
+        return schemas;
+    }
+
+    schema(): PipelineSchemaAllOfInterface {
+        return this.schemasArray().reduce(
+            (acc: PipelineSchemaAllOfInterface, 
+            val: PipelineSchemaInterface) => { acc.properties.allOf.push(val.properties); return acc; }, 
+            { type: 'object', properties: {allOf: [] }});
+    }
+
+    fullSchema(): Object {
+        console.log("allOfSchema", util.inspect(this.schema(), false, null));
+
+
+
+let myscheme =                                                                                                                                                                       
+ { type: 'object',                                                                                                                                         
+  properties:                                                                                                                                                         
+   { allOf:                                                                                                                                                           
+      [                                                                                                                                                     
+           { type: 'object',                                                                                                                                          
+             properties:                                                                                                                                              
+              { create:                                                                                                                                               
+                 { type: 'object',                                                                                                                                    
+                   properties:                                                                                                                                        
+                    { resources:                                                                                                                                      
+                       { type: 'array',                                                                                                                               
+                         items: { '$ref': '#/definitions/model' },                                                                                                    
+                         minItems: 1 } },                                                                                                                             
+                   required: [ 'resources' ] },                                                                                                                       
+                read:                                                                                                                                                 
+                 { type: 'object',                                                                                                                                    
+                   properties:                                                                                                                                        
+                    { query:                                                                                                                                          
+                       { type: 'object',                                                                                                                              
+                         properties: { anyOf: { '$ref': '#/definitions/model' } } }  },                                                                              
+                update:                                                                                                                                               
+                 { type: 'object',                                                                                                                                    
+                   properties:                                                                                                                                        
+                    { query:                                                                                                                                          
+                       { type: 'object',                                                                                                                              
+                         properties: { anyOf: { '$ref': '#/definitions/model' } } },                                                                                  
+                      values:                                                                                                                                         
+                       { type: 'object',                                                                                                                              
+                         properties: { anyOf: { '$ref': '#/definitions/model' } },                                                                                    
+                         minProperties: 1 } },                                                                                                                        
+                   required: [ 'query', 'values' ] },                                                                                                                 
+                delete:                                                                                                                                               
+                 { type: 'object',                                                                                                                                    
+                   properties:                                                                                                                                        
+                    { query:                                                                                                                                          
+                       { type: 'object',                                                                                                                              
+                         properties: { anyOf: { '$ref': '#/definitions/model' } } } },                                                                                
+                   required: [ 'query' ] } } } },                                                                                                                     
+        {  type: 'object',                                                                                                                                          
+             properties:                                                                                                                                              
+              { create:                                                                                                                                               
+                 { type: 'object',                                                                                                                                    
+                   properties: {},                                                                                                                                    
+                   description: 'Sets the creation time' },                                                                                                           
+                read:                                                                                                                                                 
+                 { type: 'object',                                                                                                                                    
+                   properties: {},                                                                                                                                    
+                   description: 'Returns the creation and update time of each resource, and the latest creation and update time overall' },                           
+                update:                                                                                                                                               
+                 { type: 'object',                                                                                                                                    
+                   properties: {},                                                                                                                                    
+                   description: 'Sets the update time' } }  },                                                                                                       
+        {  type: 'object',                                                                                                                                          
+             properties:                                                                                                                                              
+              { read:                                                                                                                                                 
+                 { type: 'object',                                                                                                                                    
+                   properties: {},                                                                                                                                    
+                   description: 'Reads a limited count of results'  } } } ] } }                                                                                      
+                                                                                                                                                                      
+
+;
+
+
+
+        return jsonSchemaMergeAllOf(this.schema());
     }
 
     public static getCRUDMethods() {
-        // Object.keys(this.prototype) doesn't seem to work the same...
         return ['create', 'read', 'update', 'delete'];
     }
 
@@ -141,7 +217,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.describe(), false, null));
+        return (util.inspect(this.fullSchema(), false, null));
     }
 
 

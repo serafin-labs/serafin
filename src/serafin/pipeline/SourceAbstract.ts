@@ -1,4 +1,5 @@
 import * as Promise from 'bluebird';
+import { PipelineSchemaHelper } from './schema/Helper';
 import { PipelineAbstract } from './Abstract';
 import { SchemaInterface } from './model/SchemaInterface';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
@@ -30,35 +31,7 @@ export abstract class PipelineSourceAbstract<
     constructor(schema: SchemaInterface) {
         super();
         this.parent = null;
-
-        this.schema['definitions'] = { model: schema };
-        this.schema['properties'] = {
-            description: null,
-            methods: { type: 'object', properties: {} }
-        };
-
-        for (const key of PipelineAbstract.getCRUDMethods()) {
-            if (Object.getOwnPropertyDescriptor(this[key], METHOD_NOT_IMPLEMENTED)) {
-                delete (this.schema.properties['methods']['properties'][key]);
-            } else if (key == 'create') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': { 'resource': { "$ref": "#/definitions/model" } }, 'required': ['resource']
-                };
-            } else if (key == 'read' || key == 'delete') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } }
-                    }
-                };
-            } else if (key == 'update') {
-                this.schema.properties['methods']['properties'][key] = {
-                    'properties': {
-                        'query': { "anyOf": { "$ref": "#/definitions/model" } },
-                        'values': { "anyOf": { "$ref": "#/definitions/model/properties" } }
-                    }
-                };
-            }
-        }
+        this.schemaHelper.setSourceDefaultMethods(schema, PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
 
     @PipelineSourceAbstract.notImplemented
