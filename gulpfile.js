@@ -20,15 +20,21 @@ var outputTypingsDirectory = __dirname + '/lib/typings'
 var buildFile = outputDirectory + '/build.txt'
 
 // General tasks
-gulp.task('default', ['dev']);
-gulp.task('dev', ['build', 'watch-typescript', 'watch-assets', 'watch-build-done']);
+gulp.task('default', ['run']);
+gulp.task('watch', ['watch-typescript', 'watch-assets', 'watch-build-done']);
 gulp.task('build', ['build-typescript', 'copy-assets']);
-gulp.task('restart', function (cb) {
-    exec('forever restart -c "node --debug" --minUptime 1000 --spinSleepTime 1000 lib/index.js', function (err, stdout, stderr) {
-        console.log(stdout);
-        console.log(stderr);
-        cb(err);
+gulp.task('run', function (done) {
+    var process = exec('forever -c "node --debug" --minUptime 1000 --spinSleepTime 1000 lib/index.js');
+    process.stdout.on('data', function (data) {
+        console.log(data);
     });
+    process.stderr.on('data', function (data) {
+        console.error(data);
+    });
+    done();
+});
+gulp.task('restart', function (done) {
+    restart(done);
 });
 
 /**
@@ -40,6 +46,18 @@ function buildDone() {
     } catch (e) {
         console.error('Build file not created');
     }
+}
+
+
+/**
+ * Restart
+ */
+function restart(done) {
+    return exec('forever restartall', function (err, stdout, stderr) {
+        console.log(stdout);
+        console.log(stderr);
+        done();
+    });
 }
 
 /**
@@ -68,10 +86,9 @@ gulp.task('watch-assets', function () {
  * Detect that the build has ended (when the build file is modified).
  */
 gulp.task('watch-build-done', function () {
-    plugins.watch(buildFile, { interval: 1000, usePolling: true },
-        plugins.batch({ timeout: 500 }, function (events, done) {
-            gulp.start('restart', done);
-            done();
+    plugins.watch(buildFile, { interval: 1000, debounceDelay: 1000, usePolling: true },
+        plugins.batch(function (events, done) {
+            restart(done);
         }));
 });
 

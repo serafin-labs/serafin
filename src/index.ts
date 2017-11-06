@@ -66,7 +66,6 @@ async function main() {
 
         let trucs = pipeline2.read({});
         let pipeline3 = pipeline2.pipe(new Paginate)
-        let desc = pipeline3.schemasArray();
         let bidule = pipeline3.read({});
 
         let pipeline4 = pipeline3.pipe(new UpdateTime);
