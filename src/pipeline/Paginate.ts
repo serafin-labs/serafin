@@ -12,10 +12,27 @@ export class Paginate<T,
     @option('offset', { type: "integer" }, false)
     @option('count', { type: "integer" }, false)
     @option('page', { type: "integer" }, false)
-    read(query?: ReadQuery): Promise<ReadWrapper> {
-        return this.parent.read(query).then((resources) => {
-            let count = resources.results.length;
-            return Promise.resolve({ ...resources, count: count });
+    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+        return this.parent.read(query, options).then((resources) => {
+            let offset = 0;
+            
+            if (options) {
+                if (options['offset']) {
+                    offset = options['offset'];
+                } else if (options['page'] && options['count']) {
+                    offset = (resources.length / options['count']) * options['page'];
+                }
+                
+                if (options['count']) {
+                    if (offset > resources.length) {
+                        throw new Error("Offset higher than the number of resources");
+                    }
+
+                    resources = resources.slice(offset, offset + options['count']);
+                }
+            }
+            
+            return Promise.resolve({ ...resources, count: resources.length });
         });
     }
 }
