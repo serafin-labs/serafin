@@ -53,7 +53,7 @@ export abstract class PipelineAbstract<
             if (typeof Object.getOwnPropertyDescriptor(thisPrototype, key) != 'undefined') {
                 let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'properties');
                 if (paramsDescriptor && typeof (paramsDescriptor.value == 'object')) {
-                    //    this.schemaHelper.setMethodProperties(key, paramsDescriptor.value);
+                    this.schemaHelper.setMethodProperties(key, 'properties', paramsDescriptor.value);
                 }
 
                 let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
@@ -146,7 +146,6 @@ export abstract class PipelineAbstract<
     toString(): string {
         return (util.inspect(this.fullFlatSchema(), false, null));
     }
-
 
     /**
      * Combine the given pipeline with this one.
