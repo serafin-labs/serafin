@@ -4,8 +4,142 @@ import * as _ from "lodash"
 import * as P from "bluebird"
 import * as bodyParser from "body-parser"
 import * as compression from "compression"
+import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
 
+/**
+ * Get a schema sub part from the pipeline schema.
+ * 
+ * @param schema 
+ * @param method 
+ * @param target 
+ */
+function extractSchema(schema: JSONSchema4, method: "create" | "update" | "read" | "patch" | "delete", target: "query" | "options" | "resources" | "values") {
+    if (schema.properties.methods.properties[method] && schema.properties.methods.properties[method].properties && schema.properties.methods.properties[method].properties[target]) {
+        return schema.properties.methods.properties[method] && schema.properties.methods.properties[method].properties[target]
+    }
+    return null
+}
+
+/**
+ * Find the schema pointed out by `path` in the given defnitions structure
+ * 
+ * @param path 
+ * @param definitions 
+ */
+function locateSchema(path: string, definitions: { [definitionsName: string]: Swagger.Schema }): JSONSchema4 {
+    if (path.startsWith("#/definitions/")) {
+        var currentTarget: any = definitions;
+        path.substr("#/definitions/".length).split("/").forEach(nextTarget => {
+            currentTarget = currentTarget[nextTarget]
+        })
+        return currentTarget
+    }
+    // only local schema in definitions are supported
+    return null
+}
+
+/**
+ * Deduce parameters to set in Open API spec from the JSON Schema provided.
+ * /!\ This function doesn't support the full spectrum of JSON Schema.
+ * Things like pattern properties are for example impossible to convert to Open API Parameter format.
+ * 
+ * @param schema 
+ * @param definitions 
+ */
+function schemaToSwaggerParameter(schema: JSONSchema4, definitions: { [definitionsName: string]: Swagger.Schema }): Swagger.Parameter[] {
+    if (schema && schema.$ref) {
+        // the schema is a reference. Let's try to locate the schema
+        return schemaToSwaggerParameter(locateSchema(schema.$ref, definitions), definitions)
+    }
+    if (schema && schema.type === "object") {
+        let results = []
+        for (let property in schema.properties) {
+            let propertySchema = schema.properties[property]
+            if (["string", "number", "boolean", "integer"].indexOf(propertySchema.type as string) !== -1) {
+                // we have a primitive type
+                let parameter: Swagger.Parameter = {
+                    in: "query",
+                    name: property,
+                    type: propertySchema.type as any,
+                    description: propertySchema.description,
+                    required: schema.required && schema.required.indexOf(property) !== -1,
+
+                }
+                if (propertySchema.minimum) {
+                    parameter.minimum = propertySchema.minimum
+                }
+                if (propertySchema.maximum) {
+                    parameter.maximum = propertySchema.maximum
+                }
+                if (propertySchema.default) {
+                    parameter.default = propertySchema.default
+                }
+                results.push(parameter)
+            }
+            if (propertySchema.type === "array" && ["string", "number", "boolean", "integer"].indexOf(propertySchema.items["type"] as string) !== -1) {
+                // if the array contains a primitive type
+                let parameter: Swagger.Parameter = {
+                    in: "query",
+                    name: property,
+                    type: "array",
+                    description: propertySchema.description,
+                    required: schema.required && schema.required.indexOf(property) !== -1,
+                    collectionFormat: "multi",
+                    items: {
+                        type: propertySchema.items["type"] as any
+                    }
+                }
+                if (propertySchema.default) {
+                    parameter.default = propertySchema.default
+                }
+                results.push(parameter)
+            }
+        }
+        if (schema.oneOf) {
+            results = results.concat(schema.oneOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
+        }
+        if (schema.anyOf) {
+            results = results.concat(schema.anyOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
+        }
+        if (schema.allOf) {
+            results = results.concat(schema.allOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
+        }
+        return results
+    }
+    return []
+}
+
+/**
+ * Filter a paramater array to remove duplicates. The first occurance is kept and the others are discarded.
+ * 
+ * @param parameters 
+ */
+function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swagger.Parameter[] {
+    // filter duplicated params (in case allOf, oneOf or anyOf contains multiple schemas with the same property)
+    return parameters.filter((value: Swagger.Parameter, index, array) => {
+        for (var i = 0; i < index; ++i) {
+            if (array[i].name === value.name) {
+                return false
+            }
+        }
+        return true
+    })
+}
+
+/**
+ * Parse the given paramters array and move the specified ones to `path`
+ * 
+ * @param parameters 
+ */
+function pathParameters(parameters: Swagger.Parameter[], inPath: string[]): Swagger.Parameter[] {
+    parameters.forEach(parameter => {
+        if (inPath.indexOf(parameter.name) !== -1) {
+            parameter.in = "path"
+        }
+    })
+    return parameters
+}
 
 /**
  * Api class represents a set of endpoints based on pipelines.
@@ -209,7 +343,8 @@ export class Api {
         this.application.use(endpointPath, router);
 
         // import pipeline schemas to openApi definitions
-        // TODO
+        var pipelineSchema = pipeline.fullFlatSchema();
+        _.merge(this.openApi.definitions, pipelineSchema.definitions)
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -217,10 +352,12 @@ export class Api {
         this.openApi.paths[resourcesPathWithId] = this.openApi.paths[resourcesPathWithId] || {};
 
         // general get
+        var readQuerySchema = extractSchema(pipelineSchema, "read", "query");
+        var readOptionsSchema = extractSchema(pipelineSchema, "read", "options");
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.capitalize(pluralName)}`,
             operationId: `find${_.capitalize(pluralName)}`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(readQuerySchema, this.openApi.definitions).concat(schemaToSwaggerParameter(readOptionsSchema, this.openApi.definitions))),
             responses: {
                 200: {
                     description: `${_.capitalize(pluralName)} corresponding to the query`,
@@ -237,15 +374,22 @@ export class Api {
             }
         }
 
-        // post a new ressource
+        // post a new resource
+        var createResourcesSchema = extractSchema(pipelineSchema, "create", "resources");
+        var createOptionsSchema = extractSchema(pipelineSchema, "create", "options");
         this.openApi.paths[resourcesPath]["post"] = {
             description: `Create a new ${_.capitalize(name)}`,
-            operationId: `add${_.capitalize(pluralName)}`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            operationId: `add${_.capitalize(name)}`,
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(createOptionsSchema, this.openApi.definitions)).concat([{
+                in: "body",
+                name: name,
+                description: `The ${_.capitalize(name)} to be created.`,
+                schema: createResourcesSchema.items as any
+            }]),
             responses: {
                 201: {
                     description: `${_.capitalize(name)} created`,
-                    schema: { $ref: `#/definitions/Read${_.capitalize(name)}Wrapper` }
+                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
                 },
                 400: {
                     description: "Bad request",
@@ -266,7 +410,12 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["get"] = {
             description: `Get one ${_.capitalize(name)} by its id`,
             operationId: `get${_.capitalize(name)}ById`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            parameters: [{
+                in: "path",
+                name: "id",
+                type: "string",
+                required: true
+            }],
             responses: {
                 200: {
                     description: `${_.capitalize(name)} corresponding to the provided id`,
@@ -288,10 +437,24 @@ export class Api {
         }
 
         // put by id
+        var updateValuesSchema = extractSchema(pipelineSchema, "update", "values");
+        var updateOptionsSchema = extractSchema(pipelineSchema, "update", "options");
         this.openApi.paths[resourcesPathWithId]["put"] = {
             description: `Put a ${_.capitalize(name)} using its id`,
             operationId: `put${_.capitalize(name)}`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(updateOptionsSchema, this.openApi.definitions)).concat([
+                {
+                    in: "body",
+                    name: name,
+                    description: `The ${_.capitalize(name)} to be updated.`,
+                    schema: updateValuesSchema as any
+                }, {
+                    in: "path",
+                    name: "id",
+                    type: "string",
+                    required: true
+                }
+            ]),
             responses: {
                 200: {
                     description: `Updated ${_.capitalize(name)}`,
@@ -313,10 +476,25 @@ export class Api {
         }
 
         // patch by id
+        var patchValuesSchema = extractSchema(pipelineSchema, "patch", "values");
+        var patchOptionsSchema = extractSchema(pipelineSchema, "patch", "options");
+        var patchQuerySchema = extractSchema(pipelineSchema, "patch", "query");
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.capitalize(name)} using its id`,
             operationId: `patch${_.capitalize(name)}`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(patchQuerySchema, this.openApi.definitions).concat(schemaToSwaggerParameter(patchOptionsSchema, this.openApi.definitions))).concat([
+                {
+                    in: "body",
+                    name: name,
+                    description: `The patch of ${_.capitalize(name)}.`,
+                    schema: patchValuesSchema as any
+                }, {
+                    in: "path",
+                    name: "id",
+                    type: "string",
+                    required: true
+                }
+            ]),
             responses: {
                 200: {
                     description: `Updated ${_.capitalize(name)}`,
@@ -338,10 +516,18 @@ export class Api {
         }
 
         // delete by id
+        var deleteOptionsSchema = extractSchema(pipelineSchema, "delete", "options");
         this.openApi.paths[resourcesPathWithId]["delete"] = {
             description: `Delete a ${_.capitalize(name)} using its id`,
             operationId: `delete${_.capitalize(name)}`,
-            parameters: [/* TODO extract parameters from pipeline metadata */],
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(patchQuerySchema, this.openApi.definitions)).concat([
+                {
+                    in: "path",
+                    name: "id",
+                    type: "string",
+                    required: true
+                }
+            ]),
             responses: {
                 200: {
                     description: `Deleted ${_.capitalize(name)}`,

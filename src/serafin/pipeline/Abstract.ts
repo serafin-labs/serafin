@@ -132,7 +132,7 @@ export abstract class PipelineAbstract<
         return schemas;
     }
 
-    fullFlatSchema(): Object {
+    fullFlatSchema(): JSONSchema4 {
         return jsonSchemaMergeAllOf(this.fullSchema());
     }
 
