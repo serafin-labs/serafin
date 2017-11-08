@@ -1,6 +1,7 @@
 import { PipelineAbstract, option, description } from '../serafin/pipeline/Abstract'
 import { ReadWrapperInterface } from '../serafin/pipeline/model/Resource'
 import * as Promise from 'bluebird'
+import * as _ from 'lodash'
 
 @description("Provides pagination over the read results")
 export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?: number }, { count: number, results: {}[] }> {
@@ -17,19 +18,19 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
                 if (options['offset']) {
                     offset = options['offset'];
                 } else if (options['page'] && options['count']) {
-                    offset = (resources.length / options['count']) * options['page'];
+                    offset = (resources.results.length / options['count']) * options['page'];
                 }
                 
                 if (options['count']) {
-                    if (offset > resources.length) {
+                    if (offset > resources.results.length) {
                         throw new Error("Offset higher than the number of resources");
                     }
 
-                    resources = resources.slice(offset, offset + options['count']);
+                    resources.results = resources.results.slice(offset, offset + options['count']);
                 }
             }
             
-            return Promise.resolve({ ...resources, count: resources.length });
+            return Promise.resolve({ ...resources, count: resources.results.length });
         });
     }
 }
