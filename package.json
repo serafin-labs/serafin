@@ -27,6 +27,7 @@
     "bluebird": "^3.4.1",
     "body-parser": "^1.18.2",
     "compression": "^1.7.1",
+    "djv": "^2.0.0",
     "express": "^4.16.2",
     "json-schema-merge-allof": "^0.6.0",
     "json-schema-to-typescript": "^4.6.5",

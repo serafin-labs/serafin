@@ -1,5 +1,6 @@
 import * as util from 'util';
 import * as Promise from 'bluebird';
+import * as Djv from 'djv'
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
@@ -43,6 +44,8 @@ export abstract class PipelineAbstract<
 
     constructor() {
         this.initSchemaHelper();
+
+        this.remapMethods();
     }
 
     protected initSchemaHelper() {
@@ -64,6 +67,63 @@ export abstract class PipelineAbstract<
         }
     }
 
+    protected remapMethods() {
+        for (const key of PipelineAbstract.getCRUDMethods()) {
+            if (typeof this[key] == 'function') {
+                let func: Function = this[key];
+                this[key] = (...params) => {
+                    console.log(Object.getPrototypeOf(this).constructor.name, key, params);
+                    
+                    let validationFunctionName = 'validate' + key.charAt(0).toUpperCase() + key.slice(1);
+                    
+                    try {
+                      //  this[validationFunctionName](params);
+                        return func.call(this, ...params);
+                    } catch (e) {
+                        let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + key + " : " + e);
+                        return Promise.reject(callError);
+                    }
+                };
+            }
+        }
+    }
+
+    protected validateSchema(schemaPath: string, params: Object):void {
+        const env = new Djv({ version: 'draft-04' });
+        env.addSchema('', this.schema());
+ 
+        let errorMessage = env.validate('#/properties/methods/properties/read', params)
+        if (errorMessage) {
+            throw new Error("Validation failed -> " + errorMessage + "\nparams: " + (util.inspect(params, false, null)));
+        }
+    }
+
+    protected validateCreate(params:any[]):void {
+        let [resources, options] = params;
+        console.log('PARAMS', params);
+        return this.validateSchema('#/properties/methods/properties/create', {resources: resources, options: options});
+    }
+
+    protected validateRead(params:any[]):void {
+        let [query, options] = params;
+        return this.validateSchema('#/properties/methods/properties/read', {query: query, options: options});
+    }
+
+    protected validateUpdate(params:any[]):void {
+        let [id, values, options] = params;
+        return this.validateSchema('#/properties/methods/properties/update', {id: id, values:values, options: options});
+    }
+
+    protected validatePatch(params:any[]):void {
+        let [query, values, options] = params;
+        return this.validateSchema('#/properties/methods/properties/patch', {query: query, values:values, options: options});
+    }
+
+    protected validateDelete(params:any[]):void {
+        let [query, options] = params;
+        return this.validateSchema('#/properties/methods/properties/delete', {query: query, options: options});
+    }
+
     /**
      * Create new resources based on `resources` input array.
      * 
@@ -80,7 +140,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -158,6 +218,7 @@ export abstract class PipelineAbstract<
             throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
         }
         pipeline.parent = this;
+
         // cast the pipeline and combine all interfaces
         var chainedPipeline: PipelineAbstract<T, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
         return chainedPipeline;

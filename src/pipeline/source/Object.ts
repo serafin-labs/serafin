@@ -38,7 +38,11 @@ export class PipelineSourceObject<
         return resource;
     }
 
-    private _read(query: any) {
+    private _read(query: any): Promise<ReadWrapper> {
+        if (!query) {
+            query = {};
+        }
+
         let resources = _.filter(this.resources, resource => {
             for (var property in query) {
                 if (query[property] != resource[property as string]) {
@@ -52,7 +56,7 @@ export class PipelineSourceObject<
         return Promise.resolve({ results: resources } as ReadWrapper);
     }
 
-    create(resources: Partial<T>[]) {
+    create(resources: Partial<T>[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -68,12 +72,12 @@ export class PipelineSourceObject<
         return Promise.resolve(createdResources);
     }
 
-    read(query: ReadQuery): Promise<ReadWrapper> {
+    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this._read(query)
     }
 
 
-    update(id: string, values: Partial<T>) {
+    update(id: string, values: Partial<T>, options?: UpdateOptions) {
         return this._read({
             id: id
         }).then((resources) => {
@@ -91,7 +95,7 @@ export class PipelineSourceObject<
         });
     }
 
-    patch(query: PatchQuery, values: Partial<T>) {
+    patch(query: PatchQuery, values: Partial<T>, options?: PatchOptions) {
         return this._read(query).then((resources) => {
             let updatedResources: T[] = [];
 
@@ -109,7 +113,7 @@ export class PipelineSourceObject<
         });
     }
 
-    delete(query?: DeleteQuery) {
+    delete(query?: DeleteQuery, options?: DeleteOptions) {
         return this._read(query).then((resources) => {
             let deletedResources: T[] = [];
 

@@ -35,7 +35,7 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         throw new Error("Not implemented");
     }
 

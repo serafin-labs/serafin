@@ -41,40 +41,45 @@ async function main() {
     api.prepareApplication();
 
     let pipeline = (new PipelineSourceObject<User>(userSchema))
-        .pipe(new UpdateTime)
-        .pipe(new Paginate);
+        .pipe(new Paginate)
+        .pipe(new UpdateTime);
 
-    let results = pipeline.read({ id: "test" });
+    let results = await pipeline.create([{ email: "test" }]);
 
-    console.log(pipeline.toString());
+    console.log(await pipeline.read({}, {count: 3}));
+
+    //console.log(pipeline.toString());
 
     api.use(pipeline, 'user');
-    console.log(JSON.stringify(api["openApi"], null, 4));
+    //console.log(JSON.stringify(api["openApi"], null, 4));
 
     await api.runApplication();
 
-    setTimeout(() => {
+    setTimeout(async () => {
         let pipeline2 = new PipelineSourceObject<User>(userSchema)
             //.pipe(new UpdateTime())
             // .pipe(new Paginate())
             ;
 
-        pipeline2.create([{
+        await pipeline2.create([{
             email: 'toto',
             type: 'hop'
-        }]);
+        }], {truc: 'machin'});
 
-        let trucs = pipeline2.read({});
-        let pipeline3 = pipeline2.pipe(new Paginate)
-        let bidule = pipeline3.read({});
+        let trucs = await pipeline2.read({});
+        let pipeline3 = await pipeline2.pipe(new Paginate)
+        let bidule = await pipeline3.read({});
 
-        let pipeline4 = pipeline3.pipe(new UpdateTime);
+        let pipeline4 = await pipeline3.pipe(new UpdateTime);
         pipeline4.create([{
             email: 'toto2',
             type: 'hop2'
         }]);
 
-        let bidule2 = pipeline4.read({});
+        let bidule2 = await pipeline4.read({});
+
+        let pipeline5 = new PipelineSourceObject<User>(userSchema);
+        pipeline5.read();
 
     }, 1000);
 
