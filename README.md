@@ -21,7 +21,7 @@ It also takes advantage of the HTTP concepts: URLs, cache handling, status codes
 Among the ways a developer can set up an REST API, we mainly identified the following tendencies.
 
 #### From scratch
-Some developers prefer to build a REST application from scratch. In this case, they have full control over what they create, but need to reinvent the wheel. They will usually end up reusing components that already have been aggregated by a lot of REST frameworks, and time/money constraints will often push them to implement the minimum to fit their specific needs, consequently a partial or erreoneous implementation.
+Some developers prefer to build a REST application from scratch. In this case, they have full control over what they create, but need to reinvent the wheel. They will usually end up reusing components that have already been aggregated by a lot of REST frameworks, and time/money constraints will often push them to implement the minimum to fit their specific needs, consequently a partial or erreoneous implementation.
 
 #### Declarative-based frameworks
 Some API frameworks expect endpoints definitions through declarative files such as *Yaml* or *JSON*. It provides a synthetic view of the endpoints, and these files are generally compiled into actual code.
@@ -32,6 +32,11 @@ Moreover, such declarative files rarely follow a standard and are specific to ea
 
 Our point is that if a declarative file allows to represent clearly an API, there's no reason why a clear programmatic interface wouldn't.
 
+#### Scaffolding-based frameworks
+Some API frameworks use scaffolding technics to generate the code of your endpoints. They provide a good boost at the beginning but once you have to add your own logic to the generated endpoints, it becomes close to an API from scratch if not worse.
+
+If a framework can generate the API code for you, there's no reason why a clear programmatic interface wouldn't be able to provide same default behaviours easily.
+
 #### UI-based API builders
 New tools are appearing, allowing to design an API through a user interface. The objective is usually to provide assistance to people with limited knowledge of how to do so. It can be seen as a Content Management System for APIs, with the same advantages and drawbacks.
 
@@ -40,51 +45,63 @@ With limited possibilities offered by the UI, and limited to no access to the un
 For these cases, **Serafin** is a good fit too! 
 
 #### API frameworks
-Our vision is that to build completely, in an accessible, mantainable and evolutive way an API, there's now such thing as a fully programmatic framework.
+Our vision is that to build completely, in an accessible, mantainable and evolutive way an API, there's no such thing as a fully programmatic framework.
 
-What differentiates **Serafin** from many other frameworks is its set of features, allowing backend developers to focus on the business value of what they build, and frontend developers to have everything they need at disposal to call it from their web or mobile application.
+What differentiates **Serafin** from many other frameworks is its set of features, allowing backend developers to focus on the business value of what they build:
+
+- its self-descriptive nature featuring Open API and JSON Schema
+- it is based on typescript and provide advanced way to check types and data
+- its pipeline architecture provides an advanced way to cutomize behaviour
 
 ## Features
 Here are some of the features making **Serafin** the solution of choice when it comes to build an API:
 
 ### Pipelines
-Any endpoint is linked to a *pipeline*, with a set of HTTP actions possible on it.
+Any endpoint is linked to a *pipeline*, with a set of REST actions possible on it.
 
 A *source pipeline* is a generic access to a data source, wether it is a file, an in-memory storage, a *MongoDB*, *dynamoDB*. or even *MySQL* database. **Serafin** handles all the operations on these sources itself, wether it is reading, writing, or even creating the adapted storage structure. It also maps all these actions to the corresponding *HTTP methods*, in a *RESTful* way.
 
-A **pipeline** is a modifier that enhances an other *pipeline* capacities. This way, it is possible to easily add many common behaviors such as filtering, pagination, sorting, cache handling, or, of course, custom behaviors to any *pipeline*.
+A **pipeline** is a modifier that enhances an other *pipeline* capacities. This way, it is possible to easily add many common behaviors such as filtering, sorting, caching, rate limiting, computed fields, logging... or, of course, custom behaviors to any *pipeline*.
 
 ### self-descriptive API
-The resulting API is self-descriptive, without particular efforts from the developer.
 
-It means that **Serafin** provides both a summary of all the API endpoints, and a structured technical description of each endpoint: available methods, parameters, security, behavior etc...
-This description can be used as documentation for the developers who implement calls to this API into their application, but is also targeted at technical tools, to generate functional tests, load tests, connect another API, run data exports and so on...
+The resulting API is self-descriptive, without a lot of efforts from the developer. By self-descriptive, we mean that the API provides its own metadata about what it is capable of. We rely on standards like Open API (formerly Swagger) and JSON Schema to provide this metadata.
 
-### developer tools
-**Serafin** provides a few tools that make use of its API self-descriptive features.
-
-Among the most useful ones, the *HTML UI* provides a convenient assistant when it comes to browse the API resources, to follow their relations, to create a set of data, to see each endpoint description etc...
-
-Other tools such as the command runner, the functional and load testers, the Swagger or Postman exports, can prove useful to help the developer in creating a flawless API quickly and efficiently.
+This description can be used as documentation for the developers who implement calls to this API into their application, but is also targeted at technical tools than can generate code or behaviour based on it.
 
 ### ready to run project
-While not forcing developers to rely on its recommended set of tools, **Serafin** comes as a ready to run project. Its debugger, code coverage, profiler are pre-configured for *Visual Studio Code* users.
-Its *Typescript* parameters and *gulp* tasks are properly defined.
-The project is ready to run as a *Docker* container.
+
+If you need a ready to run project to get you on the right path, you can use the yeoman generator we provide. It provides a fully configured project with debugger and code coverage configured for *Visual Studio* users, *Typescript* and *gulp* tasks, and a *Docker* configuration to run your project as a *Docker* container.
+
+TODO: move our test project configuration to yeoman
 
 ## Technical description
 
 ### Project organization
 
-Currently, being a prototype, the project is not separated into different modules. The sources are inside the *src* directoy. All the libraries names and directories are subject to change. Also the different components are ultimatley meant to be separated. 
+Currently, being a prototype, the project is not separated into different modules. The sources are inside the *src* directoy. All the libraries names and directories are subject to change. Also the different components are ultimatley meant to be separated in smaller packages.
 
-    TODO
+- *pipeline* folder contains the core definition of pipelines (abstract classes) and utils method
+- *http* folder contains the Api class that is used to provide the REST HTTP API and the Open Api definition
 
 ### Running the project
 
-To run the project or participate to its development, install *Docker* (along with its *docker-compose* tool), and run `docker-compose up` inside the project main directory.
+To run the project or participate to its development, install *Docker* (along with its *docker-compose* tool), and run `docker-compose up` inside the project main directory. It will start a compilation task and an example API.
 
 The project contains a *.vscode* directory with parameters set to run the debugger, and proposes a set of adapted extensions along with their configuration. If using the *Docker* extension, the project can be run by pressing `CMD + SHIFT + P`, and then by selecting **Docker: Compose Up**.
+
+## Contribute to the project
+
+It's a community project, so if you want to help, do not hesitate =)
+
+If you want to contribute to the core modules, please fork the repository and submit us a *Pull Request* with a lot of explanations. We will review it as soon as possible. Don't forget to cover your code with unit tests.
+
+If you want to create a new plugin module like a *Pipeline* or a *Pipeline Source*, please follow our guidelines:
+
+* If possible, do it in *Typescript* so you can generate proper .d.ts files.
+* Create a plugin only if it accomplishes something unique and special.
+* Follow this naming convention for your package name : *serafin-pipeline-[name]*.
+* Don't forget it's not yet a stable version, core modules can still change drastically.
 
 ## Resources:
 
@@ -93,11 +110,10 @@ JSON Schema:
   - https://spacetelescope.github.io/understanding-json-schema/index.html
   - http://json-schema.org/documentation.html
 
-HTTP:
+REST:
 
-  - https://tools.ietf.org/html/rfc5988
   - http://www.restapitutorial.com/lessons/httpmethods.html
-  - http://tools.ietf.org/html/7231#section-4.3.7
+  - https://www.openapis.org/
 
 Links representation:
 
@@ -108,33 +124,3 @@ Links representation:
   - https://rwcbook.github.io/hal-forms/ (if necesary)
   - http://jsonapi.org/
   - https://groups.google.com/forum/#!topic/hal-discuss/kqiF3EdobTU (thread about the method inclusion)
-
-
-
-
-## Appendix
-
-### Resource representation
-
-```
-   OPTIONS /users HTTP/1.1
-   Host: myhost.org
-   Accept: application/hal+json
-
-   HTTP/1.1 200 OK
-   Content-Type: application/hal+json
-
-   {
-     "_links": {
-       "self": { "href": "/users", "schema": ... },
-       "get": { "href": "/users/{id}", "templated": true, "schema": ... },
-       "post": { "href": "/users", "schema": ... },
-       "put": { "href": "/users", "schema": ... },
-       
-     },
-     "id": "a5k7b2",
-     "email": "foo@bar.com",
-     "name": "Toto"
-   }
-
-```
