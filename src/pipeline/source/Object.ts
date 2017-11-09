@@ -1,5 +1,5 @@
 import * as Promise from 'bluebird'
-import { PipelineSourceAbstract, description } from '../../serafin/pipeline/SourceAbstract'
+import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline/SourceAbstract'
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/model/Resource';
 import { SchemaInterface } from '../../serafin/pipeline/model/SchemaInterface';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
@@ -56,6 +56,7 @@ export class PipelineSourceObject<
         return Promise.resolve({ results: resources } as ReadWrapper);
     }
 
+    @validate
     create(resources: Partial<T>[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
@@ -72,11 +73,13 @@ export class PipelineSourceObject<
         return Promise.resolve(createdResources);
     }
 
+    @validate
     read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this._read(query)
     }
 
 
+    @validate
     update(id: string, values: Partial<T>, options?: UpdateOptions) {
         return this._read({
             id: id
@@ -95,6 +98,7 @@ export class PipelineSourceObject<
         });
     }
 
+    @validate
     patch(query: PatchQuery, values: Partial<T>, options?: PatchOptions) {
         return this._read(query).then((resources) => {
             let updatedResources: T[] = [];
@@ -113,6 +117,7 @@ export class PipelineSourceObject<
         });
     }
 
+    @validate
     delete(query?: DeleteQuery, options?: DeleteOptions) {
         return this._read(query).then((resources) => {
             let deletedResources: T[] = [];

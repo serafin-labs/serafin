@@ -1,6 +1,5 @@
 import * as util from 'util';
 import * as Promise from 'bluebird';
-import * as Djv from 'djv'
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
@@ -8,7 +7,9 @@ import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof'
 import { PipelineSchemaInterface } from './schema/Interface';
 import { PipelineSchemaPropertiesInterface } from './schema/PropertiesInterface';
 import { PipelineSchemaHelper } from './schema/Helper'
-export { option, description } from './Decorators'
+export { option } from './decorator/option'
+export { description } from './decorator/description'
+export { validate } from './decorator/validate'
 
 /**
  * Abstract Class representing a pipeline.
@@ -44,8 +45,6 @@ export abstract class PipelineAbstract<
 
     constructor() {
         this.initSchemaHelper();
-
-        this.remapMethods();
     }
 
     protected initSchemaHelper() {
@@ -65,63 +64,6 @@ export abstract class PipelineAbstract<
                 }
             }
         }
-    }
-
-    protected remapMethods() {
-        for (const key of PipelineAbstract.getCRUDMethods()) {
-            if (typeof this[key] == 'function') {
-                let func: Function = this[key];
-                this[key] = (...params) => {
-                    console.log(Object.getPrototypeOf(this).constructor.name, key, params);
-                    
-                    let validationFunctionName = 'validate' + key.charAt(0).toUpperCase() + key.slice(1);
-                    
-                    try {
-                      //  this[validationFunctionName](params);
-                        return func.call(this, ...params);
-                    } catch (e) {
-                        let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + key + " : " + e);
-                        return Promise.reject(callError);
-                    }
-                };
-            }
-        }
-    }
-
-    protected validateSchema(schemaPath: string, params: Object):void {
-        const env = new Djv({ version: 'draft-04' });
-        env.addSchema('', this.schema());
- 
-        let errorMessage = env.validate('#/properties/methods/properties/read', params)
-        if (errorMessage) {
-            throw new Error("Validation failed -> " + errorMessage + "\nparams: " + (util.inspect(params, false, null)));
-        }
-    }
-
-    protected validateCreate(params:any[]):void {
-        let [resources, options] = params;
-        console.log('PARAMS', params);
-        return this.validateSchema('#/properties/methods/properties/create', {resources: resources, options: options});
-    }
-
-    protected validateRead(params:any[]):void {
-        let [query, options] = params;
-        return this.validateSchema('#/properties/methods/properties/read', {query: query, options: options});
-    }
-
-    protected validateUpdate(params:any[]):void {
-        let [id, values, options] = params;
-        return this.validateSchema('#/properties/methods/properties/update', {id: id, values:values, options: options});
-    }
-
-    protected validatePatch(params:any[]):void {
-        let [query, values, options] = params;
-        return this.validateSchema('#/properties/methods/properties/patch', {query: query, values:values, options: options});
-    }
-
-    protected validateDelete(params:any[]):void {
-        let [query, options] = params;
-        return this.validateSchema('#/properties/methods/properties/delete', {query: query, options: options});
     }
 
     /**
@@ -186,8 +128,8 @@ export abstract class PipelineAbstract<
         return this.schemaHelper.schema;
     }
 
-    fullSchema(): {allOf: PipelineSchemaInterface[]} {
-        let schemas = (this.parent) ? this.parent.fullSchema() : {allOf: []};
+    fullSchema(): { allOf: PipelineSchemaInterface[] } {
+        let schemas = (this.parent) ? this.parent.fullSchema() : { allOf: [] };
         schemas.allOf.push(this.schema());
         return schemas;
     }
