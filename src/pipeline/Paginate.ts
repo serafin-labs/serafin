@@ -8,14 +8,12 @@ import * as _ from 'lodash'
 export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?: number }, { count: number, results: {}[] }> {
     @validate
     @description("Reads a limited count of results")
-    @option('offset', { type: "integer" }, false)
-    @option('count', { type: "integer" }, false)
-    @option('page', { type: "integer" }, false)
+    @option('offset', { type: "integer" }, false, 'Offset of the first resource to return')
+    @option('page', { type: "integer" }, false, "Offset of the first page to read (one page represents 'count' resources)")
+    @option('count', { type: "integer" }, false, "Number of resources to return")
     read(query?: {}, options?: { offset?: number, count?: number }): Promise<{ count: number, results: {}[] }> {
         return this.parent.read(query, options).then((resources) => {
             let offset = 0;
-            console.log('READ THIS', this);
-
             if (options) {
                 if (options['offset']) {
                     offset = options['offset'];

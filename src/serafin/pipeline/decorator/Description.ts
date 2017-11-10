@@ -1,5 +1,5 @@
 /**
- * Class decorator associating a description
+ * Class decorator associating a description to it
  * 
  * @param text 
  */

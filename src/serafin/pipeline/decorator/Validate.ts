@@ -3,9 +3,7 @@ import * as util from 'util';
 import { PipelineAbstract } from '../Abstract'
 
 /**
- * Class decorator enabling JSONSchema validation upon a CRUD method
- * 
- * @param text 
+ * Method decorator enabling JSONSchema validation upon a CRUD method
  */
 export function validate(target: any, propertyKey?: string, descriptor?: PropertyDescriptor) {
     let validationFunctions = {
@@ -51,9 +49,8 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
 function validateSchema(schemaPath: string, params: Object): void {
     const env = new Djv({ version: 'draft-04' });
     env.addSchema('', this.schema());
-
     let errorMessage = env.validate('#/properties/methods/properties/read', params)
     if (errorMessage) {
-        throw new Error("Validation failed -> " + errorMessage + "\nparams: " + (util.inspect(params, false, null)));
+        throw new Error("Validation failed -> " + errorMessage + ", params: " + (util.inspect(params, false, null)));
     }
 }
