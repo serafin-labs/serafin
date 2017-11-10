@@ -60,7 +60,7 @@
   },
   "scripts": {
     "start": "forever --minUptime 1000 --spinSleepTime 1000 lib/index.js",
-    "dev": "npm install && gulp build && (gulp watch & gulp run)",
+    "dev": "npm install && gulp build && gulp dev",
     "test": "npm-test.sh"
   }
 }

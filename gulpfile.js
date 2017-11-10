@@ -1,3 +1,8 @@
+// TODO: 
+// - call forever programmatically
+// - include the tests and code coverage generation
+// - isolate the 'generic' gulp tasks in a dedicated component (as before)
+
 // General dependencies
 var crypto = require('crypto');
 var fs = require('fs');
@@ -19,23 +24,30 @@ var outputDirectory = __dirname + '/lib';
 var outputTypingsDirectory = __dirname + '/lib/typings'
 var buildFile = outputDirectory + '/build.txt'
 
+var assetsFormat = '*.+(xml|js|json|htm|html|css|ico|jpg|jpeg|png|gif|tiff|svg|webp|ttf|eot|otf|woff)';
+
 // General tasks
 gulp.task('default', ['run']);
-gulp.task('watch', ['watch-typescript', 'watch-assets', 'watch-build-done']);
+gulp.task('dev', ['watch', 'watch-build-done', 'run-dev']);
+gulp.task('watch', ['watch-typescript', 'watch-assets']);
 gulp.task('build', ['build-typescript', 'copy-assets']);
-gulp.task('run', function (done) {
-    var process = exec('forever -c "node --debug" --minUptime 1000 --spinSleepTime 1000 lib/index.js');
+gulp.task('run', function () { run('--minUptime 1000 --spinSleepTime 1000'); });
+gulp.task('run-dev', function () { run('--minUptime 1000 --spinSleepTime 1000 -m 1'); });
+
+/**
+ * Run the main task with forever
+ * 
+ * @param options forever options
+ */
+function run(options) {
+    var process = exec(`forever -c "node --debug" ${options} lib/index.js`);
     process.stdout.on('data', function (data) {
         console.log(data);
     });
     process.stderr.on('data', function (data) {
         console.error(data);
     });
-    done();
-});
-gulp.task('restart', function (done) {
-    restart(done);
-});
+}
 
 /**
  * Write the build file with the current date in it
@@ -48,15 +60,13 @@ function buildDone() {
     }
 }
 
-
 /**
- * Restart
+ * Restart the forever service
  */
-function restart(done) {
+function restart() {
     return exec('forever restartall', function (err, stdout, stderr) {
         console.log(stdout);
         console.log(stderr);
-        done();
     });
 }
 
@@ -69,38 +79,35 @@ gulp.task('clean', function (callback) {
         outputDirectory + '/*'
     ], callback);
 });
+
+gulp.task('watch-build-done', function () {
+    return plugins.watch(buildFile, { usePolling: true, awaitWriteFinish: true, alwaysStat: true }, function () {
+        restart();
+    });
+});
+
 /**
  * Watch any assets that need to be copied over to the output directory.
  */
 gulp.task('watch-assets', function () {
     // Polling is used to work properly with containers
-    plugins.watch([sourceDirectory + '/**/*.+(xml|js|json|htm|html|css|ico|jpg|jpeg|png|gif|tiff|svg|webp|ttf|eot|otf|woff)'], { interval: 1000, usePolling: true },
+    return plugins.watch([sourceDirectory + '/**///' + assetsFormat], { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
         // Use batch to avoid many saved files to trigger multiple copies
-        plugins.batch(function (events, done) {
-            gulp.start('copy-assets', done);
-            done();
-        }));
-});
-
-/**
- * Detect that the build has ended (when the build file is modified).
- */
-gulp.task('watch-build-done', function () {
-    plugins.watch(buildFile, { interval: 1000, debounceDelay: 1000, usePolling: true },
-        plugins.batch(function (events, done) {
-            restart(done);
-        }));
+        function () {
+            return gulp.start('copy-assets');
+        });
 });
 
 /**
  * Watch typescript sources and trigger compilation.
  */
 gulp.task('watch-typescript', function () {
-    plugins.watch([sourceDirectory + '/**/*.ts'], { interval: 1000, usePolling: true },
-        plugins.batch(function (events, done) {
-            gulp.start('build-typescript', done);
-            done();
-        }));
+    return plugins.watch([sourceDirectory + '/**/*.ts'], { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
+        function () {
+            return gulp.start('build-typescript');
+        });
+
+
 });
 
 /**
@@ -108,7 +115,7 @@ gulp.task('watch-typescript', function () {
  * This task keeps the directory structure.
  */
 gulp.task('copy-assets', function () {
-    return gulp.src([sourceDirectory + '/**/*.json', sourceDirectory + '/**/*.xml', sourceDirectory + '/**/*.html', sourceDirectory + '/**/*.css', sourceDirectory + '/**/*.ico'])
+    return gulp.src([sourceDirectory + '/**/' + assetsFormat])
         .pipe(gulp.dest(outputDirectory))
         .on('end', () => buildDone());
 });
@@ -145,8 +152,7 @@ gulp.task('build-typescript', function () {
 });
 
 /**
- * Build json schemas
- * For testing
+ * Build json schemas. For testing.
  */
 gulp.task('build-json-schema', function () {
     return gulp.src(sourceDirectory + '/model/**/*.json')
