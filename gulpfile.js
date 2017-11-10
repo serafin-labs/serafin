@@ -4,7 +4,6 @@ var fs = require('fs');
 var path = require('path');
 var exec = require('child_process').exec;
 var _ = require('lodash');
-var Promise = require('bluebird');
 
 // Gulp dependencies
 var gulp = require('gulp');
