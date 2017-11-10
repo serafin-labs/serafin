@@ -1,3 +1,6 @@
+import { setMethodSchema } from '../../../../.history/src/serafin/pipeline/Abstract_20171110164031';
+import { setPipelineMethodSchema } from '../Abstract'
+
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
  * 
@@ -8,22 +11,24 @@
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        if (!descriptor.value['properties']) {
-            descriptor.value['properties'] = {
-                options: {
-                    type: 'object',
-                    properties: {},
-                    required: []
-                }
-            };
+        let property = {
+            options: {
+                type: 'object',
+                properties: {
+                    [option]: (typeof schema == 'function') ? schema() : schema
+                },
+                required: []
+            }
+        };
+
+        if (description) {
+            property.options.properties[option]['description'] = description;
         }
 
-        descriptor.value['properties'].options.properties[option] = (typeof schema == 'function') ? schema() : schema;
-        if (description) {
-            descriptor.value['properties'].options.properties[option].description = description;
-        }
         if (required) {
-            descriptor.value['properties'].options.required.push(option);
+            property.options.required.push(option);
         }
+
+        setPipelineMethodSchema(target, propertyKey, property);
     }
 }

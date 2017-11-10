@@ -1,4 +1,5 @@
 import * as util from 'util';
+import * as _ from 'lodash';
 import * as Promise from 'bluebird';
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
@@ -10,6 +11,8 @@ import { PipelineSchemaHelper } from './schema/Helper'
 export { option } from './decorator/option'
 export { description } from './decorator/description'
 export { validate } from './decorator/validate'
+
+const METHOD_SCHEMAS = Symbol('methodSchemas');
 
 /**
  * Abstract Class representing a pipeline.
@@ -51,16 +54,14 @@ export abstract class PipelineAbstract<
         this.schemaHelper = new PipelineSchemaHelper(Object.getPrototypeOf(this).constructor.name, Object.getPrototypeOf(this).constructor['description'] || undefined)
         let thisPrototype = Object.getPrototypeOf(this);
 
-        for (const key of PipelineAbstract.getCRUDMethods()) {
-            if (typeof Object.getOwnPropertyDescriptor(thisPrototype, key) != 'undefined') {
-                let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'properties');
-                if (paramsDescriptor && typeof (paramsDescriptor.value == 'object')) {
-                    this.schemaHelper.setMethodProperties(key, 'properties', paramsDescriptor.value);
-                }
-
-                let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
-                if (descriptionDescriptor) {
-                    this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
+        if (this[METHOD_SCHEMAS]) {
+            for (const key of PipelineAbstract.getCRUDMethods()) {
+                if (this[METHOD_SCHEMAS][key]) {
+                    this.schemaHelper.setMethodProperties(key, 'properties', this[METHOD_SCHEMAS][key]);
+                    let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
+                    if (descriptionDescriptor) {
+                        this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
+                    }
                 }
             }
         }
@@ -139,7 +140,7 @@ export abstract class PipelineAbstract<
     }
 
     public static getCRUDMethods() {
-        return ['create', 'read', 'update', 'delete'];
+        return ['create', 'read', 'update', 'patch', 'delete'];
     }
 
     /**
@@ -186,4 +187,11 @@ export abstract class PipelineAbstract<
  */
 export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper extends ReadWrapperInterface<N> = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
 
+}
+
+export function setPipelineMethodSchema(target: PipelineAbstract, method: string, schema: Object) {
+    if (!target[METHOD_SCHEMAS]) {
+        target[METHOD_SCHEMAS] = {};
+    }
+    target[METHOD_SCHEMAS][method] = _.merge({ properties: schema } || { properties: {} }, target[METHOD_SCHEMAS][method]);
 }
