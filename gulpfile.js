@@ -40,7 +40,7 @@ gulp.task('run-dev', function () { run('--minUptime 1000 --spinSleepTime 1000 -m
  * @param options forever options
  */
 function run(options) {
-    var process = exec(`forever -c "node --debug" ${options} lib/index.js`);
+    var process = exec(`forever -c "node --debug " ${options} lib/index.js`);
     process.stdout.on('data', function (data) {
         console.log(data);
     });
