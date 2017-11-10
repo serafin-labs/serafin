@@ -1,7 +1,6 @@
 import * as Swagger from 'swagger-schema-official';
 import * as express from "express"
 import * as _ from "lodash"
-import * as P from "bluebird"
 import * as bodyParser from "body-parser"
 import * as compression from "compression"
 import { JSONSchema4 } from "json-schema"
@@ -186,7 +185,7 @@ export class Api {
     }
 
     runApplication(port: number = 80) {
-        return new P<this>((resolve, reject) => {
+        return new Promise<this>((resolve, reject) => {
             var server = this.application.listen(port, (error: any) => {
                 if (error) {
                     reject(error);
@@ -235,7 +234,7 @@ export class Api {
                 res.end();
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // get a resource by its id
@@ -256,7 +255,7 @@ export class Api {
                 res.end();
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // create a new resource
@@ -273,7 +272,7 @@ export class Api {
                 res.status(201).json(createdResources[0])
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // patch an existing resource
@@ -295,7 +294,7 @@ export class Api {
                 res.end()
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // put an existing resource
@@ -315,7 +314,7 @@ export class Api {
                 res.end()
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // delete an existing resource
@@ -336,7 +335,7 @@ export class Api {
                 res.end()
             }).catch(error => {
                 handleError(error, res)
-            }).done();
+            });
         })
 
         // attach the router to the express app

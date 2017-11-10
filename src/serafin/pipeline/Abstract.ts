@@ -1,5 +1,4 @@
 import * as util from 'util';
-import * as Promise from 'bluebird';
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
@@ -70,7 +69,7 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         return this.parent.create(resources, options);
     }
 
@@ -80,7 +79,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -93,7 +92,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+    async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         return this.parent.update(id, values, options);
     }
 
@@ -106,7 +105,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         return this.parent.patch(query, values, options);
     }
 
@@ -115,7 +114,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         return this.parent.delete(query, options);
     }
 

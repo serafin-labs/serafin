@@ -1,4 +1,3 @@
-import * as Promise from 'bluebird'
 import { PipelineSourceAbstract, description } from '../../serafin/pipeline/SourceAbstract'
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/model/Resource';
 import { SchemaInterface } from '../../serafin/pipeline/model/SchemaInterface';
@@ -38,7 +37,7 @@ export class PipelineSourceObject<
         return resource;
     }
 
-    private _read(query: any) {
+    private async _read(query: any) {
         let resources = _.filter(this.resources, resource => {
             for (var property in query) {
                 if (query[property] != resource[property as string]) {
@@ -49,10 +48,10 @@ export class PipelineSourceObject<
             return true;
         });
 
-        return Promise.resolve({ results: resources } as ReadWrapper);
+        return { results: resources } as ReadWrapper;
     }
 
-    create(resources: Partial<T>[]) {
+    async create(resources: Partial<T>[]) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -61,64 +60,61 @@ export class PipelineSourceObject<
                 createdResources.push(<any>identifiedResource);
             } else {
                 // Todo: put the conflict test at beginning (for atomicity)
-                return Promise.reject(new Error('Conflict'));
+                throw new Error('Conflict');
             }
         });
 
-        return Promise.resolve(createdResources);
+        return createdResources;
     }
 
-    read(query: ReadQuery): Promise<ReadWrapper> {
+    async read(query: ReadQuery): Promise<ReadWrapper> {
         return this._read(query)
     }
 
 
-    update(id: string, values: Partial<T>) {
-        return this._read({
+    async update(id: string, values: Partial<T>) {
+        var resources = await this._read({
             id: id
-        }).then((resources) => {
-            if (resources.results.length > 0) {
-                var resource = resources.results[0]
-                if (resource.id && resource.id !== id) {
-                    delete (this.resources[resource.id]);
-                }
-                // in case it wasn't assigned yet
-                resource.id = id
-                this.resources[id] = resource;
-                Promise.resolve(resource);
+        });
+        if (resources.results.length > 0) {
+            var resource = resources.results[0]
+            if (resource.id && resource.id !== id) {
+                delete (this.resources[resource.id]);
             }
-            return Promise.resolve(undefined);
-        });
+            // in case it wasn't assigned yet
+            resource.id = id
+            this.resources[id] = resource;
+            return resource;
+        }
+        return undefined;
     }
 
-    patch(query: PatchQuery, values: Partial<T>) {
-        return this._read(query).then((resources) => {
-            let updatedResources: T[] = [];
+    async patch(query: PatchQuery, values: Partial<T>) {
+        var resources = await this._read(query)
+        let updatedResources: T[] = [];
 
-            resources.results.forEach(resource => {
-                let id = resource.id;
-                resource = jsonMergePatch(resource, values)
-                if (resource.id !== id) {
-                    delete (this.resources[resource.id]);
-                }
-                this.resources[id] = resource;
-                updatedResources.push(resource);
-            });
-
-            return Promise.resolve(updatedResources);
+        resources.results.forEach(resource => {
+            let id = resource.id;
+            resource = jsonMergePatch(resource, values)
+            if (resource.id !== id) {
+                delete (this.resources[resource.id]);
+            }
+            this.resources[id] = resource;
+            updatedResources.push(resource);
         });
+
+        return updatedResources;
     }
 
-    delete(query?: DeleteQuery) {
-        return this._read(query).then((resources) => {
-            let deletedResources: T[] = [];
+    async delete(query?: DeleteQuery) {
+        var resources = await this._read(query)
+        let deletedResources: T[] = [];
 
-            resources.results.forEach((resource) => {
-                delete this.resources[resource.id];
-                deletedResources.push(resource);
-            });
-
-            return Promise.resolve(deletedResources);
+        resources.results.forEach((resource) => {
+            delete this.resources[resource.id];
+            deletedResources.push(resource);
         });
+
+        return deletedResources;
     }
 }

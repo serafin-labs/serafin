@@ -1,4 +1,3 @@
-import * as Promise from 'bluebird';
 import { PipelineSchemaHelper } from './schema/Helper';
 import { PipelineAbstract } from './Abstract';
 import { SchemaInterface } from './model/SchemaInterface';
@@ -35,27 +34,27 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+    async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
