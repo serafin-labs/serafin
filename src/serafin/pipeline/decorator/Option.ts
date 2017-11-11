@@ -1,4 +1,3 @@
-import { setMethodSchema } from '../../../../.history/src/serafin/pipeline/Abstract_20171110164031';
 import { setPipelineMethodSchema } from '../Abstract'
 
 /**

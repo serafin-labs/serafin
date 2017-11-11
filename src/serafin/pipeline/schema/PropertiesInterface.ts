@@ -26,15 +26,23 @@ export interface PipelineSchemaPropertiesInterface {
                     'query'?: Object,
                     'values'?: Object
                 }
+                required?: string[]
             },
-            required?: string[]
-        },
-        'delete'?: {
-            type: string,
-            properties: {
-                'query'?: Object
+            'patch'?: {
+                type: string,
+                properties: {
+                    'query'?: Object,
+                    'values'?: Object
+                }
+                required?: string[]
             },
-            required?: string[]
+            'delete'?: {
+                type: string,
+                properties: {
+                    'query'?: Object
+                },
+                required?: string[]
+            }
         }
     }
 }

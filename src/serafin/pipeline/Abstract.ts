@@ -147,7 +147,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.fullFlatSchema(), false, null));
+        return (util.inspect(this.fullSchema(), false, null));
     }
 
     /**
@@ -193,5 +193,5 @@ export function setPipelineMethodSchema(target: PipelineAbstract, method: string
     if (!target[METHOD_SCHEMAS]) {
         target[METHOD_SCHEMAS] = {};
     }
-    target[METHOD_SCHEMAS][method] = _.merge({ properties: schema } || { properties: {} }, target[METHOD_SCHEMAS][method]);
+    target[METHOD_SCHEMAS][method] = _.merge(schema || { properties: {} }, target[METHOD_SCHEMAS][method]);
 }
