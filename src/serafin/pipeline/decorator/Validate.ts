@@ -49,7 +49,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
 function validateSchema(schemaPath: string, params: Object): void {
     const env = new Djv({ version: 'draft-04' });
     env.addSchema('', this.schema());
-    let errorMessage = env.validate('#/properties/methods/properties/read', params)
+    let errorMessage = env.validate(schemaPath, params)
     if (errorMessage) {
         throw new Error("Validation failed -> " + errorMessage + ", params: " + (util.inspect(params, false, null)));
     }
