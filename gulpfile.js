@@ -32,7 +32,7 @@ gulp.task('dev', ['watch', 'watch-build-done', 'run-dev']);
 gulp.task('watch', ['watch-typescript', 'watch-assets']);
 gulp.task('build', ['build-typescript', 'copy-assets']);
 gulp.task('run', function () { run('--minUptime 1000 --spinSleepTime 1000'); });
-gulp.task('run-dev', function () { run('--minUptime 1000 --spinSleepTime 1000 -m 1'); });
+gulp.task('run-dev', function () { run('-c "node --debug" --minUptime 1000 --spinSleepTime 1000 -m 1'); });
 
 /**
  * Run the main task with forever
@@ -40,7 +40,7 @@ gulp.task('run-dev', function () { run('--minUptime 1000 --spinSleepTime 1000 -m
  * @param options forever options
  */
 function run(options) {
-    var process = exec(`forever -c "node --debug " ${options} lib/index.js`);
+    var process = exec(`forever ${options} lib/index.js`);
     process.stdout.on('data', function (data) {
         console.log(data);
     });
