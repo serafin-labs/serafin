@@ -10,24 +10,27 @@ import { setPipelineMethodSchema } from '../Abstract'
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        let property = {
-            options: {
-                type: 'object',
-                properties: {
-                    [option]: (typeof schema == 'function') ? schema() : schema
-                },
-                required: []
+        let methodSchema = {
+            type: 'object',
+            properties: {
+                options: {
+                    type: 'object',
+                    properties: {
+                        [option]: (typeof schema == 'function') ? schema() : schema
+                    },
+                    required: []
+                }
             }
         };
 
         if (description) {
-            property.options.properties[option]['description'] = description;
+            methodSchema.properties.options.properties[option]['description'] = description;
         }
 
         if (required) {
-            property.options.required.push(option);
+            methodSchema.properties.options.required.push(option);
         }
 
-        setPipelineMethodSchema(target, propertyKey, property);
+        setPipelineMethodSchema(target, propertyKey, methodSchema);
     }
 }

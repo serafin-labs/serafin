@@ -6,7 +6,6 @@ import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof'
 import { PipelineSchemaInterface } from './schema/Interface';
-import { PipelineSchemaPropertiesInterface } from './schema/PropertiesInterface';
 import { PipelineSchemaHelper } from './schema/Helper'
 export { option } from './decorator/option'
 export { description } from './decorator/description'
@@ -57,11 +56,7 @@ export abstract class PipelineAbstract<
         if (this[METHOD_SCHEMAS]) {
             for (const key of PipelineAbstract.getCRUDMethods()) {
                 if (this[METHOD_SCHEMAS][key]) {
-                    this.schemaHelper.setMethodProperties(key, 'properties', this[METHOD_SCHEMAS][key]);
-                    let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
-                    if (descriptionDescriptor) {
-                        this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
-                    }
+                    this.schemaHelper.setMethodSchema(key, this[METHOD_SCHEMAS][key]);
                 }
             }
         }
@@ -129,10 +124,9 @@ export abstract class PipelineAbstract<
         return this.schemaHelper.schema;
     }
 
-    fullSchema(): { allOf: PipelineSchemaInterface[] } {
-        let schemas = (this.parent) ? this.parent.fullSchema() : { allOf: [] };
-        schemas.allOf.push(this.schema());
-        return schemas;
+    fullSchema(): PipelineSchemaInterface {
+        let s = (this.parent) ? this.schemaHelper.merge(this.schema(), this.parent.fullSchema()) : this.schema();
+        return s;
     }
 
     fullFlatSchema(): Object {
@@ -193,5 +187,5 @@ export function setPipelineMethodSchema(target: PipelineAbstract, method: string
     if (!target[METHOD_SCHEMAS]) {
         target[METHOD_SCHEMAS] = {};
     }
-    target[METHOD_SCHEMAS][method] = _.merge(schema || { properties: {} }, target[METHOD_SCHEMAS][method]);
+    target[METHOD_SCHEMAS][method] = _.merge(schema, target[METHOD_SCHEMAS][method] || {});
 }

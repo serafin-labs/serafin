@@ -12,67 +12,90 @@ export class PipelineSchemaHelper {
             title: name,
             type: 'object',
             description: description || undefined,
-            properties: {
-                methods: { 'type': 'object', properties: {} }
+            definitions: {
+                methods: {}
             }
         };
     }
 
-    private createMethod(method: string) {
-        if (!this.schema.properties.methods.properties[method]) {
-            this.schema.properties.methods.properties[method] = { 'type': 'object', 'properties': {} };
-        }
-    }
-
-    setMethodProperties(method: string, propertyName: string, properties: {}) {
-        this.createMethod(method);
-        this.schema.properties.methods.properties[method].properties = properties;
-    }
-
-    setMethodDescription(method: string, description: string) {
-        this.createMethod(method);
-        this.schema.properties.methods.properties[method].description = description;
+    setMethodSchema(method: string, schema: {}) {
+        this.schema.definitions.methods[method] = schema;
     }
 
     setSourceDefaultMethods(model, implementedMethods = []) {
-        this.schema.definitions = { model: model };
-        this.schema.properties.methods = {
-            type: 'object',
-            properties: _.pick({
-                'create': {
-                    type: 'object',
-                    properties: {
-                        'resources': {
-                            type: 'array',
-                            items: { "$ref": "#/definitions/model" },
-                            minItems: 1
-                        }
-                    },
-                    required: ['resources']
-                },
-                'read': {
-                    type: 'object',
-                    properties: {
-                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
+        this.schema.definitions.model = model;
+        this.schema.definitions.methods = _.pick({
+            'create': {
+                type: 'object',
+                properties: {
+                    'resources': {
+                        type: 'array',
+                        items: { "$ref": "#/definitions/model" },
+                        minItems: 1
                     }
                 },
-                'update': {
-                    type: 'object',
-                    properties: {
-                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
-                        'values': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } }, "minProperties": 1 }
-                    },
-                    required: ['query', 'values']
+                required: ['resources']
+            },
+            'read': {
+                type: 'object',
+                properties: {
+                    'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
+                }
+            },
+            'update': {
+                type: 'object',
+                properties: {
+                    'id': { type: 'string' },
+                    'values': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } }, "minProperties": 1 }
                 },
-                'delete': {
-                    type: 'object',
-                    properties: {
-                        'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
-                    },
-                    required: ['query']
+                required: ['query', 'values']
+            },
+            'patch': {
+                type: 'object',
+                properties: {
+                    'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
+                    'values': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } }, "minProperties": 1 }
                 },
-            }, implementedMethods)
-        }
+                required: ['query', 'values']
+            },
+            'delete': {
+                type: 'object',
+                properties: {
+                    'query': { type: 'object', properties: { "anyOf": { "$ref": "#/definitions/model" } } },
+                },
+                required: ['query']
+            },
+        }, implementedMethods);
+    }
+
+    merge(schema1: PipelineSchemaInterface, schema2: PipelineSchemaInterface): PipelineSchemaInterface {
+        let methods = {};
+        let merge = (title, description) => {
+            return (obj, key) => {
+                if (!methods[key]) {
+                    methods[key] = { allOf: [] };
+                }
+
+                if (obj['allOf']) {
+                    obj['allOf'].forEach(allOfObj => {
+                        methods[key].allOf.push(allOfObj)
+                    });
+                } else {
+                    obj.pipelineDescription = description;
+                    obj.title = title + " - " + key;
+                    methods[key].allOf.push(obj);
+                }
+            };
+        };
+
+        _.each(schema1.definitions.methods, merge(schema1.title, schema1.description));
+        _.each(schema2.definitions.methods, merge(schema2.title, schema2.description));
+
+        let obj = { ...schema1, ...schema2 };
+        obj.definitions.methods = methods
+        delete (obj.title);
+        delete (obj.description);
+        return obj;
     }
 
     toString() {

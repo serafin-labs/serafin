@@ -9,23 +9,23 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
     let validationFunctions = {
         create: function (params: any[]): void {
             let [resources, options] = params;
-            return validateSchema.call(this, '#/properties/methods/properties/create', { resources: resources, options: options });
+            return validateSchema.call(this, '#/definitions/methods/create', { resources: resources, options: options });
         },
         read: function (params: any[]): void {
             let [query, options] = params;
-            return validateSchema.call(this, '#/properties/methods/properties/read', { query: query, options: options });
+            return validateSchema.call(this, '#/definitions/methods/read', { query: query, options: options });
         },
         update: function (params: any[]): void {
             let [id, values, options] = params;
-            return validateSchema.call(this, '#/properties/methods/properties/update', { id: id, values: values, options: options });
+            return validateSchema.call(this, '#/definitions/methods/update', { id: id, values: values, options: options });
         },
         patch: function (params: any[]): void {
             let [query, values, options] = params;
-            return validateSchema.call(this, '#/properties/methods/properties/patch', { query: query, values: values, options: options });
+            return validateSchema.call(this, '#/definitions/methods/patch', { query: query, values: values, options: options });
         },
         delete: function (params: any[]): void {
             let [query, options] = params;
-            return validateSchema.call(this, '#/properties/methods/properties/delete', { query: query, options: options });
+            return validateSchema.call(this, '#/definitions/methods/delete', { query: query, options: options });
         }
     }
 

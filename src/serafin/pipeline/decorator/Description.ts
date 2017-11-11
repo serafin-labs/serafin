@@ -1,3 +1,5 @@
+import { setPipelineMethodSchema } from '../Abstract'
+
 /**
  * Class decorator associating a description to it
  * 
@@ -8,7 +10,10 @@ export function description(text: string) {
         if (typeof (descriptor) === 'undefined') {
             targetOrCtor['description'] = text;
         } else {
-            descriptor.value.description = text;
+            let methodSchema = {
+                description: text
+            };
+            setPipelineMethodSchema(targetOrCtor, propertyKey, methodSchema);
         }
     };
 }
