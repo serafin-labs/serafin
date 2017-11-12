@@ -80,7 +80,7 @@ export class PipelineSourceObject<
 
     @validate
     async update(id: string, values: Partial<T>, options?: UpdateOptions) {
-        return this._read({
+        var resources = await this._read({
             id: id
         });
         if (resources.results.length > 0) {
@@ -98,8 +98,8 @@ export class PipelineSourceObject<
 
     @validate
     async patch(query: PatchQuery, values: Partial<T>, options?: PatchOptions) {
-        return this._read(query).then((resources) => {
-            let updatedResources: T[] = [];
+        var resources = await this._read(query);
+        let updatedResources: T[] = [];
 
         resources.results.forEach(resource => {
             let id = resource.id;
@@ -116,8 +116,8 @@ export class PipelineSourceObject<
 
     @validate
     async delete(query?: DeleteQuery, options?: DeleteOptions) {
-        return this._read(query).then((resources) => {
-            let deletedResources: T[] = [];
+        var resources = await this._read(query);
+        let deletedResources: T[] = [];
 
         resources.results.forEach((resource) => {
             delete this.resources[resource.id];
