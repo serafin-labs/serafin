@@ -1,9 +1,10 @@
-import { PipelineAbstract, option, description } from '../serafin/pipeline/Abstract'
+import { PipelineAbstract, option, description, validate } from '../serafin/pipeline/Abstract'
 import { ReadWrapperInterface } from '../serafin/pipeline/model/Resource'
+
 
 @description("Adds creation and update timestamps to the resources")
 export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }> {
-
+    @validate
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
     async read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
         return this.parent.read(query).then((items) => {
@@ -33,6 +34,7 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
         });
     }
 
+    @validate
     @description("Sets the creation time")
     async create(resources: {}[], options?: {}) {
         resources.forEach(resource => {
@@ -42,12 +44,14 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
         return this.parent.create(resources);
     }
 
+    @validate
     @description("Sets the update time")
     async update(id: string, values: {}, options?: {}) {
         values['updatedAt'] = Date.now();
         return this.parent.update(id, values);
     }
 
+    @validate
     @description("Sets the update time")
     async patch(query: {}, values: {}, options?: {}) {
         values['updatedAt'] = Date.now();

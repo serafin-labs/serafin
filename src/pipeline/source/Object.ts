@@ -1,4 +1,4 @@
-import { PipelineSourceAbstract, description } from '../../serafin/pipeline/SourceAbstract'
+import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline/SourceAbstract'
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/model/Resource';
 import { SchemaInterface } from '../../serafin/pipeline/model/SchemaInterface';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
@@ -37,7 +37,11 @@ export class PipelineSourceObject<
         return resource;
     }
 
-    private async _read(query: any) {
+    private async _read(query: any): Promise<ReadWrapper> {
+        if (!query) {
+            query = {};
+        }
+
         let resources = _.filter(this.resources, resource => {
             for (var property in query) {
                 if (query[property] != resource[property as string]) {
@@ -51,7 +55,8 @@ export class PipelineSourceObject<
         return { results: resources } as ReadWrapper;
     }
 
-    async create(resources: Partial<T>[]) {
+    @validate
+    async create(resources: Partial<T>[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -67,13 +72,15 @@ export class PipelineSourceObject<
         return createdResources;
     }
 
-    async read(query: ReadQuery): Promise<ReadWrapper> {
+    @validate
+    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this._read(query)
     }
 
 
-    async update(id: string, values: Partial<T>) {
-        var resources = await this._read({
+    @validate
+    async update(id: string, values: Partial<T>, options?: UpdateOptions) {
+        return this._read({
             id: id
         });
         if (resources.results.length > 0) {
@@ -89,9 +96,10 @@ export class PipelineSourceObject<
         return undefined;
     }
 
-    async patch(query: PatchQuery, values: Partial<T>) {
-        var resources = await this._read(query)
-        let updatedResources: T[] = [];
+    @validate
+    async patch(query: PatchQuery, values: Partial<T>, options?: PatchOptions) {
+        return this._read(query).then((resources) => {
+            let updatedResources: T[] = [];
 
         resources.results.forEach(resource => {
             let id = resource.id;
@@ -106,9 +114,10 @@ export class PipelineSourceObject<
         return updatedResources;
     }
 
-    async delete(query?: DeleteQuery) {
-        var resources = await this._read(query)
-        let deletedResources: T[] = [];
+    @validate
+    async delete(query?: DeleteQuery, options?: DeleteOptions) {
+        return this._read(query).then((resources) => {
+            let deletedResources: T[] = [];
 
         resources.results.forEach((resource) => {
             delete this.resources[resource.id];

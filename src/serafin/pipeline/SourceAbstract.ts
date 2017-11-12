@@ -2,8 +2,9 @@ import { PipelineSchemaHelper } from './schema/Helper';
 import { PipelineAbstract } from './Abstract';
 import { SchemaInterface } from './model/SchemaInterface';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
-
-export { option, description } from './Decorators'
+export { option } from './decorator/option'
+export { description } from './decorator/description'
+export { validate } from './decorator/validate'
 
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
 
@@ -34,7 +35,7 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    async read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         throw new Error("Not implemented");
     }
 

@@ -1,12 +1,16 @@
 import * as util from 'util';
+import * as _ from 'lodash';
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof'
 import { PipelineSchemaInterface } from './schema/Interface';
-import { PipelineSchemaPropertiesInterface } from './schema/PropertiesInterface';
 import { PipelineSchemaHelper } from './schema/Helper'
-export { option, description } from './Decorators'
+export { option } from './decorator/option'
+export { description } from './decorator/description'
+export { validate } from './decorator/validate'
+
+const METHOD_SCHEMAS = Symbol('methodSchemas');
 
 /**
  * Abstract Class representing a pipeline.
@@ -48,16 +52,10 @@ export abstract class PipelineAbstract<
         this.schemaHelper = new PipelineSchemaHelper(Object.getPrototypeOf(this).constructor.name, Object.getPrototypeOf(this).constructor['description'] || undefined)
         let thisPrototype = Object.getPrototypeOf(this);
 
-        for (const key of PipelineAbstract.getCRUDMethods()) {
-            if (typeof Object.getOwnPropertyDescriptor(thisPrototype, key) != 'undefined') {
-                let paramsDescriptor = Object.getOwnPropertyDescriptor(this[key], 'properties');
-                if (paramsDescriptor && typeof (paramsDescriptor.value == 'object')) {
-                    this.schemaHelper.setMethodProperties(key, 'properties', paramsDescriptor.value);
-                }
-
-                let descriptionDescriptor = Object.getOwnPropertyDescriptor(this[key], 'description');
-                if (descriptionDescriptor) {
-                    this.schemaHelper.setMethodDescription(key, descriptionDescriptor.value);
+        if (this[METHOD_SCHEMAS]) {
+            for (const key of PipelineAbstract.getCRUDMethods()) {
+                if (this[METHOD_SCHEMAS][key]) {
+                    this.schemaHelper.setMethodSchema(key, this[METHOD_SCHEMAS][key]);
                 }
             }
         }
@@ -79,7 +77,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    async read(query: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -125,10 +123,9 @@ export abstract class PipelineAbstract<
         return this.schemaHelper.schema;
     }
 
-    fullSchema(): { allOf: PipelineSchemaInterface[] } {
-        let schemas = (this.parent) ? this.parent.fullSchema() : { allOf: [] };
-        schemas.allOf.push(this.schema());
-        return schemas;
+    fullSchema(): PipelineSchemaInterface {
+        let s = (this.parent) ? this.schemaHelper.merge(this.schema(), this.parent.fullSchema()) : this.schema();
+        return s;
     }
 
     fullFlatSchema(): JSONSchema4 {
@@ -143,7 +140,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.fullFlatSchema(), false, null));
+        return (util.inspect(this.fullSchema(), false, null));
     }
 
     /**
@@ -157,6 +154,7 @@ export abstract class PipelineAbstract<
             throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
         }
         pipeline.parent = this;
+
         // cast the pipeline and combine all interfaces
         var chainedPipeline: PipelineAbstract<T, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
         return chainedPipeline;
@@ -182,4 +180,11 @@ export abstract class PipelineAbstract<
  */
 export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper extends ReadWrapperInterface<N> = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
 
+}
+
+export function setPipelineMethodSchema(target: PipelineAbstract, method: string, schema: Object) {
+    if (!target[METHOD_SCHEMAS]) {
+        target[METHOD_SCHEMAS] = {};
+    }
+    target[METHOD_SCHEMAS][method] = _.merge(schema, target[METHOD_SCHEMAS][method] || {});
 }

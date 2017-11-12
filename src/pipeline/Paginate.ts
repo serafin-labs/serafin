@@ -1,13 +1,15 @@
-import { PipelineAbstract, option, description } from '../serafin/pipeline/Abstract'
+import { PipelineAbstract, option, description, validate } from '../serafin/pipeline/Abstract'
 import { ReadWrapperInterface } from '../serafin/pipeline/model/Resource'
+import * as _ from 'lodash'
+
 
 @description("Provides pagination over the read results")
 export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?: number }, { count: number, results: {}[] }> {
-
+    @validate
     @description("Reads a limited count of results")
-    @option('offset', { type: "integer" }, false)
-    @option('count', { type: "integer" }, false)
-    @option('page', { type: "integer" }, false)
+    @option('offset', { type: "integer" }, false, 'Offset of the first resource to return')
+    @option('page', { type: "integer" }, false, "Offset of the first page to read (one page represents 'count' resources)")
+    @option('count', { type: "integer" }, false, "Number of resources to return")
     async read(query?: {}, options?: { offset?: number, count?: number }): Promise<{ count: number, results: {}[] }> {
         return this.parent.read(query, options).then((resources) => {
             let offset = 0;
@@ -16,19 +18,19 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
                 if (options['offset']) {
                     offset = options['offset'];
                 } else if (options['page'] && options['count']) {
-                    offset = (resources.length / options['count']) * options['page'];
+                    offset = (resources.results.length / options['count']) * options['page'];
                 }
 
                 if (options['count']) {
-                    if (offset > resources.length) {
+                    if (offset > resources.results.length) {
                         throw new Error("Offset higher than the number of resources");
                     }
 
-                    resources = resources.slice(offset, offset + options['count']);
+                    resources.results = resources.results.slice(offset, offset + options['count']);
                 }
             }
 
-            return Promise.resolve({ ...resources, count: resources.length });
+            return Promise.resolve({ ...resources, count: resources.results.length });
         });
     }
 }
