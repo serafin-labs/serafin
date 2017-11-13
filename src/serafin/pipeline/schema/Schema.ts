@@ -1,6 +1,8 @@
 import { JSONSchema4 } from "json-schema"
 import * as _ from "lodash"
 
+import { throughJsonSchema } from "../../schema/throughJsonSchema"
+
 /**
  * Represents a Schema and its dependencies
  */
@@ -60,45 +62,21 @@ export class Schema {
         this.schemaObject.definitions[name] = refSchemaObject;
         delete refSchemaObject.id;
         this.refs.push({ id: refId, name: name })
-        this.remapRefs(this.schemaObject)
-        return this
-    }
-
-    /**
-     * go through the whole schema and modify refs that points to known URI
-     */
-    private remapRefs(schema: JSONSchema4) {
-        if (schema.$ref) {
-            let ref = this.refs.reduce((result, currentRef) => {
-                // TODO handle relative refs
-                return schema.$ref.startsWith(currentRef.id) ? currentRef : result
-            }, null);
-            if (ref) {
-                let $ref = schema.$ref.substr(ref.id.length);
-                if ($ref.startsWith("#")) {
-                    $ref = schema.$ref.substr(1);
+        throughJsonSchema(this.schemaObject, (s) => {
+            if (s.$ref) {
+                let ref = this.refs.reduce((result, currentRef) => {
+                    // TODO handle relative refs
+                    return s.$ref.startsWith(currentRef.id) ? currentRef : result
+                }, null);
+                if (ref) {
+                    let $ref = s.$ref.substr(ref.id.length);
+                    if ($ref.startsWith("#")) {
+                        $ref = s.$ref.substr(1);
+                    }
+                    s.$ref = `#/definitions/${ref.name}${$ref}`
                 }
-                schema.$ref = `#/definitions/${ref.name}${$ref}`
             }
-        }
-        if (schema.properties) {
-            for (let property in schema.properties) {
-                this.remapRefs(schema.properties[property])
-            }
-        }
-        if (schema.definitions) {
-            for (let property in schema.definitions) {
-                this.remapRefs(schema.definitions[property])
-            }
-        }
-        if (schema.oneOf) {
-            schema.oneOf.forEach(s => this.remapRefs(s))
-        }
-        if (schema.allOf) {
-            schema.allOf.forEach(s => this.remapRefs(s))
-        }
-        if (schema.anyOf) {
-            schema.anyOf.forEach(s => this.remapRefs(s))
-        }
+        });
+        return this
     }
 }

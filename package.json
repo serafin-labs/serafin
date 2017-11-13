@@ -31,6 +31,7 @@
     "express": "^4.16.2",
     "json-schema-merge-allof": "^0.6.0",
     "json-schema-to-typescript": "^4.6.5",
+    "jsonpointer": "^4.0.1",
     "node-uuid": "^1.4.8",
     "util": "^0.10.3"
   },

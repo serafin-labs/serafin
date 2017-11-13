@@ -5,257 +5,11 @@ import * as bodyParser from 'body-parser';
 import * as compression from 'compression';
 import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
+import { throughJsonSchema } from "../schema/throughJsonSchema"
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
 
-/**
- * Get a schema sub part from the pipeline schema.
- * 
- * @param schema 
- * @param method 
- * @param target 
- */
-function extractSchema(schema: JSONSchema4, method: "create" | "update" | "read" | "patch" | "delete", target: "query" | "options" | "resources" | "values") {
-    if (schema.properties.methods.properties[method] && schema.properties.methods.properties[method].properties && schema.properties.methods.properties[method].properties[target]) {
-        return schema.properties.methods.properties[method] && schema.properties.methods.properties[method].properties[target]
-    }
-    return null
-}
 
-/**
- * Find the schema pointed out by `path` in the given defnitions structure
- * 
- * @param path 
- * @param definitions 
- */
-function locateSchema(path: string, definitions: { [definitionsName: string]: Swagger.Schema }): JSONSchema4 {
-    if (path.startsWith("#/definitions/")) {
-        var currentTarget: any = definitions;
-        path.substr("#/definitions/".length).split("/").forEach(nextTarget => {
-            currentTarget = currentTarget[nextTarget]
-        })
-        return currentTarget
-    }
-    // only local schema in definitions are supported
-    return null
-}
 
-/**
- * Deduce parameters to set in Open API spec from the JSON Schema provided.
- * /!\ This function doesn't support the full spectrum of JSON Schema.
- * Things like pattern properties are for example impossible to convert to Open API Parameter format.
- * 
- * @param schema 
- * @param definitions 
- */
-function schemaToSwaggerParameter(schema: JSONSchema4, definitions: { [definitionsName: string]: Swagger.Schema }): Swagger.Parameter[] {
-    if (schema && schema.$ref) {
-        // the schema is a reference. Let's try to locate the schema
-        return schemaToSwaggerParameter(locateSchema(schema.$ref, definitions), definitions)
-    }
-    if (schema && schema.type === "object") {
-        let results = []
-        for (let property in schema.properties) {
-            let propertySchema = schema.properties[property]
-            if (["string", "number", "boolean", "integer"].indexOf(propertySchema.type as string) !== -1) {
-                // we have a primitive type
-                let parameter: Swagger.Parameter = {
-                    in: "query",
-                    name: property,
-                    type: propertySchema.type as any,
-                    description: propertySchema.description,
-                    required: schema.required && schema.required.indexOf(property) !== -1,
-
-                }
-                if (propertySchema.minimum) {
-                    parameter.minimum = propertySchema.minimum
-                }
-                if (propertySchema.maximum) {
-                    parameter.maximum = propertySchema.maximum
-                }
-                if (propertySchema.default) {
-                    parameter.default = propertySchema.default
-                }
-                results.push(parameter)
-            }
-            if (propertySchema.type === "array" && ["string", "number", "boolean", "integer"].indexOf(propertySchema.items["type"] as string) !== -1) {
-                // if the array contains a primitive type
-                let parameter: Swagger.Parameter = {
-                    in: "query",
-                    name: property,
-                    type: "array",
-                    description: propertySchema.description,
-                    required: schema.required && schema.required.indexOf(property) !== -1,
-                    collectionFormat: "multi",
-                    items: {
-                        type: propertySchema.items["type"] as any
-                    }
-                }
-                if (propertySchema.default) {
-                    parameter.default = propertySchema.default
-                }
-                results.push(parameter)
-            }
-        }
-        if (schema.oneOf) {
-            results = results.concat(schema.oneOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
-        }
-        if (schema.anyOf) {
-            results = results.concat(schema.anyOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
-        }
-        if (schema.allOf) {
-            results = results.concat(schema.allOf.map(subSchema => schemaToSwaggerParameter(subSchema, definitions)).reduce((p, c) => p.concat(c), []))
-        }
-        return results
-    }
-    return []
-}
-
-/**
- * Filter a paramater array to remove duplicates. The first occurance is kept and the others are discarded.
- * 
- * @param parameters 
- */
-function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swagger.Parameter[] {
-    // filter duplicated params (in case allOf, oneOf or anyOf contains multiple schemas with the same property)
-    return parameters.filter((value: Swagger.Parameter, index, array) => {
-        for (var i = 0; i < index; ++i) {
-            if (array[i].name === value.name) {
-                return false
-            }
-        }
-        return true
-    })
-}
-
-/**
- * Go through the given schema and remove properties not supported by Open API
- * @param schema 
- */
-function jsonSchemaToOpenApiSchema(schema: JSONSchema4) {
-    delete schema.id;
-    delete schema.$id;
-    delete schema.$schema;
-    if (schema.properties) {
-        for (let property in schema.properties) {
-            jsonSchemaToOpenApiSchema(schema.properties[property])
-        }
-    }
-    if (schema.definitions) {
-        for (let property in schema.definitions) {
-            jsonSchemaToOpenApiSchema(schema.definitions[property])
-        }
-    }
-    if (schema.oneOf) {
-        schema.oneOf.forEach(s => jsonSchemaToOpenApiSchema(s))
-    }
-    if (schema.allOf) {
-        schema.allOf.forEach(s => jsonSchemaToOpenApiSchema(s))
-    }
-    if (schema.anyOf) {
-        schema.anyOf.forEach(s => jsonSchemaToOpenApiSchema(s))
-    }
-    return schema
-}
-/**
- * go through the whole schema and modify refs that points to a local schema and prepend the basepath
- */
-function remapRefs(schema: JSONSchema4, basePath: string) {
-    if (schema.$ref && schema.$ref.startsWith("#")) {
-        let $ref = schema.$ref.substr(1);
-        schema.$ref = `${basePath}${$ref}`
-    }
-    if (schema.properties) {
-        for (let property in schema.properties) {
-            remapRefs(schema.properties[property], basePath)
-        }
-    }
-    if (schema.definitions) {
-        for (let property in schema.definitions) {
-            remapRefs(schema.definitions[property], basePath)
-        }
-    }
-    if (schema.oneOf) {
-        schema.oneOf.forEach(s => remapRefs(s, basePath))
-    }
-    if (schema.allOf) {
-        schema.allOf.forEach(s => remapRefs(s, basePath))
-    }
-    if (schema.anyOf) {
-        schema.anyOf.forEach(s => remapRefs(s, basePath))
-    }
-    return schema
-}
-
-/**
- * flatten the given schema definitions, so any sub-schema is moved back to the top and refs are moved accordingly
- * @param schema 
- */
-function flatten(definitions: { [name: string]: JSONSchema4 }) {
-    // recursive function that remap ref to a the flatten architecture
-    let remap = (schema: JSONSchema4 | JSONSchema4[], originalPath: string, newPath: string) => {
-        if (Array.isArray(schema)) {
-            schema.forEach(e => remap(e, originalPath, newPath))
-        } else {
-            if (schema.$ref && schema.$ref === originalPath) {
-                schema.$ref = newPath
-            }
-            if (schema.properties) {
-                for (let property in schema.properties) {
-                    remap(schema.properties[property], originalPath, newPath)
-                }
-            }
-            if (schema.definitions) {
-                for (let property in schema.definitions) {
-                    remap(schema.definitions[property], originalPath, newPath)
-                }
-            }
-            if (schema.oneOf) {
-                schema.oneOf.forEach(s => remap(s, originalPath, newPath))
-            }
-            if (schema.allOf) {
-                schema.allOf.forEach(s => remap(s, originalPath, newPath))
-            }
-            if (schema.anyOf) {
-                schema.anyOf.forEach(s => remap(s, originalPath, newPath))
-            }
-        }
-    }
-    // determine schemas that needs to be moved
-    let definitionsToMove = []
-    for (let name in definitions) {
-        let schema = definitions[name]
-        if (schema.definitions) {
-            for (let subSchemaName in schema.definitions) {
-                let newSchemaName = `${name}${_.upperFirst(subSchemaName)}`
-                definitionsToMove.push([newSchemaName, schema.definitions[subSchemaName]])
-                remap(definitions, `#/definitions/${name}/definitions/${subSchemaName}`, `#/definitions/${newSchemaName}`)
-            }
-            delete schema.definitions
-        }
-    }
-    // move the definitions to the top
-    definitionsToMove.forEach((def) => {
-        let [name, schema] = def;
-        definitions[name] = schema;
-    })
-    // if definitions were moved, call recursively flatten to process other 'definitions' that have emerged
-    if (definitionsToMove.length > 0) {
-        flatten(definitions)
-    }
-}
-
-/**
- * Parse the given paramters array and move the specified ones to `path`
- * 
- * @param parameters 
- */
-function pathParameters(parameters: Swagger.Parameter[], inPath: string[]): Swagger.Parameter[] {
-    parameters.forEach(parameter => {
-        if (inPath.indexOf(parameter.name) !== -1) {
-            parameter.in = "path"
-        }
-    })
-    return parameters
-}
 
 /**
  * Api class represents a set of endpoints based on pipelines.
@@ -468,7 +222,7 @@ export class Api {
         var modelSchema = pipeline.modelSchema;
         var optionsSchema = pipeline.flatOptionsSchemas;
         this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(modelSchema.schemaObject)), `#/definitions/${name}`) as any
-        flatten(this.openApi.definitions as any)
+        flattenSchemas(this.openApi.definitions as any)
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -479,7 +233,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.upperFirst(pluralName)}`,
             operationId: `find${_.upperFirst(pluralName)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.read ? optionsSchema.read.schemaObject : null, this.openApi.definitions))),
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read ? optionsSchema.read.schemaObject : null, this.openApi))),
             responses: {
                 200: {
                     description: `${_.upperFirst(pluralName)} corresponding to the query`,
@@ -508,7 +262,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["post"] = {
             description: `Create a new ${_.upperFirst(name)}`,
             operationId: `add${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create ? optionsSchema.create.schemaObject : null, this.openApi.definitions)).concat([{
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create ? optionsSchema.create.schemaObject : null, this.openApi)).concat([{
                 in: "body",
                 name: name,
                 description: `The ${_.upperFirst(name)} to be created.`,
@@ -568,7 +322,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["put"] = {
             description: `Put a ${_.upperFirst(name)} using its id`,
             operationId: `put${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update ? optionsSchema.update.schemaObject : null, this.openApi.definitions)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update ? optionsSchema.update.schemaObject : null, this.openApi)).concat([
                 {
                     in: "body",
                     name: name,
@@ -605,7 +359,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.patch ? optionsSchema.patch.schemaObject : null, this.openApi.definitions))).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch ? optionsSchema.patch.schemaObject : null, this.openApi))).concat([
                 {
                     in: "body",
                     name: name,
@@ -642,7 +396,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["delete"] = {
             description: `Delete a ${_.upperFirst(name)} using its id`,
             operationId: `delete${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete ? optionsSchema.delete.schemaObject : null, this.openApi.definitions)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete ? optionsSchema.delete.schemaObject : null, this.openApi)).concat([
                 {
                     in: "path",
                     name: "id",
