@@ -2,6 +2,7 @@ import { PipelineSourceAbstract, description, validate } from '../../serafin/pip
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/model/Resource';
 import { SchemaInterface } from '../../serafin/pipeline/model/SchemaInterface';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
+import { PipelineSchema } from '../../serafin/pipeline/schema/PipelineSchema'
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
@@ -22,7 +23,7 @@ export class PipelineSourceObject<
     DeleteOptions = {}> extends PipelineSourceAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions> {
     protected resources: { [index: string]: T };
 
-    constructor(schema: SchemaInterface) {
+    constructor(schema: PipelineSchema<T>) {
         super(schema);
         this.resources = {} as { [index: string]: T };
     }

@@ -1,4 +1,4 @@
-import { setPipelineMethodSchema } from '../Abstract'
+import { addPipelineOptionMetadata } from '../Abstract'
 
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
@@ -10,27 +10,18 @@ import { setPipelineMethodSchema } from '../Abstract'
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        let methodSchema = {
-            type: 'object',
-            properties: {
-                options: {
-                    type: 'object',
-                    properties: {
-                        [option]: (typeof schema == 'function') ? schema() : schema
-                    },
-                    required: []
-                }
-            }
-        };
-
-        if (description) {
-            methodSchema.properties.options.properties[option]['description'] = description;
+        // extract schemaObject
+        let schemaObject
+        if (typeof schema === "function") {
+            schemaObject = schema()
+        } else {
+            schemaObject = schema
         }
 
-        if (required) {
-            methodSchema.properties.options.required.push(option);
-        }
+        // add option metadata to the pipeline
+        addPipelineOptionMetadata(target, propertyKey, option, schemaObject, description, required)
 
-        setPipelineMethodSchema(target, propertyKey, methodSchema);
+        // add validation code to the method
+        // TODO add option validation here. @validate only validates schemas related to the model. When an option is passed it always needs to be validated
     }
 }

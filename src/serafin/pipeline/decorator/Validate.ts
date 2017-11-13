@@ -1,4 +1,4 @@
-import * as Djv from 'djv'
+import * as Ajv from 'ajv'
 import * as util from 'util';
 import { PipelineAbstract } from '../Abstract'
 
@@ -9,23 +9,28 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
     let validationFunctions = {
         create: function (params: any[]): void {
             let [resources, options] = params;
-            return validateSchema.call(this, '#/definitions/methods/create', { resources: resources, options: options });
+            validateSchema.call(this, {
+                type: 'array',
+                items: { "$ref": "modelSchema#/definitions/createValues" },
+                minItems: 1
+            }, resources);
         },
         read: function (params: any[]): void {
             let [query, options] = params;
-            return validateSchema.call(this, '#/definitions/methods/read', { query: query, options: options });
+            validateSchema.call(this, { "$ref": "modelSchema#/definitions/readQuery" }, query);
         },
         update: function (params: any[]): void {
             let [id, values, options] = params;
-            return validateSchema.call(this, '#/definitions/methods/update', { id: id, values: values, options: options });
+            validateSchema.call(this, 'modelSchema#/definitions/updateValues', values);
         },
         patch: function (params: any[]): void {
             let [query, values, options] = params;
-            return validateSchema.call(this, '#/definitions/methods/patch', { query: query, values: values, options: options });
+            validateSchema.call(this, 'modelSchema#/definitions/patchQuery', query);
+            validateSchema.call(this, 'modelSchema#/definitions/patchValues', values);
         },
         delete: function (params: any[]): void {
             let [query, options] = params;
-            return validateSchema.call(this, '#/definitions/methods/delete', { query: query, options: options });
+            validateSchema.call(this, 'modelSchema#/definitions/deleteQuery', query);
         }
     }
 
@@ -39,18 +44,19 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
             } catch (e) {
                 let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
                 console.log("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                //return Promise.reject(e);
+                return Promise.reject(e);
             }
 
         };
     }
 }
 
-function validateSchema(schemaPath: string, params: Object): void {
-    const env = new Djv({ version: 'draft-04' });
-    env.addSchema('', this.schema());
-    let errorMessage = env.validate(schemaPath, params)
-    if (errorMessage) {
-        throw new Error("Validation failed -> " + errorMessage + ", params: " + (util.inspect(params, false, null)));
+function validateSchema(schema: any, objectToTest: any): void {
+    var ajv = new Ajv();
+    ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+    ajv.addSchema(this.modelSchema.schemaObject, "modelSchema")
+    let valid = ajv.validate(schema, objectToTest)
+    if (!valid) {
+        throw new Error(ajv.errorsText());
     }
 }

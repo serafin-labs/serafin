@@ -1,8 +1,8 @@
 import * as Swagger from 'swagger-schema-official';
-import * as express from "express"
-import * as _ from "lodash"
-import * as bodyParser from "body-parser"
-import * as compression from "compression"
+import * as express from 'express';
+import * as _ from 'lodash';
+import * as bodyParser from 'body-parser';
+import * as compression from 'compression';
 import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
 
@@ -124,6 +124,29 @@ function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swagger.Pa
         }
         return true
     })
+}
+
+
+/**
+ * go through the whole schema and modify refs that points to a local schema and prepend the basepath
+ */
+function remapRefs(schema: JSONSchema4, basePath: string) {
+    if (schema.$ref && schema.$ref.startsWith("#")) {
+        let $ref = schema.$ref.substr(1);
+        schema.$ref = `${basePath}${$ref}`
+    }
+    if (schema.properties) {
+        for (let property in schema.properties) {
+            remapRefs(schema.properties[property], basePath)
+        }
+    }
+    if (schema.definitions) {
+        for (let property in schema.definitions) {
+            remapRefs(schema.definitions[property], basePath)
+        }
+    }
+    // TODO add support for onOf, allOf, etc
+    return schema
 }
 
 /**
@@ -342,8 +365,9 @@ export class Api {
         this.application.use(endpointPath, router);
 
         // import pipeline schemas to openApi definitions
-        var pipelineSchema = pipeline.fullFlatSchema();
-        _.merge(this.openApi.definitions, pipelineSchema.definitions)
+        var modelSchema = pipeline.modelSchema;
+        var optionsSchema = pipeline.flatOptionsSchemas;
+        this.openApi.definitions[name] = remapRefs(_.cloneDeep(modelSchema.schemaObject), `#/definitions/${name}`) as any
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -351,16 +375,22 @@ export class Api {
         this.openApi.paths[resourcesPathWithId] = this.openApi.paths[resourcesPathWithId] || {};
 
         // general get
-        var readQuerySchema = extractSchema(pipelineSchema, "read", "query");
-        var readOptionsSchema = extractSchema(pipelineSchema, "read", "options");
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.capitalize(pluralName)}`,
             operationId: `find${_.capitalize(pluralName)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(readQuerySchema, this.openApi.definitions).concat(schemaToSwaggerParameter(readOptionsSchema, this.openApi.definitions))),
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.read ? optionsSchema.read.schemaObject : null, this.openApi.definitions))),
             responses: {
                 200: {
                     description: `${_.capitalize(pluralName)} corresponding to the query`,
-                    schema: { $ref: `#/definitions/Read${_.capitalize(name)}Wrapper` }
+                    schema: {
+                        type: 'object',
+                        properties: {
+                            results: {
+                                type: 'array',
+                                items: { "$ref": `#/definitions/${name}` },
+                            }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
@@ -374,21 +404,19 @@ export class Api {
         }
 
         // post a new resource
-        var createResourcesSchema = extractSchema(pipelineSchema, "create", "resources");
-        var createOptionsSchema = extractSchema(pipelineSchema, "create", "options");
         this.openApi.paths[resourcesPath]["post"] = {
             description: `Create a new ${_.capitalize(name)}`,
             operationId: `add${_.capitalize(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(createOptionsSchema, this.openApi.definitions)).concat([{
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create ? optionsSchema.create.schemaObject : null, this.openApi.definitions)).concat([{
                 in: "body",
                 name: name,
                 description: `The ${_.capitalize(name)} to be created.`,
-                schema: createResourcesSchema.items as any
+                schema: modelSchema.createValues as any
             }]),
             responses: {
                 201: {
                     description: `${_.capitalize(name)} created`,
-                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                    schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
                     description: "Bad request",
@@ -418,7 +446,7 @@ export class Api {
             responses: {
                 200: {
                     description: `${_.capitalize(name)} corresponding to the provided id`,
-                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                    schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
                     description: "Bad request",
@@ -436,17 +464,15 @@ export class Api {
         }
 
         // put by id
-        var updateValuesSchema = extractSchema(pipelineSchema, "update", "values");
-        var updateOptionsSchema = extractSchema(pipelineSchema, "update", "options");
         this.openApi.paths[resourcesPathWithId]["put"] = {
             description: `Put a ${_.capitalize(name)} using its id`,
             operationId: `put${_.capitalize(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(updateOptionsSchema, this.openApi.definitions)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update ? optionsSchema.update.schemaObject : null, this.openApi.definitions)).concat([
                 {
                     in: "body",
                     name: name,
                     description: `The ${_.capitalize(name)} to be updated.`,
-                    schema: updateValuesSchema as any
+                    schema: modelSchema.updateValues as any
                 }, {
                     in: "path",
                     name: "id",
@@ -457,7 +483,7 @@ export class Api {
             responses: {
                 200: {
                     description: `Updated ${_.capitalize(name)}`,
-                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                    schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
                     description: "Bad request",
@@ -475,18 +501,15 @@ export class Api {
         }
 
         // patch by id
-        var patchValuesSchema = extractSchema(pipelineSchema, "patch", "values");
-        var patchOptionsSchema = extractSchema(pipelineSchema, "patch", "options");
-        var patchQuerySchema = extractSchema(pipelineSchema, "patch", "query");
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.capitalize(name)} using its id`,
             operationId: `patch${_.capitalize(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(patchQuerySchema, this.openApi.definitions).concat(schemaToSwaggerParameter(patchOptionsSchema, this.openApi.definitions))).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.patch ? optionsSchema.patch.schemaObject : null, this.openApi.definitions))).concat([
                 {
                     in: "body",
                     name: name,
                     description: `The patch of ${_.capitalize(name)}.`,
-                    schema: patchValuesSchema as any
+                    schema: modelSchema.patchValues as any
                 }, {
                     in: "path",
                     name: "id",
@@ -497,7 +520,7 @@ export class Api {
             responses: {
                 200: {
                     description: `Updated ${_.capitalize(name)}`,
-                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                    schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
                     description: "Bad request",
@@ -515,11 +538,10 @@ export class Api {
         }
 
         // delete by id
-        var deleteOptionsSchema = extractSchema(pipelineSchema, "delete", "options");
         this.openApi.paths[resourcesPathWithId]["delete"] = {
             description: `Delete a ${_.capitalize(name)} using its id`,
             operationId: `delete${_.capitalize(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(patchQuerySchema, this.openApi.definitions)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete ? optionsSchema.delete.schemaObject : null, this.openApi.definitions)).concat([
                 {
                     in: "path",
                     name: "id",
@@ -530,7 +552,7 @@ export class Api {
             responses: {
                 200: {
                     description: `Deleted ${_.capitalize(name)}`,
-                    schema: { $ref: `#/definitions/${_.capitalize(name)}` }
+                    schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
                     description: "Bad request",

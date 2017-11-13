@@ -1,11 +1,11 @@
+import { fail } from 'assert';
 import * as express from 'express';
 import { Api } from './serafin/http/Api';
 import { User } from './model/model';
 import { PipelineSourceObject } from './pipeline/source/Object';
 import { Paginate } from './pipeline/Paginate';
 import { UpdateTime } from './pipeline/UpdateTime';
-
-var userSchema = require('./model/user.model.json');
+import { PipelineSchema } from './serafin/pipeline/schema/PipelineSchema';
 
 const util = require('util')
 
@@ -40,48 +40,39 @@ async function main() {
     });
     api.prepareApplication();
 
-    let pipeline = (new PipelineSourceObject<User>(userSchema))
-        .pipe(new Paginate)
-        .pipe(new UpdateTime);
-
-    let results = await pipeline.create([{ email: "test" }]);
-
-    console.log(await pipeline.read({}, {count: 3}));
-
-    //console.log(pipeline.toString());
-
-    api.use(pipeline, 'user');
-    //console.log(JSON.stringify(api["openApi"], null, 4));
-
     await api.runApplication();
 
     setTimeout(async () => {
-        let pipeline2 = new PipelineSourceObject<User>(userSchema)
-            //.pipe(new UpdateTime())
-            // .pipe(new Paginate())
-            ;
+        console.log("start");
 
-        await pipeline2.create([{
-            email: 'toto',
-            type: 'hop'
-        }], {truc: 'machin'});
+        let userSchema = (new PipelineSchema<User>(require('./model/user.model.json'), "user"))
+            .addSchema({
+                type: "object",
+                properties: {
+                    email: { "type": "string" }
+                },
+                required: ["email"],
+                additionalProperties: false
+            }, "createValues").addSchema({
+                type: "object",
+                properties: {
+                    id: { type: "string" },
+                    email: { type: "string" }
+                },
+                additionalProperties: false
+            }, "readQuery")
 
-        let trucs = await pipeline2.read({});
-        let pipeline3 = await pipeline2.pipe(new Paginate)
-        let bidule = await pipeline3.read({});
+        let pipeline = (new PipelineSourceObject(userSchema))
+            .pipe(new Paginate());
 
-        let pipeline4 = await pipeline3.pipe(new UpdateTime);
-        pipeline4.create([{
-            email: 'toto2',
-            type: 'hop2'
-        }]);
+        api.use(pipeline, 'user');
 
-        let bidule2 = await pipeline4.read({});
+        let results = await pipeline.create([{ email: "test" }]);
 
-        let pipeline5 = new PipelineSourceObject<User>(userSchema);
-        pipeline5.read();
+        console.log(await pipeline.read({} as any, { count: 3 }));
 
-    }, 1000);
+        console.log(JSON.stringify(api["openApi"], null, 4));
+    }, 2000);
 
 
     return new Promise(() => null);

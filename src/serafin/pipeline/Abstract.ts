@@ -3,14 +3,52 @@ import * as _ from 'lodash';
 import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
-import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof'
+import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaInterface } from './schema/Interface';
 import { PipelineSchemaHelper } from './schema/Helper'
+import { PipelineSchema } from './schema/PipelineSchema'
+import { OptionsSchema } from './schema/OptionsSchema'
+import { ResourceIdentityInterface } from './model/Resource'
+
 export { option } from './decorator/option'
 export { description } from './decorator/description'
 export { validate } from './decorator/validate'
 
-const METHOD_SCHEMAS = Symbol('methodSchemas');
+const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
+
+/**
+ * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
+ * 
+ * @param target 
+ * @param method 
+ * @param name 
+ * @param schema 
+ * @param description 
+ * @param required 
+ */
+export function addPipelineOptionMetadata(target: PipelineAbstract, method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
+    // initialize the objet holding the options schemas metadata if it was not initialized yet
+    if (!target[OPTIONS_SCHEMAS]) {
+        target[OPTIONS_SCHEMAS] = {};
+    }
+    // initialize the OptionsSchema for this method
+    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
+    // add the new option to the schema
+    optionsSchema.addOption(name, schema, description, required)
+    target[OPTIONS_SCHEMAS][method] = optionsSchema
+}
+
+export function setPipelineDescription(target: PipelineAbstract, method: string, description: string) {
+    // initialize the objet holding the options schemas metadata if it was not initialized yet
+    if (!target[OPTIONS_SCHEMAS]) {
+        target[OPTIONS_SCHEMAS] = {};
+    }
+    // initialize the OptionsSchema for this method
+    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
+    // set the description on the schema
+    optionsSchema.setDescription(description)
+    target[OPTIONS_SCHEMAS][method] = optionsSchema
+}
 
 /**
  * Abstract Class representing a pipeline.
@@ -33,32 +71,76 @@ export abstract class PipelineAbstract<
     PatchOptions = {},
     DeleteQuery = {},
     DeleteOptions = {}> {
+
+    /**
+     * The model schema of this pipeline.
+     */
+    public get modelSchema(): PipelineSchema<ResourceIdentityInterface> {
+        return this.parent.modelSchema
+    }
+
+    /**
+     * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
+     * The options are stored internally with a special Symbol to avoid potential collisions.
+     */
+    public get optionsSchemas() {
+        return (this[OPTIONS_SCHEMAS] || {}) as {
+            create?: OptionsSchema
+            read?: OptionsSchema
+            update?: OptionsSchema
+            patch?: OptionsSchema
+            delete?: OptionsSchema
+        }
+    }
+
+    /**
+     * All Options Schemas from this pipeline and its parents
+     */
+    private get allOptionsSchemas() {
+        let allOptionsSchemasFromParent = this.parent ? this.parent.allOptionsSchemas : {
+            create: [],
+            read: [],
+            update: [],
+            patch: [],
+            delete: []
+        }
+        let currentOptionsSchemas = this.optionsSchemas
+        for (let method in currentOptionsSchemas) {
+            allOptionsSchemasFromParent[method].push(currentOptionsSchemas[method])
+        }
+        return allOptionsSchemasFromParent
+    }
+
+    /**
+     * All Options Schemas from this pipeline and its parents merged into one
+     */
+    public get flatOptionsSchemas() {
+        let result = {} as {
+            create?: OptionsSchema
+            read?: OptionsSchema
+            update?: OptionsSchema
+            patch?: OptionsSchema
+            delete?: OptionsSchema
+        }
+        let allOptionsSchemas = this.allOptionsSchemas
+        PipelineAbstract.getCRUDMethods().map(method => {
+            return [this.allOptionsSchemas[method].reduce((mergedOptions: OptionsSchema, currentOptions: OptionsSchema) => {
+                return mergedOptions.merge(currentOptions)
+            }, new OptionsSchema()), method]
+        }).forEach((params) => {
+            let [method, mergedOptions] = params
+            result[method] = mergedOptions
+        })
+        return result
+    }
+
     /**
      * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
 
-    /**
-     * Contains a definition of this pipeline metadata
-     */
-    protected schemaHelper: PipelineSchemaHelper;
-
     constructor() {
-        this.initSchemaHelper();
-    }
-
-    protected initSchemaHelper() {
-        this.schemaHelper = new PipelineSchemaHelper(Object.getPrototypeOf(this).constructor.name, Object.getPrototypeOf(this).constructor['description'] || undefined)
-        let thisPrototype = Object.getPrototypeOf(this);
-
-        if (this[METHOD_SCHEMAS]) {
-            for (const key of PipelineAbstract.getCRUDMethods()) {
-                if (this[METHOD_SCHEMAS][key]) {
-                    this.schemaHelper.setMethodSchema(key, this[METHOD_SCHEMAS][key]);
-                }
-            }
-        }
     }
 
     /**
@@ -116,22 +198,6 @@ export abstract class PipelineAbstract<
         return this.parent.delete(query, options);
     }
 
-    /**
-     * Get the metadata of this pipeline
-     */
-    schema(): PipelineSchemaInterface {
-        return this.schemaHelper.schema;
-    }
-
-    fullSchema(): PipelineSchemaInterface {
-        let s = (this.parent) ? this.schemaHelper.merge(this.schema(), this.parent.fullSchema()) : this.schema();
-        return s;
-    }
-
-    fullFlatSchema(): JSONSchema4 {
-        return jsonSchemaMergeAllOf(this.fullSchema());
-    }
-
     public static getCRUDMethods() {
         return ['create', 'read', 'update', 'patch', 'delete'];
     }
@@ -140,7 +206,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.fullSchema(), false, null));
+        return (util.inspect(this.modelSchema.schemaObject, false, null));
     }
 
     /**
@@ -180,11 +246,4 @@ export abstract class PipelineAbstract<
  */
 export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper extends ReadWrapperInterface<N> = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
 
-}
-
-export function setPipelineMethodSchema(target: PipelineAbstract, method: string, schema: Object) {
-    if (!target[METHOD_SCHEMAS]) {
-        target[METHOD_SCHEMAS] = {};
-    }
-    target[METHOD_SCHEMAS][method] = _.merge(schema, target[METHOD_SCHEMAS][method] || {});
 }

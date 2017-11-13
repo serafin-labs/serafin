@@ -2,6 +2,8 @@ import { PipelineSchemaHelper } from './schema/Helper';
 import { PipelineAbstract } from './Abstract';
 import { SchemaInterface } from './model/SchemaInterface';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
+import { PipelineSchema } from './schema/PipelineSchema'
+
 export { option } from './decorator/option'
 export { description } from './decorator/description'
 export { validate } from './decorator/validate'
@@ -28,10 +30,19 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    constructor(schema: SchemaInterface) {
+    protected _pipelineSchema: PipelineSchema<T>
+    /**
+     * The model schema of this pipeline. It is passed to the constructor.
+     */
+    public get modelSchema(): PipelineSchema<T> {
+        return this._pipelineSchema
+    }
+
+    constructor(schema: PipelineSchema<T>) {
         super();
         this.parent = null;
-        this.schemaHelper.setSourceDefaultMethods(schema, PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
+        this._pipelineSchema = schema
+        schema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
 
     @PipelineSourceAbstract.notImplemented
