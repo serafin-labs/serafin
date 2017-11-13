@@ -126,7 +126,35 @@ function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swagger.Pa
     })
 }
 
-
+/**
+ * Go through the given schema and remove properties not supported by Open API
+ * @param schema 
+ */
+function jsonSchemaToOpenApiSchema(schema: JSONSchema4) {
+    delete schema.id;
+    delete schema.$id;
+    delete schema.$schema;
+    if (schema.properties) {
+        for (let property in schema.properties) {
+            jsonSchemaToOpenApiSchema(schema.properties[property])
+        }
+    }
+    if (schema.definitions) {
+        for (let property in schema.definitions) {
+            jsonSchemaToOpenApiSchema(schema.definitions[property])
+        }
+    }
+    if (schema.oneOf) {
+        schema.oneOf.forEach(s => jsonSchemaToOpenApiSchema(s))
+    }
+    if (schema.allOf) {
+        schema.allOf.forEach(s => jsonSchemaToOpenApiSchema(s))
+    }
+    if (schema.anyOf) {
+        schema.anyOf.forEach(s => jsonSchemaToOpenApiSchema(s))
+    }
+    return schema
+}
 /**
  * go through the whole schema and modify refs that points to a local schema and prepend the basepath
  */
@@ -145,8 +173,74 @@ function remapRefs(schema: JSONSchema4, basePath: string) {
             remapRefs(schema.definitions[property], basePath)
         }
     }
-    // TODO add support for onOf, allOf, etc
+    if (schema.oneOf) {
+        schema.oneOf.forEach(s => remapRefs(s, basePath))
+    }
+    if (schema.allOf) {
+        schema.allOf.forEach(s => remapRefs(s, basePath))
+    }
+    if (schema.anyOf) {
+        schema.anyOf.forEach(s => remapRefs(s, basePath))
+    }
     return schema
+}
+
+/**
+ * flatten the given schema definitions, so any sub-schema is moved back to the top and refs are moved accordingly
+ * @param schema 
+ */
+function flatten(definitions: { [name: string]: JSONSchema4 }) {
+    // recursive function that remap ref to a the flatten architecture
+    let remap = (schema: JSONSchema4 | JSONSchema4[], originalPath: string, newPath: string) => {
+        if (Array.isArray(schema)) {
+            schema.forEach(e => remap(e, originalPath, newPath))
+        } else {
+            if (schema.$ref && schema.$ref === originalPath) {
+                schema.$ref = newPath
+            }
+            if (schema.properties) {
+                for (let property in schema.properties) {
+                    remap(schema.properties[property], originalPath, newPath)
+                }
+            }
+            if (schema.definitions) {
+                for (let property in schema.definitions) {
+                    remap(schema.definitions[property], originalPath, newPath)
+                }
+            }
+            if (schema.oneOf) {
+                schema.oneOf.forEach(s => remap(s, originalPath, newPath))
+            }
+            if (schema.allOf) {
+                schema.allOf.forEach(s => remap(s, originalPath, newPath))
+            }
+            if (schema.anyOf) {
+                schema.anyOf.forEach(s => remap(s, originalPath, newPath))
+            }
+        }
+    }
+    // determine schemas that needs to be moved
+    let definitionsToMove = []
+    for (let name in definitions) {
+        let schema = definitions[name]
+        if (schema.definitions) {
+            for (let subSchemaName in schema.definitions) {
+                let newSchemaName = `${name}${_.upperFirst(subSchemaName)}`
+                definitionsToMove.push([newSchemaName, schema.definitions[subSchemaName]])
+                remap(definitions, `#/definitions/${name}/definitions/${subSchemaName}`, `#/definitions/${newSchemaName}`)
+            }
+            delete schema.definitions
+        }
+    }
+    // move the definitions to the top
+    definitionsToMove.forEach((def) => {
+        let [name, schema] = def;
+        definitions[name] = schema;
+    })
+    // if definitions were moved, call recursively flatten to process other 'definitions' that have emerged
+    if (definitionsToMove.length > 0) {
+        flatten(definitions)
+    }
 }
 
 /**
@@ -189,6 +283,12 @@ export class Api {
         // init open Api specs
         this.openApi.paths = this.openApi.paths || {};
         this.openApi.definitions = this.openApi.definitions || {};
+        this.openApi.definitions.Error = {
+            type: "object",
+            properties: {
+                error: { type: "string" }
+            }
+        }
 
         // setup endpoints for api metadata
         this.application.get(this.basePath + "/api.json", (req, res) => {
@@ -367,7 +467,8 @@ export class Api {
         // import pipeline schemas to openApi definitions
         var modelSchema = pipeline.modelSchema;
         var optionsSchema = pipeline.flatOptionsSchemas;
-        this.openApi.definitions[name] = remapRefs(_.cloneDeep(modelSchema.schemaObject), `#/definitions/${name}`) as any
+        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(modelSchema.schemaObject)), `#/definitions/${name}`) as any
+        flatten(this.openApi.definitions as any)
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -376,12 +477,12 @@ export class Api {
 
         // general get
         this.openApi.paths[resourcesPath]["get"] = {
-            description: `Find ${_.capitalize(pluralName)}`,
-            operationId: `find${_.capitalize(pluralName)}`,
+            description: `Find ${_.upperFirst(pluralName)}`,
+            operationId: `find${_.upperFirst(pluralName)}`,
             parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.read ? optionsSchema.read.schemaObject : null, this.openApi.definitions))),
             responses: {
                 200: {
-                    description: `${_.capitalize(pluralName)} corresponding to the query`,
+                    description: `${_.upperFirst(pluralName)} corresponding to the query`,
                     schema: {
                         type: 'object',
                         properties: {
@@ -405,17 +506,17 @@ export class Api {
 
         // post a new resource
         this.openApi.paths[resourcesPath]["post"] = {
-            description: `Create a new ${_.capitalize(name)}`,
-            operationId: `add${_.capitalize(name)}`,
+            description: `Create a new ${_.upperFirst(name)}`,
+            operationId: `add${_.upperFirst(name)}`,
             parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create ? optionsSchema.create.schemaObject : null, this.openApi.definitions)).concat([{
                 in: "body",
                 name: name,
-                description: `The ${_.capitalize(name)} to be created.`,
-                schema: modelSchema.createValues as any
+                description: `The ${_.upperFirst(name)} to be created.`,
+                schema: { $ref: `#/definitions/${name}CreateValues` }
             }]),
             responses: {
                 201: {
-                    description: `${_.capitalize(name)} created`,
+                    description: `${_.upperFirst(name)} created`,
                     schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
@@ -435,8 +536,8 @@ export class Api {
 
         // get by id
         this.openApi.paths[resourcesPathWithId]["get"] = {
-            description: `Get one ${_.capitalize(name)} by its id`,
-            operationId: `get${_.capitalize(name)}ById`,
+            description: `Get one ${_.upperFirst(name)} by its id`,
+            operationId: `get${_.upperFirst(name)}ById`,
             parameters: [{
                 in: "path",
                 name: "id",
@@ -445,7 +546,7 @@ export class Api {
             }],
             responses: {
                 200: {
-                    description: `${_.capitalize(name)} corresponding to the provided id`,
+                    description: `${_.upperFirst(name)} corresponding to the provided id`,
                     schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
@@ -465,14 +566,14 @@ export class Api {
 
         // put by id
         this.openApi.paths[resourcesPathWithId]["put"] = {
-            description: `Put a ${_.capitalize(name)} using its id`,
-            operationId: `put${_.capitalize(name)}`,
+            description: `Put a ${_.upperFirst(name)} using its id`,
+            operationId: `put${_.upperFirst(name)}`,
             parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update ? optionsSchema.update.schemaObject : null, this.openApi.definitions)).concat([
                 {
                     in: "body",
                     name: name,
-                    description: `The ${_.capitalize(name)} to be updated.`,
-                    schema: modelSchema.updateValues as any
+                    description: `The ${_.upperFirst(name)} to be updated.`,
+                    schema: { $ref: `#/definitions/${name}UpdateValues` }
                 }, {
                     in: "path",
                     name: "id",
@@ -482,7 +583,7 @@ export class Api {
             ]),
             responses: {
                 200: {
-                    description: `Updated ${_.capitalize(name)}`,
+                    description: `Updated ${_.upperFirst(name)}`,
                     schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
@@ -502,14 +603,14 @@ export class Api {
 
         // patch by id
         this.openApi.paths[resourcesPathWithId]["patch"] = {
-            description: `Patch a ${_.capitalize(name)} using its id`,
-            operationId: `patch${_.capitalize(name)}`,
+            description: `Patch a ${_.upperFirst(name)} using its id`,
+            operationId: `patch${_.upperFirst(name)}`,
             parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi.definitions).concat(schemaToSwaggerParameter(optionsSchema.patch ? optionsSchema.patch.schemaObject : null, this.openApi.definitions))).concat([
                 {
                     in: "body",
                     name: name,
-                    description: `The patch of ${_.capitalize(name)}.`,
-                    schema: modelSchema.patchValues as any
+                    description: `The patch of ${_.upperFirst(name)}.`,
+                    schema: { $ref: `#/definitions/${name}PatchValues` }
                 }, {
                     in: "path",
                     name: "id",
@@ -519,7 +620,7 @@ export class Api {
             ]),
             responses: {
                 200: {
-                    description: `Updated ${_.capitalize(name)}`,
+                    description: `Updated ${_.upperFirst(name)}`,
                     schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
@@ -539,8 +640,8 @@ export class Api {
 
         // delete by id
         this.openApi.paths[resourcesPathWithId]["delete"] = {
-            description: `Delete a ${_.capitalize(name)} using its id`,
-            operationId: `delete${_.capitalize(name)}`,
+            description: `Delete a ${_.upperFirst(name)} using its id`,
+            operationId: `delete${_.upperFirst(name)}`,
             parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete ? optionsSchema.delete.schemaObject : null, this.openApi.definitions)).concat([
                 {
                     in: "path",
@@ -551,7 +652,7 @@ export class Api {
             ]),
             responses: {
                 200: {
-                    description: `Deleted ${_.capitalize(name)}`,
+                    description: `Deleted ${_.upperFirst(name)}`,
                     schema: { $ref: `#/definitions/${name}` }
                 },
                 400: {
