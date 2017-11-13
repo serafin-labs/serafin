@@ -91,6 +91,14 @@ export class Schema {
                 this.remapRefs(schema.definitions[property])
             }
         }
-        // TODO add support for onOf, allOf, etc
+        if (schema.oneOf) {
+            schema.oneOf.forEach(s => this.remapRefs(s))
+        }
+        if (schema.allOf) {
+            schema.allOf.forEach(s => this.remapRefs(s))
+        }
+        if (schema.anyOf) {
+            schema.anyOf.forEach(s => this.remapRefs(s))
+        }
     }
 }
