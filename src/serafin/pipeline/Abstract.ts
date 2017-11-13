@@ -128,7 +128,7 @@ export abstract class PipelineAbstract<
                 return mergedOptions.merge(currentOptions)
             }, new OptionsSchema()), method]
         }).forEach((params) => {
-            let [method, mergedOptions] = params
+            let [mergedOptions, method] = params
             result[method] = mergedOptions
         })
         return result

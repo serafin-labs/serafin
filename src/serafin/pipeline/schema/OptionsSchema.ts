@@ -7,12 +7,6 @@ import { ResourceIdentityInterface } from "../model/Resource"
  * Defines schemas related to the model that are used by the pipeline for validation.
  */
 export class OptionsSchema extends Schema {
-
-    /**
-     * Reference to the internal option schema to be modified by 'addOption' method
-     */
-    private optionsSchema: JSONSchema4
-
     /**
      * An array of all the registered options separetly
      */
@@ -32,7 +26,6 @@ export class OptionsSchema extends Schema {
             required: []
         } as JSONSchema4;
         super(schema)
-        this.optionsSchema = schema
         this.options = {}
     }
 
@@ -52,11 +45,11 @@ export class OptionsSchema extends Schema {
         }
 
         // add the option to the main schema
-        this.optionsSchema.properties[name] = schema;
+        this.schemaObject.properties[name] = schema;
 
         // set the option as required if necessary
         if (required) {
-            (this.optionsSchema.required as string[]).push(name)
+            (this.schemaObject.required as string[]).push(name)
         }
         return this
     }
@@ -68,7 +61,7 @@ export class OptionsSchema extends Schema {
      * @param description 
      */
     setDescription(description: string): this {
-        this.optionsSchema.description = description;
+        this.schemaObject.description = description;
         return this
     }
 
