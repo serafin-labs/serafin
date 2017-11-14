@@ -1,6 +1,6 @@
 
 import { PipelineAbstract } from './Abstract';
-import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/Resource';
+import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { PipelineSchemaModel } from './schema/Model'
 
 export { option } from './decorator/option'

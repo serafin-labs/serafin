@@ -1,4 +1,4 @@
-import { setPipelineDescription } from '../Abstract'
+import { PipelineSchemaAllOptions } from '../schema/AllOptions'
 
 /**
  * Class decorator associating a description to it
@@ -10,7 +10,7 @@ export function description(text: string) {
         if (typeof (descriptor) === 'undefined') {
             targetOrCtor['description'] = text;
         } else {
-            //setPipelineDescription(targetOrCtor, propertyKey, text);
+            PipelineSchemaAllOptions.addDescriptionToTarget(targetOrCtor, propertyKey, text);
         }
     };
 }

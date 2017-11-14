@@ -9,20 +9,15 @@ import { PipelineSchemaAllOptions } from '../schema/AllOptions'
  * @param description Description of the option
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null) {
-    
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // extract schemaObject
-        let schemaObject
+        let schemaObject = null;
         if (typeof schema === "function") {
-            schemaObject = schema()
+            schemaObject = schema();
         } else {
-            schemaObject = schema
+            schemaObject = schema;
         }
 
         // add option metadata to the pipeline
-        PipelineSchemaAllOptions.addOptionToTarget(target, propertyKey, option, schemaObject, description, required)
-
-        // add validation code to the method
-        // TODO add option validation here. @validate only validates schemas related to the model. When an option is passed it always needs to be validated
+        PipelineSchemaAllOptions.addOptionToTarget(target, propertyKey, option, schemaObject, description, required);
     }
 }

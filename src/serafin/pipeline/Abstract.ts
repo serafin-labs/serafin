@@ -1,12 +1,10 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ReadWrapperInterface } from './schema/Resource';
+import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
-import * as Model from './schema/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchemaAllOptions } from './schema/AllOptions'
-import { ResourceIdentityInterface } from './schema/Resource'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
@@ -22,19 +20,6 @@ export { validate } from './decorator/validate'
  * @param description 
  * @param required 
  */
-
-/*
-export function setPipelineDescription(target: PipelineAbstract, method: string, description: string) {
-    // initialize the objet holding the options schemas metadata if it was not initialized yet
-    if (!target[OPTIONS_SCHEMAS]) {
-        target[OPTIONS_SCHEMAS] = {};
-    }
-    // initialize the OptionsSchema for this method
-    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
-    // set the description on the schema
-    optionsSchema.setDescription(description)
-    target[OPTIONS_SCHEMAS][method] = optionsSchema
-}*/
 
 /**
  * Abstract Class representing a pipeline.
@@ -81,7 +66,11 @@ export abstract class PipelineAbstract<
     }
 
     public get flatOptionsSchemas() {
-        return this.allOptionsSchemas.schema;
+        return this.allOptionsSchemas.schema.definitions;
+    }
+
+    public get schema() {
+        return this.optionsSchemas.schema;
     }
 
     /**
@@ -156,7 +145,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.flatOptionsSchemas, false, null));
+        return (util.inspect(this.schema, false, null));
     }
 
     /**

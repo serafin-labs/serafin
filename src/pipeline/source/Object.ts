@@ -1,5 +1,5 @@
 import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline/SourceAbstract'
-import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/Resource';
+import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
 import * as _ from 'lodash'

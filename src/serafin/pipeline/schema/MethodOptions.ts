@@ -1,12 +1,11 @@
 import { description } from '../decorator/Description';
 import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
-import { ResourceIdentityInterface } from "./Resource"
 
 /**
  * Defines schemas related to the model that are used by the pipeline for validation.
  */
-export class PipelineSchemaOptions extends PipelineSchemaAbstract {
+export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
 
     /**
      * An array of all the registered options separetly
@@ -73,11 +72,11 @@ export class PipelineSchemaOptions extends PipelineSchemaAbstract {
     /**
      * Merge the current options schema with another one. This operation modifies the schema.
      */
-    merge(otherOptions: PipelineSchemaOptions): this {
+    merge(otherOptions: PipelineSchemaMethodOptions): this {
         for (let option in otherOptions.options) {
             let optionMetadata = otherOptions.options[option]
             this.addOption(option, optionMetadata.schema, optionMetadata.description, optionMetadata.required)
         }
-        return this
+        return this;
     }
 }
