@@ -9,6 +9,7 @@ import { PipelineSchemaAllOptions } from '../schema/AllOptions'
  * @param description Description of the option
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null) {
+    
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         // extract schemaObject
         let schemaObject

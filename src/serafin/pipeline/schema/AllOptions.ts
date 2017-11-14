@@ -19,24 +19,18 @@ export class PipelineSchemaAllOptions {
             this.optionsSchemas[method] = new PipelineSchemaOptions();
         }
 
-        if (!this.optionsSchemas[method].hasOption(name)) {
-            this.optionsSchemas[method].addOption(name, schema, description, required);
-        }
+        this.optionsSchemas[method].addOption(name, schema, description, required);
     }
 
     public merge(allOptionsSchema: PipelineSchemaAllOptions = null) {
-        let mergedAllOptionsSchemas = allOptionsSchema ? allOptionsSchema : {
-            create: [],
-            read: [],
-            update: [],
-            patch: [],
-            delete: []
+        if (!allOptionsSchema) {
+            return this;
         }
-        let currentOptionsSchemas = this.optionsSchemas
-        for (let method in currentOptionsSchemas) {
-            mergedAllOptionsSchemas[method].push(currentOptionsSchemas[method])
+
+        for (let method in allOptionsSchema.optionsSchemas) {
+            this.optionsSchemas[method] = allOptionsSchema.optionsSchemas[method].merge(this.optionsSchemas[method]);
         }
-        return mergedAllOptionsSchemas;
+        return this;
     }
 
     public flatten() {

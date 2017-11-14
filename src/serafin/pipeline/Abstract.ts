@@ -81,7 +81,7 @@ export abstract class PipelineAbstract<
     }
 
     public get flatOptionsSchemas() {
-        return this.allOptionsSchemas.flatten();
+        return this.allOptionsSchemas.schema;
     }
 
     /**
@@ -156,7 +156,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.allOptionsSchemas, false, null));
+        return (util.inspect(this.flatOptionsSchemas, false, null));
     }
 
     /**
