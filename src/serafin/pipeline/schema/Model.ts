@@ -1,6 +1,6 @@
 import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
-import { ResourceIdentityInterface } from "../model/Resource"
+import { ResourceIdentityInterface } from "./Resource"
 
 /**
  * Defines schemas related to the model that are used by the pipeline for validation.

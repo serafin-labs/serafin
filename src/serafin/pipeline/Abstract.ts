@@ -1,12 +1,12 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ReadWrapperInterface } from './model/Resource';
+import { ReadWrapperInterface } from './schema/Resource';
 import { JSONSchema4 } from "json-schema"
-import * as Model from './model/Resource';
+import * as Model from './schema/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchemaAllOptions } from './schema/AllOptions'
-import { ResourceIdentityInterface } from './model/Resource'
+import { ResourceIdentityInterface } from './schema/Resource'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'

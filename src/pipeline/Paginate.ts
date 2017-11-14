@@ -1,7 +1,5 @@
 import { PipelineAbstract, option, description, validate } from '../serafin/pipeline/Abstract'
-import { ReadWrapperInterface } from '../serafin/pipeline/model/Resource'
 import * as _ from 'lodash'
-
 
 @description("Provides pagination over the read results")
 export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?: number }, { count: number, results: {}[] }> {
