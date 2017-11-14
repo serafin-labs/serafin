@@ -1,4 +1,4 @@
-import { addPipelineOptionMetadata } from '../Abstract'
+import { PipelineSchemaAllOptions } from '../schema/AllOptions'
 
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
@@ -19,7 +19,7 @@ export function option(option: string, schema: Object | (() => Object), required
         }
 
         // add option metadata to the pipeline
-        addPipelineOptionMetadata(target, propertyKey, option, schemaObject, description, required)
+        PipelineSchemaAllOptions.addOptionToTarget(target, propertyKey, option, schemaObject, description, required)
 
         // add validation code to the method
         // TODO add option validation here. @validate only validates schemas related to the model. When an option is passed it always needs to be validated

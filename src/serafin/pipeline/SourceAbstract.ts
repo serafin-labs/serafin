@@ -1,8 +1,8 @@
-import { PipelineSchemaHelper } from './schema/Helper';
+
 import { PipelineAbstract } from './Abstract';
 import { SchemaInterface } from './model/SchemaInterface';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
-import { PipelineSchema } from './schema/PipelineSchema'
+import { PipelineSchemaModel } from './schema/Model'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
@@ -30,15 +30,15 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    protected _pipelineSchema: PipelineSchema<T>
+    protected _pipelineSchema: PipelineSchemaModel<T>
     /**
      * The model schema of this pipeline. It is passed to the constructor.
      */
-    public get modelSchema(): PipelineSchema<T> {
+    public get modelSchema(): PipelineSchemaModel<T> {
         return this._pipelineSchema
     }
 
-    constructor(schema: PipelineSchema<T>) {
+    constructor(schema: PipelineSchemaModel<T>) {
         super();
         this.parent = null;
         this._pipelineSchema = schema

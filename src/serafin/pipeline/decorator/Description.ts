@@ -10,7 +10,7 @@ export function description(text: string) {
         if (typeof (descriptor) === 'undefined') {
             targetOrCtor['description'] = text;
         } else {
-            setPipelineDescription(targetOrCtor, propertyKey, text);
+            //setPipelineDescription(targetOrCtor, propertyKey, text);
         }
     };
 }

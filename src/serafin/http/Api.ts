@@ -233,7 +233,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.upperFirst(pluralName)}`,
             operationId: `find${_.upperFirst(pluralName)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read ? optionsSchema.read.schemaObject : null, this.openApi))),
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read || null, this.openApi))),
             responses: {
                 200: {
                     description: `${_.upperFirst(pluralName)} corresponding to the query`,
@@ -262,7 +262,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["post"] = {
             description: `Create a new ${_.upperFirst(name)}`,
             operationId: `add${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create ? optionsSchema.create.schemaObject : null, this.openApi)).concat([{
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create || null, this.openApi)).concat([{
                 in: "body",
                 name: name,
                 description: `The ${_.upperFirst(name)} to be created.`,
@@ -322,7 +322,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["put"] = {
             description: `Put a ${_.upperFirst(name)} using its id`,
             operationId: `put${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update ? optionsSchema.update.schemaObject : null, this.openApi)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update || null, this.openApi)).concat([
                 {
                     in: "body",
                     name: name,
@@ -359,7 +359,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch ? optionsSchema.patch.schemaObject : null, this.openApi))).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi))).concat([
                 {
                     in: "body",
                     name: name,
@@ -396,7 +396,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["delete"] = {
             description: `Delete a ${_.upperFirst(name)} using its id`,
             operationId: `delete${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete ? optionsSchema.delete.schemaObject : null, this.openApi)).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete || null, this.openApi)).concat([
                 {
                     in: "path",
                     name: "id",

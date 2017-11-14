@@ -4,17 +4,13 @@ import { ReadWrapperInterface } from './model/Resource';
 import { JSONSchema4 } from "json-schema"
 import * as Model from './model/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
-import { PipelineSchemaInterface } from './schema/Interface';
-import { PipelineSchemaHelper } from './schema/Helper'
-import { PipelineSchema } from './schema/PipelineSchema'
-import { OptionsSchema } from './schema/OptionsSchema'
+import { PipelineSchemaModel } from './schema/Model'
+import { PipelineSchemaAllOptions } from './schema/AllOptions'
 import { ResourceIdentityInterface } from './model/Resource'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
 export { validate } from './decorator/validate'
-
-const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
@@ -26,18 +22,8 @@ const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
  * @param description 
  * @param required 
  */
-export function addPipelineOptionMetadata(target: PipelineAbstract, method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
-    // initialize the objet holding the options schemas metadata if it was not initialized yet
-    if (!target[OPTIONS_SCHEMAS]) {
-        target[OPTIONS_SCHEMAS] = {};
-    }
-    // initialize the OptionsSchema for this method
-    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
-    // add the new option to the schema
-    optionsSchema.addOption(name, schema, description, required)
-    target[OPTIONS_SCHEMAS][method] = optionsSchema
-}
 
+/*
 export function setPipelineDescription(target: PipelineAbstract, method: string, description: string) {
     // initialize the objet holding the options schemas metadata if it was not initialized yet
     if (!target[OPTIONS_SCHEMAS]) {
@@ -48,7 +34,7 @@ export function setPipelineDescription(target: PipelineAbstract, method: string,
     // set the description on the schema
     optionsSchema.setDescription(description)
     target[OPTIONS_SCHEMAS][method] = optionsSchema
-}
+}*/
 
 /**
  * Abstract Class representing a pipeline.
@@ -75,7 +61,7 @@ export abstract class PipelineAbstract<
     /**
      * The model schema of this pipeline.
      */
-    public get modelSchema(): PipelineSchema<ResourceIdentityInterface> {
+    public get modelSchema(): PipelineSchemaModel<ResourceIdentityInterface> {
         return this.parent.modelSchema
     }
 
@@ -84,54 +70,18 @@ export abstract class PipelineAbstract<
      * The options are stored internally with a special Symbol to avoid potential collisions.
      */
     public get optionsSchemas() {
-        return (this[OPTIONS_SCHEMAS] || {}) as {
-            create?: OptionsSchema
-            read?: OptionsSchema
-            update?: OptionsSchema
-            patch?: OptionsSchema
-            delete?: OptionsSchema
-        }
+        return PipelineSchemaAllOptions.getForTarget(Object.getPrototypeOf(this));
     }
 
     /**
      * All Options Schemas from this pipeline and its parents
      */
-    private get allOptionsSchemas() {
-        let allOptionsSchemasFromParent = this.parent ? this.parent.allOptionsSchemas : {
-            create: [],
-            read: [],
-            update: [],
-            patch: [],
-            delete: []
-        }
-        let currentOptionsSchemas = this.optionsSchemas
-        for (let method in currentOptionsSchemas) {
-            allOptionsSchemasFromParent[method].push(currentOptionsSchemas[method])
-        }
-        return allOptionsSchemasFromParent
+    public get allOptionsSchemas() {
+        return this.optionsSchemas.merge(this.parent ? this.parent.allOptionsSchemas : null);
     }
 
-    /**
-     * All Options Schemas from this pipeline and its parents merged into one
-     */
     public get flatOptionsSchemas() {
-        let result = {} as {
-            create?: OptionsSchema
-            read?: OptionsSchema
-            update?: OptionsSchema
-            patch?: OptionsSchema
-            delete?: OptionsSchema
-        }
-        let allOptionsSchemas = this.allOptionsSchemas
-        PipelineAbstract.getCRUDMethods().map(method => {
-            return [this.allOptionsSchemas[method].reduce((mergedOptions: OptionsSchema, currentOptions: OptionsSchema) => {
-                return mergedOptions.merge(currentOptions)
-            }, new OptionsSchema()), method]
-        }).forEach((params) => {
-            let [mergedOptions, method] = params
-            result[method] = mergedOptions
-        })
-        return result
+        return this.allOptionsSchemas.flatten();
     }
 
     /**
@@ -206,7 +156,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.modelSchema.schemaObject, false, null));
+        return (util.inspect(this.allOptionsSchemas, false, null));
     }
 
     /**
