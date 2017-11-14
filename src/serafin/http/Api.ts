@@ -220,7 +220,7 @@ export class Api {
 
         // import pipeline schemas to openApi definitions
         var modelSchema = pipeline.modelSchema;
-        var optionsSchema = pipeline.flatOptionsSchemas;
+        var optionsSchema = _.mapValues(pipeline.deepSchema.schema.definitions, (method) => method.options || {});
         this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(modelSchema.schemaObject)), `#/definitions/${name}`) as any
         flattenSchemas(this.openApi.definitions as any)
 

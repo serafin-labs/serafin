@@ -4,7 +4,7 @@ import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/Resour
 import { JSONSchema4 } from "json-schema"
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
-import { PipelineSchemaAllOptions } from './schema/AllOptions'
+import { PipelineSchemaBase } from './schema/Base'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
@@ -54,23 +54,21 @@ export abstract class PipelineAbstract<
      * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
      * The options are stored internally with a special Symbol to avoid potential collisions.
      */
-    public get optionsSchemas() {
-        return PipelineSchemaAllOptions.getForTarget(Object.getPrototypeOf(this));
+    public get baseSchema() {
+        return PipelineSchemaBase.getForTarget(Object.getPrototypeOf(this));
     }
 
-    /**
-     * All Options Schemas from this pipeline and its parents
-     */
-    public get allOptionsSchemas() {
-        return this.optionsSchemas.merge(this.parent ? this.parent.allOptionsSchemas : null);
-    }
 
-    public get flatOptionsSchemas() {
-        return this.allOptionsSchemas.schema.definitions;
+
+    public get deepSchema() {
+        return this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
     }
 
     public get schema() {
-        return this.optionsSchemas.schema;
+        if (Object.getPrototypeOf(this).constructor.description) {
+            this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
+        }
+        return this.baseSchema.schema;
     }
 
     /**

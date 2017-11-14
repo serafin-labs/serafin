@@ -6,7 +6,7 @@ import { PipelineSchemaAbstract } from './Abstract';
 
 const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
-export class PipelineSchemaAllOptions extends PipelineSchemaAbstract {
+export class PipelineSchemaBase extends PipelineSchemaAbstract {
     private description;
     private title;
     public optionsSchemas: {
@@ -36,7 +36,11 @@ export class PipelineSchemaAllOptions extends PipelineSchemaAbstract {
         this.optionsSchemas[method].addOption(name, schema, description, required);
     }
 
-    public setDescription(method: string, description: string) {
+    public setDescription(description: string) {
+        this.schemaObject['description'] = description;
+    }
+
+    public setMethodDescription(method: string, description: string) {
         if (!this.optionsSchemas[method]) {
             this.optionsSchemas[method] = new PipelineSchemaMethodOptions();
         }
@@ -44,24 +48,24 @@ export class PipelineSchemaAllOptions extends PipelineSchemaAbstract {
         this.optionsSchemas[method].setDescription(description);
     }
 
-    public merge(allOptionsSchema: PipelineSchemaAllOptions = null) {
-        if (!allOptionsSchema) {
+    public merge(pipelineSchemaBase: PipelineSchemaBase = null) {
+        if (!pipelineSchemaBase) {
             return this;
         }
 
-        for (let method in allOptionsSchema.optionsSchemas) {
-            this.optionsSchemas[method] = allOptionsSchema.optionsSchemas[method].merge(this.optionsSchemas[method]);
+        for (let method in pipelineSchemaBase.optionsSchemas) {
+            this.optionsSchemas[method] = pipelineSchemaBase.optionsSchemas[method].merge(this.optionsSchemas[method]);
         }
         return this;
     }
 
     public flatten() {
         let result = {} as {
-            create?: PipelineSchemaAllOptions
-            read?: PipelineSchemaAllOptions
-            update?: PipelineSchemaAllOptions
-            patch?: PipelineSchemaAllOptions
-            delete?: PipelineSchemaAllOptions
+            create?: PipelineSchemaMethodOptions
+            read?: PipelineSchemaMethodOptions
+            update?: PipelineSchemaMethodOptions
+            patch?: PipelineSchemaMethodOptions
+            delete?: PipelineSchemaMethodOptions
         }
 
         PipelineAbstract.getCRUDMethods().map(method => {
@@ -76,27 +80,26 @@ export class PipelineSchemaAllOptions extends PipelineSchemaAbstract {
     }
 
     static addOptionToTarget<T extends PipelineAbstract>(target: { new(): T }, method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
-        // initialize the objet holding the options schemas metadata if it was not initialized yet
-        if (!target[OPTIONS_SCHEMAS]) {
-            target[OPTIONS_SCHEMAS] = new PipelineSchemaAllOptions(target.constructor.name);
-        }
-        target[OPTIONS_SCHEMAS].addOption(method, name, schema, description, required)
+        PipelineSchemaBase.getForTarget(target).addOption(method, name, schema, description, required)
     }
 
-    static addDescriptionToTarget<T extends PipelineAbstract>(target: { new(): T }, method: string, description: string) {
-        // initialize the objet holding the options schemas metadata if it was not initialized yet
-        if (!target[OPTIONS_SCHEMAS]) {
-            target[OPTIONS_SCHEMAS] = new PipelineSchemaAllOptions(target.constructor.name);
-        }
-        target[OPTIONS_SCHEMAS].setDescription(method, description);
+    static setDescriptionToTarget<T extends PipelineAbstract>(target: { new(): T }, description: string) {
+        PipelineSchemaBase.getForTarget(target).setDescription(description);
+    }
+
+    static setMethodDescriptionToTarget<T extends PipelineAbstract>(target: { new(): T }, method: string, description: string) {
+        PipelineSchemaBase.getForTarget(target).setMethodDescription(method, description);
     }
 
     static getForTarget<T extends PipelineAbstract>(target: { new(): T }) {
-        return target[OPTIONS_SCHEMAS] || new PipelineSchemaAllOptions(target.constructor.name);
+        if (!target[OPTIONS_SCHEMAS]) {
+            target[OPTIONS_SCHEMAS] = new PipelineSchemaBase(target.constructor.name);
+        }
+        return target[OPTIONS_SCHEMAS];
     }
 
     get schema() {
-        this.schemaObject.definitions = _.mapValues(this.optionsSchemas, (optionSchema) => optionSchema.schema);
+        this.schemaObject.definitions = _.mapValues(this.optionsSchemas, (optionSchema) => ({ options: optionSchema.schema }));
         return this.schemaObject;
     }
 }

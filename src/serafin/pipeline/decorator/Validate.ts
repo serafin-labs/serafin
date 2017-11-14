@@ -54,7 +54,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
 function validateSchema(schema: any, objectToTest: any): void {
     var ajv = new Ajv();
     ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
-    ajv.addSchema(this.modelSchema.schemaObject, "modelSchema")
+    ajv.addSchema(this.modelSchema.schema, "modelSchema")
     let valid = ajv.validate(schema, objectToTest)
     if (!valid) {
         throw new Error(ajv.errorsText());

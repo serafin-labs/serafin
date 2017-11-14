@@ -73,6 +73,10 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
      * Merge the current options schema with another one. This operation modifies the schema.
      */
     merge(otherOptions: PipelineSchemaMethodOptions): this {
+        if (!otherOptions) {
+            otherOptions = new PipelineSchemaMethodOptions();
+        }
+
         for (let option in otherOptions.options) {
             let optionMetadata = otherOptions.options[option]
             this.addOption(option, optionMetadata.schema, optionMetadata.description, optionMetadata.required)

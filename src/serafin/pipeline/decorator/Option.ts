@@ -1,4 +1,4 @@
-import { PipelineSchemaAllOptions } from '../schema/AllOptions'
+import { PipelineSchemaBase } from '../schema/Base'
 
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
@@ -18,6 +18,6 @@ export function option(option: string, schema: Object | (() => Object), required
         }
 
         // add option metadata to the pipeline
-        PipelineSchemaAllOptions.addOptionToTarget(target, propertyKey, option, schemaObject, description, required);
+        PipelineSchemaBase.addOptionToTarget(target, propertyKey, option, schemaObject, description, required);
     }
 }
