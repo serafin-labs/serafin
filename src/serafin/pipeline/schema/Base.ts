@@ -3,12 +3,16 @@ import { PipelineSchemaMethodOptions } from './MethodOptions'
 import { PipelineAbstract } from '../Abstract'
 import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaAbstract } from './Abstract';
+import { PipelineSchemaModel } from './Model';
+import { ResourceIdentityInterface } from './ResourceInterfaces';
 
 const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
 export class PipelineSchemaBase extends PipelineSchemaAbstract {
     private description;
     private title;
+    private model;
+
     public optionsSchemas: {
         create?: PipelineSchemaMethodOptions
         read?: PipelineSchemaMethodOptions
@@ -19,7 +23,6 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
 
     constructor(title: string) {
         let schema = {
-            id: title.toLowerCase(),
             title: title,
             type: 'object',
             definitions: {},
@@ -59,24 +62,8 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
         return this;
     }
 
-    public flatten() {
-        let result = {} as {
-            create?: PipelineSchemaMethodOptions
-            read?: PipelineSchemaMethodOptions
-            update?: PipelineSchemaMethodOptions
-            patch?: PipelineSchemaMethodOptions
-            delete?: PipelineSchemaMethodOptions
-        }
-
-        PipelineAbstract.getCRUDMethods().map(method => {
-            return [this.optionsSchemas[method].reduce((mergedOptions: PipelineSchemaMethodOptions, currentOptions: PipelineSchemaMethodOptions) => {
-                return mergedOptions.merge(currentOptions)
-            }, new PipelineSchemaMethodOptions()), method]
-        }).forEach((params) => {
-            let [mergedOptions, method] = params
-            result[method] = mergedOptions
-        })
-        return result;
+    public setModel<T extends ResourceIdentityInterface>(model: PipelineSchemaModel<T>) {
+        this.model = model;
     }
 
     static addOptionToTarget<T extends PipelineAbstract>(target: { new(): T }, method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
@@ -100,6 +87,10 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
 
     get schema() {
         this.schemaObject.definitions = _.mapValues(this.optionsSchemas, (optionSchema) => ({ options: optionSchema.schema }));
+        if (this.model) {
+            this.schemaObject = _.merge(this.schemaObject, this.model.schemaObject);
+        }
+
         return this.schemaObject;
     }
 }

@@ -70,4 +70,12 @@ export abstract class PipelineSourceAbstract<
     private static notImplemented(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         descriptor.value[METHOD_NOT_IMPLEMENTED] = true;
     }
+
+    public get schema() {
+        if (Object.getPrototypeOf(this).constructor.description) {
+            this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
+            this.baseSchema.setModel(this._modelSchema);
+        }
+        return this.baseSchema.schema;
+    }
 }

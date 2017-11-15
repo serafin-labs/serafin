@@ -58,10 +58,14 @@ export abstract class PipelineAbstract<
         return PipelineSchemaBase.getForTarget(Object.getPrototypeOf(this));
     }
 
-
-
     public get deepSchema() {
         return this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
+    }
+
+    public get recursiveSchema() {
+        let recursiveSchema = (this.parent) ? this.parent.recursiveSchema : { allOf: [] };
+        recursiveSchema.allOf.push(this.schema);
+        return recursiveSchema;
     }
 
     public get schema() {
@@ -76,9 +80,6 @@ export abstract class PipelineAbstract<
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
-
-    constructor() {
-    }
 
     /**
      * Create new resources based on `resources` input array.
@@ -143,7 +144,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.schema, false, null));
+        return (util.inspect(this.recursiveSchema, false, null));
     }
 
     /**
