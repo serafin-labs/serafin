@@ -30,7 +30,6 @@
     "djv": "^2.0.0",
     "express": "^4.16.2",
     "json-schema-merge-allof": "^0.6.0",
-    "json-schema-to-typescript": "^4.6.5",
     "jsonpointer": "^4.0.1",
     "node-uuid": "^1.4.8",
     "util": "^0.10.3"
@@ -47,7 +46,6 @@
     "chai-spies": "^0.7.1",
     "del": "^2.2.0",
     "gulp": "^3.9.1",
-    "gulp-batch": "^1.0.5",
     "gulp-load-plugins": "^1.2.2",
     "gulp-sourcemaps": "^1.9.1",
     "gulp-typescript": "^3.1.3",

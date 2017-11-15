@@ -91,7 +91,6 @@ gulp.task('watch-build-done', function () {
 gulp.task('watch-assets', function () {
     // Polling is used to work properly with containers
     return plugins.watch([sourceDirectory + '/**///' + assetsFormat, "!" + sourceDirectory + "/tsconfig.json"], { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
-        // Use batch to avoid many saved files to trigger multiple copies
         function () {
             return gulp.start('copy-assets');
         });
