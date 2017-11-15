@@ -11,7 +11,7 @@ const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 export class PipelineSchemaBase extends PipelineSchemaAbstract {
     private description;
     private title;
-    private model;
+    protected model;
 
     public optionsSchemas: {
         create?: PipelineSchemaMethodOptions
@@ -60,6 +60,10 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
     public merge(pipelineSchemaBase: PipelineSchemaBase = null) {
         if (!pipelineSchemaBase) {
             return this;
+        }
+
+        if (pipelineSchemaBase.model) {
+            this.model = pipelineSchemaBase.model;
         }
 
         for (let method in pipelineSchemaBase.optionsSchemas) {

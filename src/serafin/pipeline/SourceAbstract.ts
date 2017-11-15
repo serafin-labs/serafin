@@ -29,17 +29,11 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    /**
-     * The model schema of this pipeline. It is passed to the constructor.
-     */
-    public get modelSchema(): PipelineSchemaModel<T> {
-        return this._modelSchema
-    }
-
-    constructor(protected _modelSchema: PipelineSchemaModel<T>) {
+    constructor(modelSchema: PipelineSchemaModel<T>) {
         super();
         this.parent = null;
-        this._modelSchema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
+        this.modelSchema = modelSchema;
+        this.modelSchema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
 
     @PipelineSourceAbstract.notImplemented
@@ -74,7 +68,7 @@ export abstract class PipelineSourceAbstract<
     public get schema() {
         if (Object.getPrototypeOf(this).constructor.description) {
             this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
-            this.baseSchema.setModel(this._modelSchema);
+            this.baseSchema.setModel(this.modelSchema);
         }
         return this.baseSchema.schema;
     }

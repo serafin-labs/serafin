@@ -219,9 +219,9 @@ export class Api {
         this.application.use(endpointPath, router);
 
         // import pipeline schemas to openApi definitions
-        var modelSchema = pipeline.modelSchema;
-        var optionsSchema = _.mapValues(pipeline.deepSchema.schema.definitions, (method) => method.options || {});
-        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(modelSchema.schemaObject)), `#/definitions/${name}`) as any
+        var baseSchema = pipeline.deepSchema;
+        var optionsSchema = _.mapValues(baseSchema.schema.definitions, (method) => method.options || {});
+        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(baseSchema.schema)), `#/definitions/${name}`) as any
         flattenSchemas(this.openApi.definitions as any)
 
         // prepare open API metadata for each endpoint
@@ -233,7 +233,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.upperFirst(pluralName)}`,
             operationId: `find${_.upperFirst(pluralName)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read || null, this.openApi))),
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(baseSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read || null, this.openApi))),
             responses: {
                 200: {
                     description: `${_.upperFirst(pluralName)} corresponding to the query`,
@@ -359,7 +359,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(modelSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi))).concat([
+            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(baseSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi))).concat([
                 {
                     in: "body",
                     name: name,

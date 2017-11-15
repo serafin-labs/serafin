@@ -43,12 +43,7 @@ export abstract class PipelineAbstract<
     DeleteQuery = {},
     DeleteOptions = {}> {
 
-    /**
-     * The model schema of this pipeline.
-     */
-    public get modelSchema(): PipelineSchemaModel<ResourceIdentityInterface> {
-        return this.parent.modelSchema
-    }
+    public modelSchema: PipelineSchemaModel<ResourceIdentityInterface>;
 
     /**
      * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
@@ -59,6 +54,9 @@ export abstract class PipelineAbstract<
     }
 
     public get deepSchema() {
+        if (this.modelSchema) {
+            this.baseSchema.setModel(this.modelSchema);
+        }
         return this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
     }
 
@@ -144,7 +142,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.recursiveSchema, false, null));
+        return (util.inspect(this.deepSchema.schema, false, null));
     }
 
     /**
