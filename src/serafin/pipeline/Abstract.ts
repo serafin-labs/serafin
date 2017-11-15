@@ -54,7 +54,7 @@ export abstract class PipelineAbstract<
     }
 
     public get deepSchema() {
-        let mergedSchema = this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
+        let mergedSchema = _.cloneDeep(this.baseSchema).merge(this.parent ? this.parent.deepSchema : null);
         if (this.modelSchema) {
             mergedSchema.setModel(this.modelSchema);
         }
@@ -144,7 +144,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.deepSchema.schema, false, null));
+        return (util.inspect(this.recursiveSchema, false, null));
     }
 
     /**
