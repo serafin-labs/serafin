@@ -9,8 +9,6 @@ import { ResourceIdentityInterface } from './ResourceInterfaces';
 const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
 export class PipelineSchemaBase extends PipelineSchemaAbstract {
-    private description;
-    private title;
     protected model;
 
     public optionsSchemas: {
@@ -69,6 +67,15 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
         for (let method in pipelineSchemaBase.optionsSchemas) {
             this.optionsSchemas[method] = pipelineSchemaBase.optionsSchemas[method].merge(this.optionsSchemas[method]);
         }
+
+        if (this.schemaObject.description) {
+            delete (this.schemaObject.description);
+        }
+
+        if (this.schemaObject.title) {
+            delete (this.schemaObject.title);
+        }
+
         return this;
     }
 
