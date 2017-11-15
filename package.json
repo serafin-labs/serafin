@@ -1,6 +1,6 @@
 {
-  "name": "@serafin/serafin",
-  "version": "0.1.0",
+  "name": "@serafin/api",
+  "version": "0.1.0-alpha",
   "description": "Serafin is an API framework designed to quickly set up a self-descriptive REST API, based upon a functional approach, and written in nodeJS/Typescript",
   "contributors": [
     {
