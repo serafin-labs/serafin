@@ -3,7 +3,7 @@ import * as Swagger from 'swagger-schema-official';
 import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 
-import { throughJsonSchema } from "../schema/throughJsonSchema"
+import { throughJsonSchema } from "../util/throughJsonSchema"
 
 /**
  * Go through the given schema and remove properties not supported by Open API

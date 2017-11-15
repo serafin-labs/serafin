@@ -39,7 +39,7 @@ gulp.task('run-dev', function () { run('-c "node --debug" --minUptime 1000 --spi
  * @param options forever options
  */
 function run(options) {
-    var process = exec(`forever ${options} lib/index.js`);
+    var process = exec(`forever ${options} lib/example/index.js`);
     process.stdout.on('data', function (data) {
         console.log(data);
     });
@@ -90,7 +90,7 @@ gulp.task('watch-build-done', function () {
  */
 gulp.task('watch-assets', function () {
     // Polling is used to work properly with containers
-    return plugins.watch([sourceDirectory + '/**///' + assetsFormat], { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
+    return plugins.watch([sourceDirectory + '/**///' + assetsFormat, "!" + sourceDirectory + "/tsconfig.json"], { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
         // Use batch to avoid many saved files to trigger multiple copies
         function () {
             return gulp.start('copy-assets');
@@ -114,7 +114,7 @@ gulp.task('watch-typescript', function () {
  * This task keeps the directory structure.
  */
 gulp.task('copy-assets', function () {
-    return gulp.src([sourceDirectory + '/**/' + assetsFormat])
+    return gulp.src([sourceDirectory + '/**/' + assetsFormat, "!" + sourceDirectory + "/tsconfig.json"])
         .pipe(gulp.dest(outputDirectory))
         .on('end', () => buildDone());
 });

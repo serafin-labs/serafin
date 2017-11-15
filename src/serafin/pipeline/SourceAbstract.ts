@@ -3,10 +3,6 @@ import { PipelineAbstract } from './Abstract';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { PipelineSchemaModel } from './schema/Model'
 
-export { option } from './decorator/option'
-export { description } from './decorator/description'
-export { validate } from './decorator/validate'
-
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
 
 /**

@@ -1,15 +1,14 @@
 /.idea
 /.vscode
 /.backup
+/.dockerignore
+/.gitignore
+/.npmignore
 .DS_Store
-/external
-/misc
 /node_modules
 /npm-debug.log
 docker-compose.*
-test.sh
-
-# Decided to leave the sources in the packages
-#/src
-#/typings
-#/typings.json
+/src
+/gulpfile.js
+/lib/test
+/lib/example

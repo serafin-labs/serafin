@@ -1,4 +1,4 @@
-import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline/SourceAbstract'
+import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline'
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
@@ -6,7 +6,7 @@ import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
 @description("Loads and stores resources as objects into memory. Any data is lost upon source uninstanciation. Ideal for unit tests.")
-export class PipelineSourceObject<
+export class PipelineSourceInMemory<
     T extends ResourceIdentityInterface,
     ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
     ReadOptions = {},

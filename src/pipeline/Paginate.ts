@@ -1,4 +1,4 @@
-import { PipelineAbstract, option, description, validate } from '../serafin/pipeline/Abstract'
+import { PipelineAbstract, option, description, validate } from '../serafin/pipeline'
 import * as _ from 'lodash'
 
 @description("Provides pagination over the read results")

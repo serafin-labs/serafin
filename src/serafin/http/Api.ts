@@ -5,7 +5,7 @@ import * as bodyParser from 'body-parser';
 import * as compression from 'compression';
 import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
-import { throughJsonSchema } from "../schema/throughJsonSchema"
+import { throughJsonSchema } from "../util/throughJsonSchema"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
 
 

@@ -6,10 +6,6 @@ import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchemaBase } from './schema/Base'
 
-export { option } from './decorator/option'
-export { description } from './decorator/description'
-export { validate } from './decorator/validate'
-
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
  * 

@@ -1,7 +1,7 @@
 import { JSONSchema4 } from "json-schema"
 import * as _ from "lodash"
 
-import { throughJsonSchema } from "../../schema/throughJsonSchema"
+import { throughJsonSchema } from "../../util/throughJsonSchema"
 
 /**
  * Represents a Schema and its dependencies
