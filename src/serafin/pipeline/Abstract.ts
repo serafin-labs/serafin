@@ -1,20 +1,14 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ReadWrapperInterface } from './model/Resource';
+import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
-import * as Model from './model/Resource';
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
-import { PipelineSchemaInterface } from './schema/Interface';
-import { PipelineSchemaHelper } from './schema/Helper'
-import { PipelineSchema } from './schema/PipelineSchema'
-import { OptionsSchema } from './schema/OptionsSchema'
-import { ResourceIdentityInterface } from './model/Resource'
+import { PipelineSchemaModel } from './schema/Model'
+import { PipelineSchemaBase } from './schema/Base'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
 export { validate } from './decorator/validate'
-
-const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
@@ -26,29 +20,6 @@ const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
  * @param description 
  * @param required 
  */
-export function addPipelineOptionMetadata(target: PipelineAbstract, method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
-    // initialize the objet holding the options schemas metadata if it was not initialized yet
-    if (!target[OPTIONS_SCHEMAS]) {
-        target[OPTIONS_SCHEMAS] = {};
-    }
-    // initialize the OptionsSchema for this method
-    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
-    // add the new option to the schema
-    optionsSchema.addOption(name, schema, description, required)
-    target[OPTIONS_SCHEMAS][method] = optionsSchema
-}
-
-export function setPipelineDescription(target: PipelineAbstract, method: string, description: string) {
-    // initialize the objet holding the options schemas metadata if it was not initialized yet
-    if (!target[OPTIONS_SCHEMAS]) {
-        target[OPTIONS_SCHEMAS] = {};
-    }
-    // initialize the OptionsSchema for this method
-    let optionsSchema: OptionsSchema = target[OPTIONS_SCHEMAS][method] || new OptionsSchema();
-    // set the description on the schema
-    optionsSchema.setDescription(description)
-    target[OPTIONS_SCHEMAS][method] = optionsSchema
-}
 
 /**
  * Abstract Class representing a pipeline.
@@ -72,66 +43,36 @@ export abstract class PipelineAbstract<
     DeleteQuery = {},
     DeleteOptions = {}> {
 
-    /**
-     * The model schema of this pipeline.
-     */
-    public get modelSchema(): PipelineSchema<ResourceIdentityInterface> {
-        return this.parent.modelSchema
-    }
+    public modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
 
     /**
      * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
      * The options are stored internally with a special Symbol to avoid potential collisions.
      */
-    public get optionsSchemas() {
-        return (this[OPTIONS_SCHEMAS] || {}) as {
-            create?: OptionsSchema
-            read?: OptionsSchema
-            update?: OptionsSchema
-            patch?: OptionsSchema
-            delete?: OptionsSchema
-        }
+    public get baseSchema() {
+        return PipelineSchemaBase.getForTarget(Object.getPrototypeOf(this));
     }
 
-    /**
-     * All Options Schemas from this pipeline and its parents
-     */
-    private get allOptionsSchemas() {
-        let allOptionsSchemasFromParent = this.parent ? this.parent.allOptionsSchemas : {
-            create: [],
-            read: [],
-            update: [],
-            patch: [],
-            delete: []
+    public get deepSchema() {
+        let mergedSchema = _.cloneDeep(this.baseSchema).merge(this.parent ? this.parent.deepSchema : null);
+        if (this.modelSchema) {
+            mergedSchema.setModel(this.modelSchema);
         }
-        let currentOptionsSchemas = this.optionsSchemas
-        for (let method in currentOptionsSchemas) {
-            allOptionsSchemasFromParent[method].push(currentOptionsSchemas[method])
-        }
-        return allOptionsSchemasFromParent
+
+        return mergedSchema;
     }
 
-    /**
-     * All Options Schemas from this pipeline and its parents merged into one
-     */
-    public get flatOptionsSchemas() {
-        let result = {} as {
-            create?: OptionsSchema
-            read?: OptionsSchema
-            update?: OptionsSchema
-            patch?: OptionsSchema
-            delete?: OptionsSchema
+    public get recursiveSchema() {
+        let recursiveSchema = (this.parent) ? this.parent.recursiveSchema : { allOf: [] };
+        recursiveSchema.allOf.push(this.schema);
+        return recursiveSchema;
+    }
+
+    public get schema() {
+        if (Object.getPrototypeOf(this).constructor.description) {
+            this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
         }
-        let allOptionsSchemas = this.allOptionsSchemas
-        PipelineAbstract.getCRUDMethods().map(method => {
-            return [this.allOptionsSchemas[method].reduce((mergedOptions: OptionsSchema, currentOptions: OptionsSchema) => {
-                return mergedOptions.merge(currentOptions)
-            }, new OptionsSchema()), method]
-        }).forEach((params) => {
-            let [mergedOptions, method] = params
-            result[method] = mergedOptions
-        })
-        return result
+        return this.baseSchema.schema;
     }
 
     /**
@@ -139,9 +80,6 @@ export abstract class PipelineAbstract<
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
-
-    constructor() {
-    }
 
     /**
      * Create new resources based on `resources` input array.
@@ -206,7 +144,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        return (util.inspect(this.modelSchema.schemaObject, false, null));
+        return (util.inspect(this.recursiveSchema, false, null));
     }
 
     /**

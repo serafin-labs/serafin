@@ -1,8 +1,7 @@
-import { PipelineSchemaHelper } from './schema/Helper';
+
 import { PipelineAbstract } from './Abstract';
-import { SchemaInterface } from './model/SchemaInterface';
-import { ReadWrapperInterface, ResourceIdentityInterface } from './model/Resource';
-import { PipelineSchema } from './schema/PipelineSchema'
+import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
+import { PipelineSchemaModel } from './schema/Model'
 
 export { option } from './decorator/option'
 export { description } from './decorator/description'
@@ -30,19 +29,11 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    protected _pipelineSchema: PipelineSchema<T>
-    /**
-     * The model schema of this pipeline. It is passed to the constructor.
-     */
-    public get modelSchema(): PipelineSchema<T> {
-        return this._pipelineSchema
-    }
-
-    constructor(schema: PipelineSchema<T>) {
+    constructor(modelSchema: PipelineSchemaModel<T>) {
         super();
         this.parent = null;
-        this._pipelineSchema = schema
-        schema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
+        this.modelSchema = modelSchema;
+        this.modelSchema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
 
     @PipelineSourceAbstract.notImplemented
@@ -72,5 +63,13 @@ export abstract class PipelineSourceAbstract<
 
     private static notImplemented(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         descriptor.value[METHOD_NOT_IMPLEMENTED] = true;
+    }
+
+    public get schema() {
+        if (Object.getPrototypeOf(this).constructor.description) {
+            this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
+            this.baseSchema.setModel(this.modelSchema);
+        }
+        return this.baseSchema.schema;
     }
 }

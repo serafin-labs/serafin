@@ -6,12 +6,7 @@ import { throughJsonSchema } from "../../schema/throughJsonSchema"
 /**
  * Represents a Schema and its dependencies
  */
-export class Schema {
-    /**
-     * The JSON Schema object
-     */
-    public schemaObject: JSONSchema4
-
+export abstract class PipelineSchemaAbstract {
     /**
      * An array that keep tracks of all references added
      */
@@ -22,7 +17,7 @@ export class Schema {
      */
     private id: string
 
-    constructor(schemaObject: JSONSchema4, id?: string) {
+    constructor(public schemaObject: JSONSchema4, id?: string) {
         this.id = id || schemaObject.id;
         this.schemaObject = schemaObject;
     }
@@ -78,5 +73,9 @@ export class Schema {
             }
         });
         return this
+    }
+
+    public get schema() {
+        return this.schemaObject;
     }
 }

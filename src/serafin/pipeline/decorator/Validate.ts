@@ -9,7 +9,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
     let compileValidationFunction = (instance) => {
         var ajv = new Ajv();
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
-        ajv.addSchema(instance.modelSchema.schemaObject, "modelSchema")
+        ajv.addSchema(instance.modelSchema.schema, "modelSchema")
         if (propertyKey === "create") {
             var validateResources = ajv.compile({
                 type: 'array',

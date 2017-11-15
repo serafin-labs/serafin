@@ -5,7 +5,7 @@ import { User } from './model/model';
 import { PipelineSourceObject } from './pipeline/source/Object';
 import { Paginate } from './pipeline/Paginate';
 import { UpdateTime } from './pipeline/UpdateTime';
-import { PipelineSchema } from './serafin/pipeline/schema/PipelineSchema';
+import { PipelineSchemaModel } from './serafin/pipeline/schema/Model';
 
 const util = require('util')
 
@@ -45,7 +45,7 @@ async function main() {
     setTimeout(async () => {
         console.log("start");
 
-        let userSchema = (new PipelineSchema<User>(require('./model/user.model.json'), "user"))
+        let userSchema = (new PipelineSchemaModel<User>(require('./model/user.model.json'), "user"))
             .addSchema({
                 type: "object",
                 properties: {
@@ -53,17 +53,21 @@ async function main() {
                 },
                 required: ["email"],
                 additionalProperties: false
-            }, "createValues").addSchema({
+            }, "createValues")
+            .addSchema({
                 type: "object",
                 properties: {
                     id: { type: "string" },
                     email: { type: "string" }
                 },
                 additionalProperties: false
-            }, "readQuery")
+            }, "readQuery");
 
         let pipeline = (new PipelineSourceObject(userSchema))
+            .pipe(new UpdateTime())
             .pipe(new Paginate());
+
+        console.log(pipeline.toString());
 
         api.use(pipeline, 'user');
 
@@ -71,7 +75,7 @@ async function main() {
 
         console.log(await pipeline.read({} as any, { count: 3 }));
 
-        console.log(JSON.stringify(api["openApi"], null, 4));
+        // console.log(JSON.stringify(api["openApi"], null, 4));
     }, 2000);
 
 

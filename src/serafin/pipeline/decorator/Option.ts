@@ -1,7 +1,7 @@
 import { type } from 'os';
-import { addPipelineOptionMetadata } from '../Abstract'
 import * as Ajv from 'ajv'
 import { PipelineAbstract } from '../Abstract'
+import { PipelineSchemaBase } from '../schema/Base'
 
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
@@ -14,16 +14,16 @@ import { PipelineAbstract } from '../Abstract'
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null, validation = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // extract schemaObject
-        let schemaObject
+        let schemaObject = null;
         if (typeof schema === "function") {
-            schemaObject = schema()
+            schemaObject = schema();
         } else {
-            schemaObject = schema
+            schemaObject = schema;
         }
 
         // add option metadata to the pipeline
-        addPipelineOptionMetadata(target, propertyKey, option, schemaObject, description, required)
+        
+        PipelineSchemaBase.addOptionToTarget(target, propertyKey, option, schemaObject, description, required);
 
         // add validation code to the method
         if (validation && typeof descriptor.value == 'function' && PipelineAbstract.getCRUDMethods().find((key) => propertyKey == key)) {

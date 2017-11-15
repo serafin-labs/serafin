@@ -1,13 +1,11 @@
-import { Schema } from "./Schema"
+import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
-import { ResourceIdentityInterface } from "../model/Resource"
+import { ResourceIdentityInterface } from "./ResourceInterfaces"
 
 /**
  * Defines schemas related to the model that are used by the pipeline for validation.
  */
-export class PipelineSchema<T extends ResourceIdentityInterface> extends Schema {
-
-
+export class PipelineSchemaModel<T extends ResourceIdentityInterface> extends PipelineSchemaAbstract {
     /**
      * The path of the main model schema
      */
