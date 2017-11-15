@@ -63,8 +63,8 @@ export abstract class PipelineAbstract<
     }
 
     public get recursiveSchema() {
-        let recursiveSchema = (this.parent) ? this.parent.recursiveSchema : { allOf: [] };
-        recursiveSchema.allOf.push(this.schema);
+        let recursiveSchema = (this.parent) ? this.parent.recursiveSchema : [];
+        recursiveSchema.push(this.schema);
         return recursiveSchema;
     }
 
