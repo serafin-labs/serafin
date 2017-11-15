@@ -28,13 +28,19 @@ export class PipelineSchemaBase extends PipelineSchemaAbstract {
             definitions: {},
         } as JSONSchema4;
         super(schema)
-        this.optionsSchemas = {};
+        this.optionsSchemas = {
+            create: new PipelineSchemaMethodOptions(),
+            read: new PipelineSchemaMethodOptions(),
+            update: new PipelineSchemaMethodOptions(),
+            patch: new PipelineSchemaMethodOptions(),
+            delete: new PipelineSchemaMethodOptions()
+        };
     }
 
     public addOption(method: string, name: string, schema: JSONSchema4, description: string, required: boolean) {
-        if (!this.optionsSchemas[method]) {
-            this.optionsSchemas[method] = new PipelineSchemaMethodOptions();
-        }
+        // if (!this.optionsSchemas[method]) {
+        //     this.optionsSchemas[method] = new PipelineSchemaMethodOptions();
+        // }
 
         this.optionsSchemas[method].addOption(name, schema, description, required);
     }

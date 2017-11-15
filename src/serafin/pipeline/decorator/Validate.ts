@@ -14,28 +14,28 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 items: { "$ref": "modelSchema#/definitions/createValues" },
                 minItems: 1
             }, resources);
-            validateSchema.call(this, { "$ref": "baseSchema#/definitions/create/options" }, options);
+            validateSchema.call(this, "baseSchema#/definitions/create/options", options);
         },
         read: function (params: any[]): void {
             let [query, options] = params;
             validateSchema.call(this, { "$ref": "modelSchema#/definitions/readQuery" }, query);
-            validateSchema.call(this, { "$ref": "baseSchema#/definitions/read/options" }, options);
+            validateSchema.call(this, "baseSchema#/definitions/read/options", options);
         },
         update: function (params: any[]): void {
             let [id, values, options] = params;
             validateSchema.call(this, 'modelSchema#/definitions/updateValues', values);
-            validateSchema.call(this, { "$ref": "baseSchema#/definitions/update/options" }, options);
+            validateSchema.call(this, 'baseSchema#/definitions/update/options', options);
         },
         patch: function (params: any[]): void {
             let [query, values, options] = params;
             validateSchema.call(this, 'modelSchema#/definitions/patchQuery', query);
             validateSchema.call(this, 'modelSchema#/definitions/patchValues', values);
-            validateSchema.call(this, { "$ref": "baseSchema#/definitions/patch/options" }, options);
+            validateSchema.call(this, "baseSchema#/definitions/patch/options", options);
         },
         delete: function (params: any[]): void {
             let [query, options] = params;
             validateSchema.call(this, 'modelSchema#/definitions/deleteQuery', query);
-            validateSchema.call(this, { "$ref": "baseSchema#/definitions/delete/options" }, options);
+            validateSchema.call(this, "baseSchema#/definitions/delete/options", options);
         }
     }
 
@@ -47,11 +47,10 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 validationFunctions[propertyKey].call(this, params);
                 return func.apply(this, params);
             } catch (e) {
-                let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                console.log("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                return Promise.reject(e);
+                let callError = new Error(`Validation error in ${Object.getPrototypeOf(this).constructor.name}.${propertyKey} : ${e}`);
+                console.error(callError.message);
+                return Promise.reject(callError);
             }
-
         };
     }
 }
@@ -61,6 +60,11 @@ function validateSchema(schema: any, objectToTest: any): void {
     ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
     ajv.addSchema(this.modelSchema.schema, "modelSchema")
     ajv.addSchema(this.baseSchema.schema, "baseSchema")
+
+    if (!objectToTest) {
+        objectToTest = {};
+    }
+
     let valid = ajv.validate(schema, objectToTest)
     if (!valid) {
         throw new Error(ajv.errorsText());

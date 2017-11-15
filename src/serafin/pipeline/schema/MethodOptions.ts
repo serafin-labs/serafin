@@ -20,7 +20,6 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
 
     constructor() {
         let schema = {
-            id: 'options',
             type: 'object',
             properties: {},
             required: []
