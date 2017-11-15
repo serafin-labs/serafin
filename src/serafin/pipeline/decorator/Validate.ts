@@ -9,32 +9,42 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
     let validationFunctions = {
         create: function (params: any[]): void {
             let [resources, options] = params;
-            validateSchema.call(this, {
-                type: 'array',
-                items: { "$ref": "modelSchema#/definitions/createValues" },
-                minItems: 1
-            }, resources);
+            if (this.modelSchema) {
+                validateSchema.call(this, {
+                    type: 'array',
+                    items: { "$ref": "modelSchema#/definitions/createValues" },
+                    minItems: 1
+                }, resources);
+            }
             validateSchema.call(this, "baseSchema#/definitions/create/options", options);
         },
         read: function (params: any[]): void {
             let [query, options] = params;
-            validateSchema.call(this, { "$ref": "modelSchema#/definitions/readQuery" }, query);
+            if (this.modelSchema) {
+                validateSchema.call(this, { "$ref": "modelSchema#/definitions/readQuery" }, query);
+            }
             validateSchema.call(this, "baseSchema#/definitions/read/options", options);
         },
         update: function (params: any[]): void {
             let [id, values, options] = params;
-            validateSchema.call(this, 'modelSchema#/definitions/updateValues', values);
+            if (this.modelSchema) {
+                validateSchema.call(this, 'modelSchema#/definitions/updateValues', values);
+            }
             validateSchema.call(this, 'baseSchema#/definitions/update/options', options);
         },
         patch: function (params: any[]): void {
             let [query, values, options] = params;
-            validateSchema.call(this, 'modelSchema#/definitions/patchQuery', query);
-            validateSchema.call(this, 'modelSchema#/definitions/patchValues', values);
+            if (this.modelSchema) {
+                validateSchema.call(this, 'modelSchema#/definitions/patchQuery', query);
+                validateSchema.call(this, 'modelSchema#/definitions/patchValues', values);
+            }
             validateSchema.call(this, "baseSchema#/definitions/patch/options", options);
         },
         delete: function (params: any[]): void {
             let [query, options] = params;
-            validateSchema.call(this, 'modelSchema#/definitions/deleteQuery', query);
+            if (this.modelSchema) {
+                validateSchema.call(this, 'modelSchema#/definitions/deleteQuery', query);
+            }
             validateSchema.call(this, "baseSchema#/definitions/delete/options", options);
         }
     }
@@ -58,8 +68,10 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
 function validateSchema(schema: any, objectToTest: any): void {
     var ajv = new Ajv();
     ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
-    ajv.addSchema(this.modelSchema.schema, "modelSchema")
     ajv.addSchema(this.baseSchema.schema, "baseSchema")
+    if (this.modelSchema) {
+        ajv.addSchema(this.modelSchema.schema, "modelSchema");
+    }
 
     if (!objectToTest) {
         objectToTest = {};

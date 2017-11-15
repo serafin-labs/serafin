@@ -43,7 +43,7 @@ export abstract class PipelineAbstract<
     DeleteQuery = {},
     DeleteOptions = {}> {
 
-    public modelSchema: PipelineSchemaModel<ResourceIdentityInterface>;
+    public modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
 
     /**
      * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
@@ -54,10 +54,12 @@ export abstract class PipelineAbstract<
     }
 
     public get deepSchema() {
+        let mergedSchema = this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
         if (this.modelSchema) {
-            this.baseSchema.setModel(this.modelSchema);
+            mergedSchema.setModel(this.modelSchema);
         }
-        return this.baseSchema.merge(this.parent ? this.parent.deepSchema : null);
+
+        return mergedSchema;
     }
 
     public get recursiveSchema() {
