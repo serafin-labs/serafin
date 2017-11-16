@@ -104,11 +104,11 @@ export class Api {
         flattenSchemas(this.openApi.definitions as any)
 
         // prepare allowed options
-        let readQueryParameters = schemaToSwaggerParameter(baseSchema.readQuery, this.openApi);
+        let readQueryParameters = schemaToSwaggerParameter(baseSchema.schema.definitions.readQuery || null, this.openApi);   
         let readOptionsParameters = schemaToSwaggerParameter(optionsSchema.read || null, this.openApi);
         let createOptionsParameters = schemaToSwaggerParameter(optionsSchema.create || null, this.openApi);
         let updateOptionsParameters = schemaToSwaggerParameter(optionsSchema.update || null, this.openApi);
-        let patchQueryParameters = schemaToSwaggerParameter(baseSchema.patchQuery, this.openApi)
+        let patchQueryParameters = schemaToSwaggerParameter(baseSchema.schema.definitions.patchQuery || null, this.openApi)
         let patchOptionsParameters = schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi);
         let deleteOptionsParameters = schemaToSwaggerParameter(optionsSchema.delete || null, this.openApi);
 
