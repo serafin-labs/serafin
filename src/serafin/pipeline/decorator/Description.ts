@@ -1,4 +1,3 @@
-import { PipelineSchemaBase } from '../schema/Base'
 import * as util from 'util'
 import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
 import { PipelineSchemaMethodOptions } from '../schema/MethodOptions'
