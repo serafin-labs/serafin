@@ -78,8 +78,8 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
         descriptor.value = function (...params) {
             try {
                 // validation function is cached using a symbol for each method
-                this[VALIDATE_FUNCTIONS[propertyKey]] = this[VALIDATE_FUNCTIONS[propertyKey]] || compileValidationFunction(this)
-                var validate = this[VALIDATE_FUNCTIONS[propertyKey]];
+                this[VALIDATE_FUNCTIONS[propertyKey]] = this[VALIDATE_FUNCTIONS[propertyKey]] || compileValidationFunction(this);
+                let validate = this[VALIDATE_FUNCTIONS[propertyKey]];
                 validate(params)
                 return func.apply(this, params);
             } catch (e) {
