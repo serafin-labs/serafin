@@ -48,8 +48,8 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
 
         // set the option as required if necessary
         if (required) {
-            this.schemaObject.required = this.schemaObject.required || []
-            (this.schemaObject.required as string[]).push(name)
+            this.schemaObject.required = this.schemaObject.required || [];
+            (this.schemaObject.required as string[]).push(name);
         }
         return this
     }
