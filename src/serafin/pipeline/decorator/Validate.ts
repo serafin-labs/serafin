@@ -1,6 +1,14 @@
 import * as Ajv from 'ajv'
 import { PipelineAbstract } from '../Abstract'
 
+const VALIDATE_FUNCTIONS = {
+    "create": Symbol("Create Validation Function"),
+    "read": Symbol("Read Validation Function"),
+    "update": Symbol("Update Validation Function"),
+    "patch": Symbol("Patch Validation Function"),
+    "delete": Symbol("Delete Validation Function")
+};
+
 /**
  * Method decorator enabling JSONSchema validation upon a CRUD method
  */
@@ -67,10 +75,11 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
     if (typeof descriptor.value == 'function' && PipelineAbstract.getCRUDMethods().find((key) => propertyKey == key)) {
         let func: Function = descriptor.value;
 
-        var validate; // shared reference to the compile function
         descriptor.value = function (...params) {
             try {
-                validate = validate || compileValidationFunction(this)
+                // validation function is cached using a symbol for each method
+                this[VALIDATE_FUNCTIONS[propertyKey]] = this[VALIDATE_FUNCTIONS[propertyKey]] || compileValidationFunction(this)
+                validate = this[VALIDATE_FUNCTIONS[propertyKey]];
                 validate(params)
                 return func.apply(this, params);
             } catch (e) {
