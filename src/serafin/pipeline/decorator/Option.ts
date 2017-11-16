@@ -1,7 +1,7 @@
-import { type } from 'os';
 import * as Ajv from 'ajv'
 import { PipelineAbstract } from '../Abstract'
-import { PipelineSchemaBase } from '../schema/Base'
+import { PipelineSchemaMethodOptions } from '../schema/MethodOptions'
+import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
 
 /**
  * Class or method decorator used to declare an action option, along with its JSONSchema definition.
@@ -22,8 +22,12 @@ export function option(option: string, schema: Object | (() => Object), required
         }
 
         // add option metadata to the pipeline
-        
-        PipelineSchemaBase.addOptionToTarget(target, propertyKey, option, schemaObject, description, required);
+        let optionsSchema: PipelineSchemaMethodOptions
+        if (!target.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
+            target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaMethodOptions()
+        }
+        optionsSchema = target[OPTIONS_SCHEMAS[propertyKey]]
+        optionsSchema.addOption(option, schemaObject, description, required);
 
         // add validation code to the method
         if (validation && typeof descriptor.value == 'function' && PipelineAbstract.getCRUDMethods().find((key) => propertyKey == key)) {

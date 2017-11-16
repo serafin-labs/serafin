@@ -4,7 +4,9 @@ import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/Resour
 import { JSONSchema4 } from "json-schema"
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
-import { PipelineSchemaBase } from './schema/Base'
+import { PipelineSchema } from './schema/Pipeline'
+import { PipelineSchemaMethodOptions } from './schema/MethodOptions'
+import { getOptionsSchemas } from './decorator/optionsSchemaSymbols'
 
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
@@ -39,36 +41,20 @@ export abstract class PipelineAbstract<
     DeleteQuery = {},
     DeleteOptions = {}> {
 
-    public modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
 
     /**
-     * The Schema objects representing the options for this pipeline alone. You can use @option decorator to add an option directly to a method.
-     * The options are stored internally with a special Symbol to avoid potential collisions.
+     * The schema that represents the capabilities of this pipeline
      */
-    public get baseSchema() {
-        return PipelineSchemaBase.getForTarget(Object.getPrototypeOf(this));
-    }
+    get schema() {
+        // find the nearest modelSchema defintion
+        let findModelSchema = () => this.modelSchema || (this.parent ? this.parent.modelSchema : null)
 
-    public get deepSchema() {
-        let mergedSchema = _.cloneDeep(this.baseSchema).merge(this.parent ? this.parent.deepSchema : null);
-        if (this.modelSchema) {
-            mergedSchema.setModel(this.modelSchema);
-        }
+        // gather all options used by this pipeline and its parents
+        let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
 
-        return mergedSchema;
-    }
-
-    public get recursiveSchema() {
-        let recursiveSchema = (this.parent) ? this.parent.recursiveSchema : [];
-        recursiveSchema.push(this.schema);
-        return recursiveSchema;
-    }
-
-    public get schema() {
-        if (Object.getPrototypeOf(this).constructor.description) {
-            this.baseSchema.setDescription(Object.getPrototypeOf(this).constructor.description);
-        }
-        return this.baseSchema.schema;
+        // create and return the global schema representing the capabilities of this pipeline
+        return new PipelineSchema(findModelSchema(), PipelineSchema.mergeOptions(findAllOptions(this)))
     }
 
     /**
@@ -139,8 +125,9 @@ export abstract class PipelineAbstract<
     /**
      * Get a readable description of what this pipeline does
      */
-    toString(): string {
-        return (util.inspect(this.recursiveSchema, false, null));
+    toString(): string { 
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        return (util.inspect(recursiveSchemas(this), false, null));
     }
 
     /**

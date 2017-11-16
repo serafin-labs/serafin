@@ -17,7 +17,7 @@ export abstract class PipelineSchemaAbstract {
      */
     private id: string
 
-    constructor(public schemaObject: JSONSchema4, id?: string) {
+    constructor(protected schemaObject: JSONSchema4, id?: string) {
         this.id = id || schemaObject.id;
         this.schemaObject = schemaObject;
     }
@@ -29,12 +29,13 @@ export abstract class PipelineSchemaAbstract {
      * @param schemaObject 
      * @param name 
      */
-    addSchema(schemaObject, name: string) {
+    addSchema(schemaObject, name: string): this {
         if (this.schemaObject.definitions && this.schemaObject.definitions[name]) {
             throw new Error(`Schema Error: The name ${name} is already used on this schema`)
         }
         this.schemaObject.definitions = this.schemaObject.definitions || {};
         this.schemaObject.definitions[name] = schemaObject;
+        return this
     }
 
     /**
