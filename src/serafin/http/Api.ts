@@ -97,16 +97,31 @@ export class Api {
             res.status(500).end();
         };
 
+        // import pipeline schemas to openApi definitions
+        var baseSchema = pipeline.deepSchema;
+        var optionsSchema = _.mapValues(baseSchema.schema.definitions, (method) => method.options || {});
+        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(baseSchema.schema)), `#/definitions/${name}`) as any
+        flattenSchemas(this.openApi.definitions as any)
+
+        // prepare allowed options
+        let readQueryParameters = schemaToSwaggerParameter(baseSchema.readQuery, this.openApi);
+        let readOptionsParameters = schemaToSwaggerParameter(optionsSchema.read || null, this.openApi);
+        let createOptionsParameters = schemaToSwaggerParameter(optionsSchema.create || null, this.openApi);
+        let updateOptionsParameters = schemaToSwaggerParameter(optionsSchema.update || null, this.openApi);
+        let patchQueryParameters = schemaToSwaggerParameter(baseSchema.patchQuery, this.openApi)
+        let patchOptionsParameters = schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi);
+        let deleteOptionsParameters = schemaToSwaggerParameter(optionsSchema.delete || null, this.openApi);
+
         // create the routes for this endpoint
 
         // get many resources
         router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // separate options from query based on pipeline metadata
-            //var options = _.pickBy(req.query, pipeline.isAnOption)
-            //var query = _.pickBy(req.query, pipeline.isAQuery)
+            var options = _.pickBy(req.query, (value, key) => _.find(readOptionsParameters, v => v.name === key))
+            var query = _.pickBy(req.query, (value, key) => _.find(readQueryParameters, v => v.name === key))
 
             // run the query
-            pipeline.read(req.query, {}).then(wrapper => {
+            pipeline.read(query, options).then(wrapper => {
                 res.status(200).json(wrapper);
                 res.end();
             }).catch(error => {
@@ -117,7 +132,7 @@ export class Api {
         // get a resource by its id
         router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = req.query
+            var options = _.pickBy(req.query, (value, key) => _.find(readOptionsParameters, v => v.name === key))
             var id = req.params.id
 
             // run the query
@@ -138,7 +153,7 @@ export class Api {
         // create a new resource
         router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = req.query
+            var options = _.pickBy(req.query, (value, key) => _.find(createOptionsParameters, v => v.name === key))
             var data = req.body
 
             // run the query
@@ -155,7 +170,7 @@ export class Api {
         // patch an existing resource
         router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = req.query
+            var options = _.pickBy(req.query, (value, key) => _.find(patchOptionsParameters, v => v.name === key))
             var patch = req.body
             var id = req.params.id
 
@@ -177,7 +192,7 @@ export class Api {
         // put an existing resource
         router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = req.query
+            var options = _.pickBy(req.query, (value, key) => _.find(updateOptionsParameters, v => v.name === key))
             var data = req.body
             var id = req.params.id
 
@@ -197,7 +212,7 @@ export class Api {
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = req.query
+            var options = _.pickBy(req.query, (value, key) => _.find(deleteOptionsParameters, v => v.name === key))
             var id = req.params.id
 
             // run the query
@@ -218,11 +233,6 @@ export class Api {
         // attach the router to the express app
         this.application.use(endpointPath, router);
 
-        // import pipeline schemas to openApi definitions
-        var baseSchema = pipeline.deepSchema;
-        var optionsSchema = _.mapValues(baseSchema.schema.definitions, (method) => method.options || {});
-        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(baseSchema.schema)), `#/definitions/${name}`) as any
-        flattenSchemas(this.openApi.definitions as any)
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -233,7 +243,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["get"] = {
             description: `Find ${_.upperFirst(pluralName)}`,
             operationId: `find${_.upperFirst(pluralName)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(baseSchema.readQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.read || null, this.openApi))),
+            parameters: removeDuplicatedParameters(readQueryParameters.concat(readOptionsParameters)),
             responses: {
                 200: {
                     description: `${_.upperFirst(pluralName)} corresponding to the query`,
@@ -262,7 +272,7 @@ export class Api {
         this.openApi.paths[resourcesPath]["post"] = {
             description: `Create a new ${_.upperFirst(name)}`,
             operationId: `add${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.create || null, this.openApi)).concat([{
+            parameters: removeDuplicatedParameters(createOptionsParameters).concat([{
                 in: "body",
                 name: name,
                 description: `The ${_.upperFirst(name)} to be created.`,
@@ -322,7 +332,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["put"] = {
             description: `Put a ${_.upperFirst(name)} using its id`,
             operationId: `put${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.update || null, this.openApi)).concat([
+            parameters: removeDuplicatedParameters(updateOptionsParameters).concat([
                 {
                     in: "body",
                     name: name,
@@ -359,7 +369,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(baseSchema.patchQuery, this.openApi).concat(schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi))).concat([
+            parameters: removeDuplicatedParameters(patchQueryParameters.concat(patchOptionsParameters)).concat([
                 {
                     in: "body",
                     name: name,
@@ -396,7 +406,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["delete"] = {
             description: `Delete a ${_.upperFirst(name)} using its id`,
             operationId: `delete${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(schemaToSwaggerParameter(optionsSchema.delete || null, this.openApi)).concat([
+            parameters: removeDuplicatedParameters(deleteOptionsParameters).concat([
                 {
                     in: "path",
                     name: "id",
