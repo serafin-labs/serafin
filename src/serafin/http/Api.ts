@@ -98,19 +98,18 @@ export class Api {
         };
 
         // import pipeline schemas to openApi definitions
-        var baseSchema = pipeline.deepSchema;
-        var optionsSchema = _.mapValues(baseSchema.schema.definitions, (method) => method.options || {});
-        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(baseSchema.schema)), `#/definitions/${name}`) as any
+        var pipelineSchema = pipeline.schema;
+        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(pipelineSchema.schema)), `#/definitions/${name}`) as any
         flattenSchemas(this.openApi.definitions as any)
 
         // prepare allowed options
-        let readQueryParameters = schemaToSwaggerParameter(baseSchema.schema.definitions.readQuery || null, this.openApi);   
-        let readOptionsParameters = schemaToSwaggerParameter(optionsSchema.read || null, this.openApi);
-        let createOptionsParameters = schemaToSwaggerParameter(optionsSchema.create || null, this.openApi);
-        let updateOptionsParameters = schemaToSwaggerParameter(optionsSchema.update || null, this.openApi);
-        let patchQueryParameters = schemaToSwaggerParameter(baseSchema.schema.definitions.patchQuery || null, this.openApi)
-        let patchOptionsParameters = schemaToSwaggerParameter(optionsSchema.patch || null, this.openApi);
-        let deleteOptionsParameters = schemaToSwaggerParameter(optionsSchema.delete || null, this.openApi);
+        let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.openApi);   
+        let readOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.openApi);
+        let createOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.openApi);
+        let updateOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.openApi);
+        let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.openApi)
+        let patchOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.openApi);
+        let deleteOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.openApi);
 
         // create the routes for this endpoint
 

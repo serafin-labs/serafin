@@ -1,5 +1,7 @@
-import { PipelineSchemaBase } from '../schema/Base'
 import * as util from 'util'
+import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
+import { PipelineSchemaMethodOptions } from '../schema/MethodOptions'
+
 /**
  * Class and method decorator associating a description to it
  * 
@@ -12,7 +14,12 @@ export function description(text: string) {
             targetOrCtor['description'] = text;
         } else {
             // Method
-            PipelineSchemaBase.setMethodDescriptionToTarget(targetOrCtor, propertyKey, text);
+            let optionsSchema: PipelineSchemaMethodOptions
+            if (!targetOrCtor.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
+                targetOrCtor[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaMethodOptions()
+            }
+            optionsSchema = targetOrCtor[OPTIONS_SCHEMAS[propertyKey]]
+            optionsSchema.setDescription(text);
         }
     };
 }

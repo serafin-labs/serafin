@@ -22,9 +22,7 @@ export class PipelineSchemaModel<T extends ResourceIdentityInterface> extends Pi
      * @param schemaObject   
      */
     addSchema(schemaObject: JSONSchema4, name: 'createValues' | 'readQuery' | 'updateValues' | 'patchQuery' | 'patchValues' | 'deleteQuery'): this {
-        this.schemaObject.definitions = this.schemaObject.definitions || {}
-        this.schemaObject.definitions[name] = schemaObject;
-        return this
+        return super.addSchema(schemaObject, name)
     }
 
     /**

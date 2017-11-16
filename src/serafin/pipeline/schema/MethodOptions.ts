@@ -21,8 +21,7 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
     constructor() {
         let schema = {
             type: 'object',
-            properties: {},
-            required: []
+            properties: {}
         } as JSONSchema4;
         super(schema)
         this.options = {}
@@ -49,7 +48,8 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
 
         // set the option as required if necessary
         if (required) {
-            (this.schemaObject.required as string[]).push(name)
+            this.schemaObject.required = this.schemaObject.required || [];
+            (this.schemaObject.required as string[]).push(name);
         }
         return this
     }
@@ -73,7 +73,7 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
      */
     merge(otherOptions: PipelineSchemaMethodOptions): this {
         if (!otherOptions) {
-            otherOptions = new PipelineSchemaMethodOptions();
+            return this
         }
 
         for (let option in otherOptions.options) {
