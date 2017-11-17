@@ -22,4 +22,5 @@ gulpTasks.assets(gulp,
 gulpTasks.typescript(gulp, __dirname + '/src', __dirname + '/src/tsconfig.json', __dirname + '/lib', __dirname + '/lib/typings');
 gulpTasks.model(gulp, __dirname + '/src/example/**/*.model.json', __dirname + '/src/example/model', 'example');
 gulpTasks.utils(gulp, __dirname + '/lib');
-gulpTasks.runner(gulp, 'lib/example/index.js', __dirname + '/lib/build.txt', __dirname + '/lib/pid', true);
+gulpTasks.runner(gulp, __dirname + '/lib/example/index.js', __dirname + '/lib/build.txt', __dirname + '/lib/pid', true);
+gulpTasks.test(gulp, __dirname + '/lib/**/test/*.js', __dirname + '/lib/coverage');

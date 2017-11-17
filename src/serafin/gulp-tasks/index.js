@@ -16,7 +16,7 @@ module.exports = {
      * @param modelDirectory Model file directory
      * @param taskSuffix Optional task suffix allow to create multiple tasks for differents model files, in case of sub-projects
      */
-    model: function (gulp, sourcePath, modelDirectory, taskSuffix = null) {
+    model(gulp, sourcePath, modelDirectory, taskSuffix = null) {
         if (typeof taskSuffix == 'string') {
             taskSuffix = '-' + taskSuffix;
         } else {
@@ -32,7 +32,7 @@ module.exports = {
 
         gulp.task('build-model' + taskSuffix, function () {
             return gulp.src(adaptPath(sourcePath))
-                .pipe(jsonSchemaToTypescript(modelDirectory + "model.ts"))
+                .pipe(jsonSchemaToTypescript(modelDirectory + "/model.ts"))
                 .pipe(gulp.dest(modelPath))
         });
     },
@@ -44,7 +44,7 @@ module.exports = {
      * @param outputDirectory Directory where the project is built
      * @param outputTypingsDirectory Directory where the typings are built
      */
-    typescript: function (gulp, sourceDirectory, tsConfigFile, outputDirectory, outputTypingsDirectory) {
+    typescript(gulp, sourceDirectory, tsConfigFile, outputDirectory, outputTypingsDirectory) {
         // Shared reference to the typescript project configuration.
         // It improves performances.
         var tsProject;
@@ -137,7 +137,10 @@ module.exports = {
         gulp.task('watch-build-done', function () {
             return plugins.watch(buildFile, { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
                 function () {
-                    return gulp.start('restart');
+                    gulp.start('restart');
+                    if (gulp.hasTask('test')) {
+                        gulp.start('test');
+                    }
                 });
         });
 
@@ -187,6 +190,27 @@ module.exports = {
                     });
                 }
             }
+        });
+    },
+
+    test(gulp, jsTestsPath, coverageReportsDirectory) {
+        gulp.task('test', function () {
+            function writeProcessOutput(process) {
+                process['stdout'].on('data', function (data) {
+                    console.log(data.toString());
+                });
+                process['stderr'].on('data', function (data) {
+                    console.error(data.toString());
+                });
+
+                return process;
+            }
+
+            istanbul = writeProcessOutput(spawn('istanbul', ['cover', '--dir', coverageReportsDirectory, '_mocha', '--', '-R', 'spec', jsTestsPath]));
+            istanbul.on('close', function (data) {
+                writeProcessOutput(spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'lcovonly', '-o', coverageReportsDirectory + '/lcov.info']));
+                writeProcessOutput(spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'html', '-o', coverageReportsDirectory + '/lcov-report']));
+            });
         });
     }
 };
