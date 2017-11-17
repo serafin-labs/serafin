@@ -5,7 +5,7 @@
             "name": "Debug",
             "type": "node",
             "request": "attach",
-            "port": 5858,
+            "port": 9229,
             "timeout": 30000,
             "address": "localhost",
             "restart": true,
