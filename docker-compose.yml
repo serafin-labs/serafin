@@ -11,5 +11,3 @@ services:
     volumes:
       - .:/srv
       - ~/.ssh/id_rsa:/home/node/.ssh/id_rsa:ro
-      - ~/.gitconfig:/home/node/.gitconfig:ro
-      - ~/.npmrc:/home/node/.npmrc:ro
