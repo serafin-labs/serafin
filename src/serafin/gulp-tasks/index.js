@@ -11,6 +11,8 @@ var merge = require('merge-stream');
 
 module.exports = {
     /**
+     * Provides the Gulp tasks watch-model and build-model
+     * 
      * @param gulp Gulp object
      * @param sourcePath Path(s) of the files containing JSON-Schema models 
      * @param modelDirectory Model file directory
@@ -38,6 +40,8 @@ module.exports = {
     },
 
     /**
+     * Provides the Gulp tasks watch-typescript and build-typescript
+     * 
      * @param gulp Gulp object
      * @param sourceDirectory Directory containing typescript sources
      * @param tsConfigFile Typescript configuration file
@@ -81,6 +85,8 @@ module.exports = {
     },
 
     /**
+     * Provides the Gulp tasks watch-assets and build-assets
+     * 
      * @param gulp Gulp object
      * @param assetsPath Path(s) of the assets to be copied
      * @param outputDirectory Directory where the assets are copied
@@ -105,6 +111,9 @@ module.exports = {
     },
 
     /**
+     * Provides the gulp task:
+     * - clean: remove the content of the output directory
+     * 
      * @param gulp Gulp object
      * @param outputDirectory Build directory
      */
@@ -120,6 +129,12 @@ module.exports = {
     },
 
     /**
+     * Provides the Gulp tasks:
+     * - build-done: create a new build text file after a build)
+     * - watch-build-done: monitor the build text file, and restart the app and launches the test suite (if enabled) on a file change
+     * - start: run the app
+     * - restart: restart the app
+     * 
      * @param gulp Gulp object
      * @param command Command to run the application
      * @param buildFile Path of the build file
@@ -187,6 +202,15 @@ module.exports = {
         });
     },
 
+    /**
+     * Provides the Gulp task:
+     * - test: run the unit tests, display their output, builds a Typescript LCOV file (for code coverage over the Typescript sources),
+     * builds a lcov-report webpage in the coverage directory
+     * 
+     * @param gulp Gulp object
+     * @param jsTestsPath Path of the JS test files
+     * @param coverageReportsDirectory Destination directory of the coverage reports 
+     */
     test(gulp, jsTestsPath, coverageReportsDirectory) {
         gulp.task('test', function () {
             istanbul = spawn('istanbul', ['cover', '--dir', coverageReportsDirectory, '_mocha', '--', '-R', 'spec', jsTestsPath], { stdio: 'inherit' });
