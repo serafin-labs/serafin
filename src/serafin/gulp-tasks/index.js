@@ -151,15 +151,9 @@ module.exports = {
             }
             options.push(command);
 
-            process = spawn('node', options, { detached: true });
+            process = spawn('node', options, { stdio: 'inherit' });
             fs.writeFileSync(pidFile, process.pid);
 
-            process.stdout.on('data', function (data) {
-                console.log(data.toString());
-            });
-            process.stderr.on('data', function (data) {
-                console.error(data.toString());
-            });
             process.on('exit', function (data) {
                 console.log('*** Process exited ***');
                 process = null;
@@ -195,21 +189,10 @@ module.exports = {
 
     test(gulp, jsTestsPath, coverageReportsDirectory) {
         gulp.task('test', function () {
-            function writeProcessOutput(process) {
-                process['stdout'].on('data', function (data) {
-                    console.log(data.toString());
-                });
-                process['stderr'].on('data', function (data) {
-                    console.error(data.toString());
-                });
-
-                return process;
-            }
-
-            istanbul = writeProcessOutput(spawn('istanbul', ['cover', '--dir', coverageReportsDirectory, '_mocha', '--', '-R', 'spec', jsTestsPath]));
+            istanbul = spawn('istanbul', ['cover', '--dir', coverageReportsDirectory, '_mocha', '--', '-R', 'spec', jsTestsPath], { stdio: 'inherit' });
             istanbul.on('close', function (data) {
-                writeProcessOutput(spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'lcovonly', '-o', coverageReportsDirectory + '/lcov.info']));
-                writeProcessOutput(spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'html', '-o', coverageReportsDirectory + '/lcov-report']));
+                spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'lcovonly', '-o', coverageReportsDirectory + '/lcov.info'], { stdio: 'inherit' });
+                spawn('remap-istanbul', ['-i', coverageReportsDirectory + '/coverage.json', '-t', 'html', '-o', coverageReportsDirectory + '/lcov-report'], { stdio: 'inherit' });
             });
         });
     }
