@@ -5,40 +5,10 @@ var fs = require('fs');
 // Gulp dependencies
 var gulp = require('gulp');
 var plugins = require('gulp-load-plugins')();
-var jsonSchemaToTypescript = require('@serafin/gulp-serafin-json-schema-to-typescript');
 var del = require('del');
 var merge = require('merge-stream');
 
 module.exports = {
-    /**
-     * Provides the Gulp tasks watch-model and build-model
-     * 
-     * @param gulp Gulp object
-     * @param sourcePath Path(s) of the files containing JSON-Schema models 
-     * @param modelDirectory Model file directory
-     * @param taskSuffix Optional task suffix allow to create multiple tasks for differents model files, in case of sub-projects
-     */
-    model(gulp, sourcePath, modelDirectory, taskSuffix = null) {
-        if (typeof taskSuffix == 'string') {
-            taskSuffix = '-' + taskSuffix;
-        } else {
-            taskSuffix = '';
-        }
-
-        gulp.task('watch-model' + taskSuffix, function () {
-            return gulp.watch(adaptPath(sourcePath), { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
-                function () {
-                    return gulp.start('build-model' + taskSuffix);
-                });
-        });
-
-        gulp.task('build-model' + taskSuffix, function () {
-            return gulp.src(adaptPath(sourcePath))
-                .pipe(jsonSchemaToTypescript(modelDirectory + "/model.ts"))
-                .pipe(gulp.dest(modelPath))
-        });
-    },
-
     /**
      * Provides the Gulp tasks watch-typescript and build-typescript
      * 
@@ -141,7 +111,7 @@ module.exports = {
      */
     runner(gulp, command, buildFile, pidFile, debug) {
         var process = null;
-        gulp.task('build-done', function () {
+        gulp.task('write-build-done', function () {
             try {
                 fs.writeFileSync(buildFile, new Date());
             } catch (e) {
@@ -152,9 +122,8 @@ module.exports = {
         gulp.task('watch-build-done', function () {
             return plugins.watch(buildFile, { usePolling: true, awaitWriteFinish: true, alwaysStat: true },
                 function () {
-                    gulp.start('restart');
-                    if (gulp.hasTask('test')) {
-                        gulp.start('test');
+                    if (gulp.hasTask('build-done')) {
+                        gulp.start('build-done');
                     }
                 });
         });
@@ -223,8 +192,8 @@ module.exports = {
 };
 
 function buildDone() {
-    if (gulp.hasTask('build-done')) {
-        gulp.start('build-done');
+    if (gulp.hasTask('write-build-done')) {
+        gulp.start('write-build-done');
     }
 }
 
