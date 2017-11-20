@@ -65,7 +65,7 @@ async function main() {
 
     // all the beauty of Serafin is that now, we have a programmatic api with typings that supports all the buissness features we have implemented
     // let's create some tests data before the server starts
-    await petPipeline.create([{name: "Snowball", category: "cat", tags: ["dead"]}, {name: "", category: "cat", photoUrls: ["aCatUrl"]}])
+    var pets= await petPipeline.create([{name: "Snowball", category: "cat", tags: ["dead"]}, {name: "", category: "cat", photoUrls: ["aCatUrl"]}])
 
     // start the server
     var server = app.listen(process.env.PORT || 80, (error: any) => {

@@ -79,7 +79,7 @@ export class PipelineSourceInMemory<
 
 
     @validate
-    async update(id: string, values: Partial<T>, options?: UpdateOptions) {
+    async update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
         var resources = await this._read({
             id: id
         });
@@ -91,7 +91,7 @@ export class PipelineSourceInMemory<
             // in case it wasn't assigned yet
             values.id = values.id || id;
             this.resources[id] = values as any;
-            return values;
+            return values as any;
         }
         return undefined;
     }
