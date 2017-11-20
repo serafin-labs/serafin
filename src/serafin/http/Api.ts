@@ -46,8 +46,7 @@ export class Api {
 
         // setup endpoints for api metadata
         this.application.get(this.basePath + "/api.json", (req, res) => {
-            res.json(this.openApi);
-            res.end();
+            res.json(this.openApi).end();
         });
     }
 
@@ -368,7 +367,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(patchQueryParameters.concat(patchOptionsParameters)).concat([
+            parameters: removeDuplicatedParameters(patchOptionsParameters).concat([
                 {
                     in: "body",
                     name: name,

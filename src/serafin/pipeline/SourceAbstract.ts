@@ -25,7 +25,7 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    constructor(modelSchema: PipelineSchemaModel<T>) {
+    constructor(modelSchema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
         super();
         this.parent = null;
         this.modelSchema = modelSchema;
