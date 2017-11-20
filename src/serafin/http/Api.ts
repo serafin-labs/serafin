@@ -52,31 +52,6 @@ export class Api {
     }
 
     /**
-     * Add the default middlewares to express to make the Api work
-     * Override with your own middleware needs
-     */
-    prepareApplication() {
-        this.application.use(bodyParser.json());
-        this.application.use(compression());
-        return this;
-    }
-
-    runApplication(port: number = 80) {
-        return new Promise<this>((resolve, reject) => {
-            var server = this.application.listen(port, (error: any) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    let host = server.address().address;
-                    let port = server.address().port;
-                    console.log('Server listening on [%s]:%s', host, port);
-                    resolve(this);
-                }
-            });
-        });
-    }
-
-    /**
      * Expose a pipeline on this API. All implemented methods are automatically binded to the corrsponding actions and urls.
      * 
      * @param pipeline The pipeline to expose on the API
