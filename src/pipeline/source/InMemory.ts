@@ -1,4 +1,4 @@
-import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline'
+import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
