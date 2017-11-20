@@ -41,7 +41,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 }
             }
         } else if (propertyKey === "update") {
-            var validateValues = ajv.compile('modelSchema#/definitions/updateValues');
+            var validateValues = ajv.compile({ "$ref": 'modelSchema#/definitions/updateValues' });
             return (params: any[]) => {
                 let [id, values, options] = params;
                 let valid = validateValues(values);
@@ -50,8 +50,8 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 }
             }
         } else if (propertyKey === "patch") {
-            var validateQuery = ajv.compile('modelSchema#/definitions/patchQuery');
-            var validateValues = ajv.compile('modelSchema#/definitions/patchValues');
+            var validateQuery = ajv.compile({ "$ref": 'modelSchema#/definitions/patchQuery' });
+            var validateValues = ajv.compile({ "$ref": 'modelSchema#/definitions/patchValues' });
             return (params: any[]) => {
                 let [query, values, options] = params;
                 let valid = validateQuery(query) && validateValues(values);
@@ -60,7 +60,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 }
             }
         } else if (propertyKey === "delete") {
-            var validateQuery = ajv.compile('modelSchema#/definitions/deleteQuery');
+            var validateQuery = ajv.compile({ "$ref": 'modelSchema#/definitions/deleteQuery' });
             return (params: any[]) => {
                 let [query, options] = params;
                 let valid = validateQuery(query || {});

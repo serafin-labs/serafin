@@ -1,11 +1,11 @@
-import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline'
+import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
-@description("Loads and stores resources as objects into memory. Any data is lost upon source uninstanciation. Ideal for unit tests.")
+@description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineSourceInMemory<
     T extends ResourceIdentityInterface,
     ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
@@ -22,7 +22,7 @@ export class PipelineSourceInMemory<
     DeleteOptions = {}> extends PipelineSourceAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions> {
     protected resources: { [index: string]: T };
 
-    constructor(schema: PipelineSchemaModel<T>) {
+    constructor(schema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
         super(schema);
         this.resources = {} as { [index: string]: T };
     }
@@ -56,12 +56,12 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async create(resources: Partial<T>[], options?: CreateOptions) {
+    async create(resources: CreateResources[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
-            if (!this.resources[resource.id]) {
-                this.resources[resource.id] = <any>identifiedResource;
+            if (!this.resources[resource["id"]]) {
+                this.resources[resource["id"]] = <any>identifiedResource;
                 createdResources.push(<any>identifiedResource);
             } else {
                 // Todo: put the conflict test at beginning (for atomicity)
@@ -79,7 +79,7 @@ export class PipelineSourceInMemory<
 
 
     @validate
-    async update(id: string, values: Partial<T>, options?: UpdateOptions) {
+    async update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
         var resources = await this._read({
             id: id
         });
@@ -89,15 +89,15 @@ export class PipelineSourceInMemory<
                 delete (this.resources[resource.id]);
             }
             // in case it wasn't assigned yet
-            resource.id = id
-            this.resources[id] = resource;
-            return resource;
+            values.id = values.id || id;
+            this.resources[id] = values as any;
+            return values as any;
         }
         return undefined;
     }
 
     @validate
-    async patch(query: PatchQuery, values: Partial<T>, options?: PatchOptions) {
+    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions) {
         var resources = await this._read(query);
         let updatedResources: T[] = [];
 

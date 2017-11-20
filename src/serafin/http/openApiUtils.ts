@@ -20,7 +20,7 @@ export function jsonSchemaToOpenApiSchema(schema: JSONSchema4) {
 }
 
 /**
- * Go through the whole schema and modify refs that points to a local schema and prepend the basepath.=
+ * Go through the whole schema and modify refs that points to a local schema and prepend the basepath.
  */
 export function remapRefs(schema: JSONSchema4, basePath: string) {
     throughJsonSchema(schema, (s) => {
@@ -164,7 +164,7 @@ export function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swa
 }
 
 /**
- * Parse the given paramters array and move the specified ones to `path`
+ * Parse the given parameters array and move the specified ones to `path`
  * 
  * @param parameters 
  */

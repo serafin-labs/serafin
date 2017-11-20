@@ -48,13 +48,13 @@ export abstract class PipelineAbstract<
      */
     get schema() {
         // find the nearest modelSchema defintion
-        let findModelSchema = () => this.modelSchema || (this.parent ? this.parent.modelSchema : null)
+        let findModelSchema = (target: PipelineAbstract) => target.modelSchema || (target.parent ? findModelSchema(target.parent) : null)
 
         // gather all options used by this pipeline and its parents
         let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(findModelSchema(), PipelineSchema.mergeOptions(findAllOptions(this)))
+        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)))
     }
 
     /**

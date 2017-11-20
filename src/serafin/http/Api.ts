@@ -1,3 +1,4 @@
+import * as Ajv from "ajv";
 import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
@@ -46,33 +47,7 @@ export class Api {
 
         // setup endpoints for api metadata
         this.application.get(this.basePath + "/api.json", (req, res) => {
-            res.json(this.openApi);
-            res.end();
-        });
-    }
-
-    /**
-     * Add the default middlewares to express to make the Api work
-     * Override with your own middleware needs
-     */
-    prepareApplication() {
-        this.application.use(bodyParser.json());
-        this.application.use(compression());
-        return this;
-    }
-
-    runApplication(port: number = 80) {
-        return new Promise<this>((resolve, reject) => {
-            var server = this.application.listen(port, (error: any) => {
-                if (error) {
-                    reject(error);
-                } else {
-                    let host = server.address().address;
-                    let port = server.address().port;
-                    console.log('Server listening on [%s]:%s', host, port);
-                    resolve(this);
-                }
-            });
+            res.json(this.openApi).end();
         });
     }
 
@@ -110,14 +85,31 @@ export class Api {
         let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.openApi)
         let patchOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.openApi);
         let deleteOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.openApi);
+        
+        // prepare Ajv filters
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
+        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        ajv.addSchema(pipelineSchema.schema, "pipelineSchema");
+        let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
+        let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
+        let createOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/createOptions' });
+        let updateOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/updateOptions' });
+        let patchOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/patchOptions' });
+        let deleteOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/deleteOptions' });
+
 
         // create the routes for this endpoint
 
         // get many resources
         router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // separate options from query based on pipeline metadata
-            var options = _.pickBy(req.query, (value, key) => _.find(readOptionsParameters, v => v.name === key))
-            var query = _.pickBy(req.query, (value, key) => _.find(readQueryParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let query = _.cloneDeep(req.query);
+            let optionsValid = readOptionsFilter(options);
+            let queryValid = readQueryFilter(query);
+            if (!optionsValid || !queryValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
 
             // run the query
             pipeline.read(query, options).then(wrapper => {
@@ -131,7 +123,11 @@ export class Api {
         // get a resource by its id
         router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = _.pickBy(req.query, (value, key) => _.find(readOptionsParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let optionsValid = readOptionsFilter(options);
+            if (!optionsValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
             var id = req.params.id
 
             // run the query
@@ -152,7 +148,11 @@ export class Api {
         // create a new resource
         router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = _.pickBy(req.query, (value, key) => _.find(createOptionsParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let optionsValid = createOptionsFilter(options);
+            if (!optionsValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
             var data = req.body
 
             // run the query
@@ -169,7 +169,11 @@ export class Api {
         // patch an existing resource
         router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = _.pickBy(req.query, (value, key) => _.find(patchOptionsParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let optionsValid = patchOptionsFilter(options);
+            if (!optionsValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
             var patch = req.body
             var id = req.params.id
 
@@ -191,7 +195,11 @@ export class Api {
         // put an existing resource
         router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = _.pickBy(req.query, (value, key) => _.find(updateOptionsParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let optionsValid = updateOptionsFilter(options);
+            if (!optionsValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
             var data = req.body
             var id = req.params.id
 
@@ -211,7 +219,11 @@ export class Api {
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             // extract parameters
-            var options = _.pickBy(req.query, (value, key) => _.find(deleteOptionsParameters, v => v.name === key))
+            let options = _.cloneDeep(req.query);
+            let optionsValid = deleteOptionsFilter(options);
+            if (!optionsValid) {
+                return handleError(new Error("Invalid Parameters"), res);
+            }
             var id = req.params.id
 
             // run the query
@@ -231,7 +243,6 @@ export class Api {
 
         // attach the router to the express app
         this.application.use(endpointPath, router);
-
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -368,7 +379,7 @@ export class Api {
         this.openApi.paths[resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(name)} using its id`,
             operationId: `patch${_.upperFirst(name)}`,
-            parameters: removeDuplicatedParameters(patchQueryParameters.concat(patchOptionsParameters)).concat([
+            parameters: removeDuplicatedParameters(patchOptionsParameters).concat([
                 {
                     in: "body",
                     name: name,
