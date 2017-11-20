@@ -5,7 +5,7 @@ import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
-@description("Loads and stores resources as objects into memory. Any data is lost upon source uninstanciation. Ideal for unit tests.")
+@description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineSourceInMemory<
     T extends ResourceIdentityInterface,
     ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,

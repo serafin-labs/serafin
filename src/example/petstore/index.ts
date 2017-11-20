@@ -57,7 +57,8 @@ async function main() {
         .pipe(new DefaultPetName("Snowball", 1)) // add custom logic to generate pets name
       //.pipe(...)  you can then add any pipeline. You can do pretty much anything, included but not limited to: custom buisness rules, logs, events, cache, api rate limiting, user acl, generated properties, fetch relations, result filters, property filters, custom type checking, etc. 
 
-    console.log(petPipeline.schema.schema); 
+    // Print schemas of each part of the pipeline to the console
+    console.log(petPipeline.toString()); 
 
     // register the pipeline to the api so it is exposed automatically
     // it will create the following routes : /pets (GET, POST) and /pets/:id (GET, PUT, PATCH, DELETE) 
