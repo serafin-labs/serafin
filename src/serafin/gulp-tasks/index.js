@@ -100,10 +100,13 @@ module.exports = {
 
     /**
      * Provides the Gulp tasks:
-     * - build-done: create a new build text file after a build)
-     * - watch-build-done: monitor the build text file, and restart the app and launches the test suite (if enabled) on a file change
+     * - write-build-done: creates a new build text file (run after a build)
+     * - watch-build-done: monitor the build text file, and launch a user defined Gulp task 'build-done' (if existing) on a file change
      * - start: run the app
      * - restart: restart the app
+     * 
+     * It is intended for the developer to create a Gulp task 'build-done' to trigger actions once the project has been rebuild, such as:
+     * gulp.task('build-done', ['restart', 'test']);
      * 
      * @param gulp Gulp object
      * @param command Command to run the application
