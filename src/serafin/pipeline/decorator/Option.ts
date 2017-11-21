@@ -1,4 +1,6 @@
 import * as Ajv from 'ajv'
+import * as VError from 'verror';
+import { validtionError } from "../../error/Error"
 import { PipelineAbstract } from '../Abstract'
 import { PipelineSchemaMethodOptions } from '../schema/MethodOptions'
 import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
@@ -48,21 +50,15 @@ export function option(option: string, schema: Object | (() => Object), required
 
             // wrap the method to add validation
             descriptor.value = function (...params) {
-                try {
-                    // get options from params
-                    let options = params.length > optPosition ? params[optPosition] : null;
-                    // run validation
-                    let valid = validate(options || {});
-                    if (!valid) {
-                        throw new Error(ajv.errorsText(validate.errors))
-                    }
-                    // call the real implementation
-                    return func.apply(this, params);
-                } catch (e) {
-                    let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                    console.log("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                    return Promise.reject(e);
+                // get options from params
+                let options = params.length > optPosition ? params[optPosition] : null;
+                // run validation
+                let valid = validate(options || {});
+                if (!valid) {
+                    return Promise.reject(validtionError(ajv.errorsText(validate.errors)))
                 }
+                // call the real implementation
+                return func.apply(this, params);
             };
         }
     }

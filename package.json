@@ -32,7 +32,8 @@
     "json-schema-merge-allof": "^0.6.0",
     "jsonpointer": "^4.0.1",
     "node-uuid": "^1.4.8",
-    "util": "^0.10.3"
+    "util": "^0.10.3",
+    "verror": "^1.10.0"
   },
   "devDependencies": {
     "@serafin/gulp-serafin-json-schema-to-typescript": "git+ssh://git@github.com/serafin-framework/gulp-serafin-json-schema-to-typescript.git",
