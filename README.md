@@ -139,7 +139,7 @@ let newEntities = await pipeline.create([...]);
 
 ### Advanced typings
 
-The pipeline not only combines behaviors. It combines types.
+The pipeline does not only combine behaviors. It also combines types.
 This means that the schema modifications and the options you add endup beeing part of the type signature of the pipeline!
 
 ![](https://media.giphy.com/media/l2QE7DJSSgkg0I812/giphy.gif)
