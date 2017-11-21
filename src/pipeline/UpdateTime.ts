@@ -8,7 +8,7 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
-    async read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
+    protected async _read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
         return this.parent.read(query, options).then((items) => {
             let lastCreatedAt = null;
             let lastUpdatedAt = null;
@@ -37,7 +37,7 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Sets the creation time")
-    async create(resources: {}[], options?: {}) {
+    protected async _create(resources: {}[], options?: {}) {
         resources.forEach(resource => {
             resource['createdAt'] = Date.now();
         });
@@ -46,13 +46,13 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Sets the update time")
-    async update(id: string, values: {}, options?: {}) {
+    protected async _update(id: string, values: {}, options?: {}) {
         values['updatedAt'] = Date.now();
         return this.parent.update(id, values, options);
     }
 
     @description("Sets the update time")
-    async patch(query: {}, values: {}, options?: {}) {
+    protected async _patch(query: {}, values: {}, options?: {}) {
         values['updatedAt'] = Date.now();
         return this.parent.patch(query, values, options);
     }

@@ -33,27 +33,27 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+    protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 
     @PipelineSourceAbstract.notImplemented
-    async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         throw new Error("Not implemented");
     }
 

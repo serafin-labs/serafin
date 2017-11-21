@@ -7,6 +7,7 @@ import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaMethodOptions } from './schema/MethodOptions'
 import { getOptionsSchemas } from './decorator/optionsSchemaSymbols'
+import { final } from './decorator/Final'
 
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
@@ -69,7 +70,11 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+        return this._create(resources, options);
+    }
+
+    protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         return this.parent.create(resources, options);
     }
 
@@ -79,7 +84,11 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+        return this._read(query, options);
+    }
+
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -92,7 +101,11 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+    @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+        return this._update(id, values, options);
+    }
+
+    protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         return this.parent.update(id, values, options);
     }
 
@@ -105,7 +118,11 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+        return this._patch(query, values, options);
+    }
+
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         return this.parent.patch(query, values, options);
     }
 
@@ -114,7 +131,11 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+        return this._delete(query, options);
+    }
+
+    protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         return this.parent.delete(query, options);
     }
 

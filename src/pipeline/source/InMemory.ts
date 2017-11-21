@@ -37,7 +37,7 @@ export class PipelineSourceInMemory<
         return resource;
     }
 
-    private async _read(query: any): Promise<ReadWrapper> {
+    private async readInMemory(query: any): Promise<ReadWrapper> {
         if (!query) {
             query = {};
         }
@@ -56,7 +56,7 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async create(resources: CreateResources[], options?: CreateOptions) {
+    protected async _create(resources: CreateResources[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -73,14 +73,14 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
-        return this._read(query)
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+        return this.readInMemory(query)
     }
 
 
     @validate
-    async update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
-        var resources = await this._read({
+    protected async _update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
+        var resources = await this.readInMemory({
             id: id
         });
         if (resources.results.length > 0) {
@@ -97,8 +97,8 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions) {
-        var resources = await this._read(query);
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions) {
+        var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
         resources.results.forEach(resource => {
@@ -115,8 +115,8 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async delete(query?: DeleteQuery, options?: DeleteOptions) {
-        var resources = await this._read(query);
+    protected async _delete(query?: DeleteQuery, options?: DeleteOptions) {
+        var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 
         resources.results.forEach((resource) => {
