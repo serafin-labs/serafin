@@ -1,3 +1,5 @@
+import * as VError from 'verror';
+import { conflictError } from "../../serafin/error/Error"
 import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
@@ -65,7 +67,7 @@ export class PipelineSourceInMemory<
                 createdResources.push(<any>identifiedResource);
             } else {
                 // Todo: put the conflict test at beginning (for atomicity)
-                throw new Error('Conflict');
+                throw conflictError(resource["id"])
             }
         });
 
