@@ -6,13 +6,13 @@ import { ResourceIdentityInterface } from "./ResourceInterfaces"
  * Defines schemas related to the model that are used by the pipeline for validation.
  */
 export class PipelineSchemaModel<
-    T extends ResourceIdentityInterface, 
-    ReadQuery = {},
-    CreateValues = {},
-    UpdateValues = {},
-    PatchQuery = {},
-    PatchValues = {},
-    DeleteQuery = {}> extends PipelineSchemaAbstract {
+    T extends ResourceIdentityInterface = ResourceIdentityInterface, 
+    ReadQuery = any,
+    CreateValues = any,
+    UpdateValues = any,
+    PatchQuery = any,
+    PatchValues = any,
+    DeleteQuery = any> extends PipelineSchemaAbstract {
         
     /**
      * The path of the main model schema

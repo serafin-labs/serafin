@@ -1,4 +1,4 @@
-
+import { notImplementedError } from "../error/Error"
 import { PipelineAbstract } from './Abstract';
 import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { PipelineSchemaModel } from './schema/Model'
@@ -34,27 +34,27 @@ export abstract class PipelineSourceAbstract<
 
     @PipelineSourceAbstract.notImplemented
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
-        throw new Error("Not implemented");
+        throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name);
     }
 
     @PipelineSourceAbstract.notImplemented
     protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
-        throw new Error("Not implemented");
+        throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name);
     }
 
     @PipelineSourceAbstract.notImplemented
     protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        throw new Error("Not implemented");
+        throw notImplementedError("update", Object.getPrototypeOf(this).constructor.name);
     }
 
     @PipelineSourceAbstract.notImplemented
     protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
-        throw new Error("Not implemented");
+        throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name);
     }
 
     @PipelineSourceAbstract.notImplemented
     protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
-        throw new Error("Not implemented");
+        throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name);
     }
 
     private static notImplemented(target: any, propertyKey: string, descriptor: PropertyDescriptor) {

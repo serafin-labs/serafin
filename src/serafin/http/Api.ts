@@ -2,11 +2,11 @@ import * as Ajv from "ajv";
 import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
-import * as bodyParser from 'body-parser';
-import * as compression from 'compression';
+import * as VError from 'verror';
 import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
 import { throughJsonSchema } from "../util/throughJsonSchema"
+import { validtionError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
 
 
@@ -41,7 +41,8 @@ export class Api {
         this.openApi.definitions.Error = {
             type: "object",
             properties: {
-                error: { type: "string" }
+                code: { type: "number" },
+                message: { type: "string" }
             }
         }
 
@@ -63,13 +64,28 @@ export class Api {
         this.pipelineByName[name] = pipeline;
 
         // setup the router
-        var endpointPath = `${this.basePath}/${pluralName}`;
-        var resourcesPath = `/${pluralName}`;
-        var router = express.Router();
+        let endpointPath = `${this.basePath}/${pluralName}`;
+        let resourcesPath = `/${pluralName}`;
+        let router = express.Router();
 
         // error handling closure for this endpoint
-        var handleError = (error, res: express.Response) => {
-            res.status(500).end();
+        let handleError = (error, res: express.Response, next: (err?: any) => void) => {
+            // handle known errors
+            if (![[ValidationErrorName, 400], [NotFoundErrorName, 404], [ConflictErrorName, 409], [NotImplementedErrorName, 405], [UnauthorizedErrorName, 401]].some((p: [string, number]) => {
+                let [errorName, code] = p;
+                if (VError.findCauseByName(error, errorName)) {
+                    res.status(code).json({
+                        code: code,
+                        message: error.message
+                    })
+                    return true
+                }
+                return false
+            })) {
+                // or pass the error down the chain
+                console.error(VError.fullStack(error));
+                next(error)
+            }
         };
 
         // import pipeline schemas to openApi definitions
@@ -108,7 +124,8 @@ export class Api {
             let optionsValid = readOptionsFilter(options);
             let queryValid = readQueryFilter(query);
             if (!optionsValid || !queryValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
 
             // run the query
@@ -116,7 +133,7 @@ export class Api {
                 res.status(200).json(wrapper);
                 res.end();
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -126,7 +143,8 @@ export class Api {
             let options = _.cloneDeep(req.query);
             let optionsValid = readOptionsFilter(options);
             if (!optionsValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(readOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
             var id = req.params.id
 
@@ -137,11 +155,11 @@ export class Api {
                 if (wrapper.results.length > 0) {
                     res.status(200).json(wrapper.results[0])
                 } else {
-                    res.status(404)
+                    throw notFoundError(`${name}:${id}`)
                 }
                 res.end();
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -151,7 +169,8 @@ export class Api {
             let options = _.cloneDeep(req.query);
             let optionsValid = createOptionsFilter(options);
             if (!optionsValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(createOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
             var data = req.body
 
@@ -162,7 +181,7 @@ export class Api {
                 }
                 res.status(201).json(createdResources[0])
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -172,7 +191,8 @@ export class Api {
             let options = _.cloneDeep(req.query);
             let optionsValid = patchOptionsFilter(options);
             if (!optionsValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(patchOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
             var patch = req.body
             var id = req.params.id
@@ -182,13 +202,13 @@ export class Api {
                 id: id
             }, patch, options).then(updatedResources => {
                 if (updatedResources.length === 0) {
-                    res.status(404)
+                    throw notFoundError(`${name}:${id}`)
                 } else {
                     res.status(200).json(updatedResources[0])
                 }
                 res.end()
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -198,7 +218,8 @@ export class Api {
             let options = _.cloneDeep(req.query);
             let optionsValid = updateOptionsFilter(options);
             if (!optionsValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(updateOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
             var data = req.body
             var id = req.params.id
@@ -206,13 +227,13 @@ export class Api {
             // run the query
             pipeline.update(id, data, options).then(updatedResource => {
                 if (!updatedResource) {
-                    res.status(404)
+                    throw notFoundError(`${name}:${id}`)
                 } else {
                     res.status(200).json(updatedResource)
                 }
                 res.end()
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -222,7 +243,8 @@ export class Api {
             let options = _.cloneDeep(req.query);
             let optionsValid = deleteOptionsFilter(options);
             if (!optionsValid) {
-                return handleError(new Error("Invalid Parameters"), res);
+                let error = this.apiError(validtionError(ajv.errorsText(deleteOptionsFilter.errors)), req)
+                return handleError(error, res, next);
             }
             var id = req.params.id
 
@@ -231,13 +253,13 @@ export class Api {
                 id: id
             }, options).then(deletedResources => {
                 if (deletedResources.length === 0) {
-                    res.status(404)
+                    throw notFoundError(`${name}:${id}`)
                 } else {
                     res.status(200).json(deletedResources[0])
                 }
                 res.end()
             }).catch(error => {
-                handleError(error, res)
+                handleError(this.apiError(error, req), res, next)
             });
         })
 
@@ -446,5 +468,17 @@ export class Api {
 
         // return this for easy chaining of operations
         return this;
+    }
+
+    protected apiError(cause: any, req: express.Request) {
+        return new VError({
+            name: "SerafinRequestError",
+            cause: cause,
+            info: {
+                url: req.url,
+                method: req.method,
+                ip: req.ip
+            }
+        }, `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`)
     }
 }

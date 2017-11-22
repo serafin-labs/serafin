@@ -1,4 +1,6 @@
 import * as Ajv from 'ajv'
+import * as VError from 'verror';
+import { validtionError } from "../../error/Error"
 import { PipelineAbstract } from '../Abstract'
 
 const VALIDATE_FUNCTIONS = {
@@ -28,7 +30,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 let [resources, options] = params;
                 let valid = validateResources(resources);
                 if (!valid) {
-                    throw new Error(ajv.errorsText(validateResources.errors))
+                    return validtionError(ajv.errorsText(validateResources.errors))
                 }
             }
         } else if (propertyKey === "read") {
@@ -37,7 +39,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 let [query, options] = params;
                 let valid = validateQuery(query || {});
                 if (!valid) {
-                    throw new Error(ajv.errorsText(validateQuery.errors))
+                    return validtionError(ajv.errorsText(validateQuery.errors))
                 }
             }
         } else if (propertyKey === "update") {
@@ -46,7 +48,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 let [id, values, options] = params;
                 let valid = validateValues(values);
                 if (!valid) {
-                    throw new Error(ajv.errorsText(validateValues.errors))
+                    return validtionError(ajv.errorsText(validateValues.errors))
                 }
             }
         } else if (propertyKey === "patch") {
@@ -56,7 +58,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 let [query, values, options] = params;
                 let valid = validateQuery(query) && validateValues(values);
                 if (!valid) {
-                    throw new Error(ajv.errorsText(validateQuery.errors || validateValues.errors))
+                    return validtionError(ajv.errorsText(validateQuery.errors || validateValues.errors))
                 }
             }
         } else if (propertyKey === "delete") {
@@ -65,7 +67,7 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
                 let [query, options] = params;
                 let valid = validateQuery(query || {});
                 if (!valid) {
-                    throw new Error(ajv.errorsText(validateQuery.errors))
+                    return validtionError(ajv.errorsText(validateQuery.errors))
                 }
             }
         }
@@ -76,18 +78,14 @@ export function validate(target: any, propertyKey?: string, descriptor?: Propert
         let func: Function = descriptor.value;
 
         descriptor.value = function (...params) {
-            try {
-                // validation function is cached using a symbol for each method
-                this[VALIDATE_FUNCTIONS[propertyKey]] = this[VALIDATE_FUNCTIONS[propertyKey]] || compileValidationFunction(this);
-                let validate = this[VALIDATE_FUNCTIONS[propertyKey]];
-                validate(params)
-                return func.apply(this, params);
-            } catch (e) {
-                let callError = new Error("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                console.log("Validation error in " + Object.getPrototypeOf(this).constructor.name + "." + propertyKey + " : " + e);
-                return Promise.reject(e);
+            // validation function is cached using a symbol for each method
+            this[VALIDATE_FUNCTIONS[propertyKey]] = this[VALIDATE_FUNCTIONS[propertyKey]] || compileValidationFunction(this);
+            let validate = this[VALIDATE_FUNCTIONS[propertyKey]];
+            let error = validate(params);
+            if (error) {
+                return Promise.reject(error)
             }
-
+            return func.apply(this, params);
         };
     }
 }
