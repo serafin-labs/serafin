@@ -1,4 +1,4 @@
-import { PipelineAbstract, option, description, validate } from '../serafin/pipeline'
+import { PipelineAbstract, option, description, validate, result } from '../serafin/pipeline'
 
 @description("Adds creation and update timestamps to the resources")
 export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }, {}, {}, { lastCreatedAt: number, lastUpdatedAt: number}> {
@@ -8,6 +8,8 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
+    @result("lastCreatedAt", { type: "integer" }, true, "Last creation date")
+    @result("lastUpdatedAt", { type: "integer" }, true, "Last modification date")
     async read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
         let readWrapper = (await this.parent.read(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }
         let lastCreatedAt = null;

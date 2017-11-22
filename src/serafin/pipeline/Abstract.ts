@@ -5,8 +5,8 @@ import { JSONSchema4 } from "json-schema"
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchema } from './schema/Pipeline'
-import { PipelineSchemaMethodOptions } from './schema/MethodOptions'
-import { getOptionsSchemas } from './decorator/optionsSchemaSymbols'
+import { PipelineSchemaProperties } from './schema/Properties'
+import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
 
 /**
  * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
@@ -52,9 +52,12 @@ export abstract class PipelineAbstract<
 
         // gather all options used by this pipeline and its parents
         let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
+ 
+        // gather all results used by this pipeline and its parents
+        let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)))
+        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
     }
 
     /**
@@ -126,7 +129,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string { 
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 

@@ -2,14 +2,9 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validtionError } from "../../error/Error"
 import { PipelineAbstract } from '../Abstract'
+import { VALIDATE_FUNCTIONS } from './decoratorSymbols'
 
-const VALIDATE_FUNCTIONS = {
-    "create": Symbol("Create Validation Function"),
-    "read": Symbol("Read Validation Function"),
-    "update": Symbol("Update Validation Function"),
-    "patch": Symbol("Patch Validation Function"),
-    "delete": Symbol("Delete Validation Function")
-};
+
 
 /**
  * Method decorator enabling JSONSchema validation upon a CRUD method

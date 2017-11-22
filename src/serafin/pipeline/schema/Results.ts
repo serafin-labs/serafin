@@ -3,14 +3,13 @@ import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
 
 /**
- *  Schema that represents a set of options for a pipeline
+ *  Schema that represents additional response results
  */
-export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
-
+export class PipelineSchemaResults extends PipelineSchemaAbstract {
     /**
      * An array of all the registered options separetly
      */
-    public options: {
+    public results: {
         [name: string]: {
             schema: JSONSchema4,
             description: string,
@@ -24,24 +23,17 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
             properties: {}
         } as JSONSchema4;
         super(schema)
-        this.options = {}
     }
 
     /**
-     * Add the following option to the schema
+     * Add the following result property to the schema
      * 
      * @param name 
-     * @param option 
+     * @param schema 
      * @param description 
      * @param required 
      */
-    addOption(name: string, schema: JSONSchema4, description: string, required: boolean): this {
-        this.options[name] = {
-            schema: schema,
-            description: description,
-            required: required
-        }
-
+    addResult(name: string, schema: JSONSchema4, description: string, required: boolean): this {
         // add the option to the main schema
         this.schemaObject.properties[name] = schema;
         this.schemaObject.properties[name].description = description;
@@ -54,29 +46,15 @@ export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
         return this
     }
 
-    hasOption(name): boolean {
-        return !!this.options[name];
-    }
-
-    /**
-     * Set the following description on this set of options
-     * 
-     * @param description 
-     */
-    setDescription(description: string): this {
-        this.schemaObject.description = description;
-        return this;
-    }
-
     /**
      * Merge the current options schema with another one. This operation modifies the schema.
      */
-    merge(otherOptions: PipelineSchemaMethodOptions): this {
-        if (!otherOptions) {
+    merge(otherResults: PipelineSchemaResults): this {
+        if (!otherResults) {
             return this
         }
 
-        for (let option in otherOptions.options) {
+        for (let option in otherResults.options) {
             let optionMetadata = otherOptions.options[option]
             this.addOption(option, optionMetadata.schema, optionMetadata.description, optionMetadata.required)
         }
