@@ -9,7 +9,8 @@ import { ResourceIdentityInterface } from './ResourceInterfaces';
 const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
 
 /**
- * Represents the complete schema of the pipeline
+ * Represents the complete schema of the pipeline.
+ * It's a combination of the model schema and all options schemas.
  */
 export class PipelineSchema<T extends ResourceIdentityInterface> extends PipelineSchemaAbstract {
     constructor(modelSchema: PipelineSchemaModel<T>, optionsSchemas: {

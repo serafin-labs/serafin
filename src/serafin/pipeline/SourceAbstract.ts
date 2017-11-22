@@ -1,6 +1,6 @@
 import { notImplementedError } from "../error/Error"
 import { PipelineAbstract } from './Abstract';
-import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
+import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { PipelineSchemaModel } from './schema/Model'
 
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
@@ -13,7 +13,7 @@ export abstract class PipelineSourceAbstract<
     T extends ResourceIdentityInterface,
     ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
     ReadOptions = {},
-    ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>,
+    ReadWrapper = {},
     CreateResources = Partial<T>,
     CreateOptions = {},
     UpdateValues = Partial<T>,
@@ -33,7 +33,7 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name);
     }
 

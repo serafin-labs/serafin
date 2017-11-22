@@ -55,7 +55,7 @@ What differentiates **Serafin** from other frameworks is its set of features, al
 
 ## What does it look like ?
 
-A very simple exemple looks like that :
+A very simple example looks like that :
 
 ```typescript
 import * as express from 'express';

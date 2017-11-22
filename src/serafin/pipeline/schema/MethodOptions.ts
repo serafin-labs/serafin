@@ -3,7 +3,7 @@ import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
 
 /**
- * Defines schemas related to the model that are used by the pipeline for validation.
+ *  Schema that represents a set of options for a pipeline
  */
 export class PipelineSchemaMethodOptions extends PipelineSchemaAbstract {
 

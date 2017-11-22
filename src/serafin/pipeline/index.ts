@@ -5,7 +5,6 @@ export { validate } from "./decorator/Validate"
 
 // schema
 export { PipelineSchemaModel } from "./schema/Model"
-export { ReadWrapperInterface } from "./schema/ResourceInterfaces"
 
 // pipeline
 export { PipelineAbstract } from "./Abstract"
