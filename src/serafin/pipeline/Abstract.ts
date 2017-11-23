@@ -83,6 +83,36 @@ export abstract class PipelineAbstract<
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
 
+    private filterContextOptions(schemaName: string, options?: {}, contextOptions?: {}): {} {
+        if (!options) {
+            options = {};
+        }
+
+        if (!Object.getOwnPropertyDescriptor(options, 'context')) {
+            Object.defineProperty(options, 'context', { value: [] });
+        }
+
+        // Browse this schema options declared as contextual, and eliminates the options that should be but are not in the "context" descriptor
+        let schema = this.currentSchema.schema.definitions[schemaName];
+        if (schema && schema['properties']) {
+            for (let key in schema['properties']) {
+                if (schema['properties'][key]['contextual'] && Object.getOwnPropertyDescriptor(options, 'context').value.indexOf(key) === -1) {
+                    delete options[key];
+                }
+            }
+        }
+
+        if (typeof contextOptions === 'object') {
+            // Mark in the options "context" descriptor the options coming from the context and move them
+            for (let key in contextOptions) {
+                options[key] = contextOptions[key];
+                Object.getOwnPropertyDescriptor(options, 'context').value.push(key);
+            }
+        }
+
+        return options;
+    }
+
     /**
      * Create new resources based on `resources` input array.
      * 
@@ -90,7 +120,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: CreateResources[], options?: CreateOptions, contextOptions?: CreateOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        options = this.filterContextOptions('createOptions', options, contextOptions) as CreateOptions;
         this.validate('create', resources, options);
         return this._create(resources, options);
     }
@@ -106,7 +136,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        options = this.filterContextOptions('readOptions', options, contextOptions) as ReadOptions;
         this.validate('read', query, options);
         return this._read(query, options);
     }
@@ -125,7 +155,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async update(id: string, values: UpdateValues, options?: UpdateOptions, contextOptions?: UpdateOptions): Promise<T> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        options = this.filterContextOptions('updateOptions', options, contextOptions) as UpdateOptions;
         this.validate('update', id, values, options);
         return this._update(id, values, options);
     }
@@ -144,7 +174,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions, contextOptions?: PatchOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        options = this.filterContextOptions('patchOptions', options, contextOptions) as PatchOptions;
         this.validate('patch', query, values, options);
         return this._patch(query, values, options);
     }
@@ -159,7 +189,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: DeleteQuery, options?: DeleteOptions, contextOptions?: DeleteOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        options = this.filterContextOptions('deleteOptions', options, contextOptions) as DeleteOptions;
         this.validate('delete', query, options);
         return this._delete(query, options);
     }

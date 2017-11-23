@@ -12,9 +12,8 @@ import { OPTIONS_SCHEMAS } from './decoratorSymbols'
  * @param schema JSONSchema definition. Can be an object or a function returning an object
  * @param required true or false
  * @param description Description of the option
- * @param validation Flag indicating if this option should be validated automatically. Default value : 'true'
  */
-export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null, validation = true) {
+export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null, contextual: boolean = false) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         // add option metadata to the pipeline
         if (propertyKey.startsWith('_')) {
@@ -25,6 +24,6 @@ export function option(option: string, schema: Object | (() => Object), required
             target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaProperties()
         }
         optionsSchema = target[OPTIONS_SCHEMAS[propertyKey]];
-        optionsSchema.addProperty(option, (typeof schema === "function") ? schema() : schema, description, required);
+        optionsSchema.addProperty(option, (typeof schema === "function") ? schema() : schema, description, required, contextual);
     }
 }

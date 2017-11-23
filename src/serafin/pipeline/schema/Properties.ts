@@ -14,7 +14,8 @@ export class PipelineSchemaProperties extends PipelineSchemaAbstract {
         [name: string]: {
             schema: JSONSchema4,
             description: string,
-            required: boolean
+            required: boolean,
+            contextual?: boolean
         }
     }
 
@@ -35,7 +36,7 @@ export class PipelineSchemaProperties extends PipelineSchemaAbstract {
      * @param description 
      * @param required 
      */
-    addProperty(name: string, schema: JSONSchema4, description: string, required: boolean): this {
+    addProperty(name: string, schema: JSONSchema4, description: string, required: boolean, contextual: boolean = false): this {
         this.properties[name] = {
             schema: schema,
             description: description,
@@ -45,6 +46,10 @@ export class PipelineSchemaProperties extends PipelineSchemaAbstract {
         // add the option to the main schema
         this.schemaObject.properties[name] = schema;
         this.schemaObject.properties[name].description = description;
+        if (contextual) {
+            this.properties[name]['contextual'] = contextual;
+            this.schemaObject.properties[name].contextual = contextual;
+        }
 
         // set the option as required if necessary
         if (required) {
