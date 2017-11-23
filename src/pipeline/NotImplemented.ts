@@ -12,7 +12,7 @@ export class NotImplemented extends PipelineAbstract<{}> {
     protected attach(pipeline: PipelineAbstract) {
         super.attach(pipeline)
         this.modelSchema = this.findModelSchema().clone();
-        this.modelSchema.setImplementedMethods(_.difference(["create", "update", "patch", "delete", "read"], this.notImplementedMethods)) 
+        this.modelSchema.implementedMethods = _.difference(this.modelSchema.implementedMethods, this.notImplementedMethods)
     }
 
     protected async _create(resources, options?) {
