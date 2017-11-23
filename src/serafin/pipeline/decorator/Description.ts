@@ -14,7 +14,10 @@ export function description(text: string) {
             targetOrCtor['description'] = text;
         } else {
             // Method
-            let optionsSchema: PipelineSchemaMethodOptions
+            let optionsSchema: PipelineSchemaMethodOptions;
+            if (propertyKey.startsWith('_')) {
+                propertyKey = propertyKey.slice(1);
+            }
             if (!targetOrCtor.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
                 targetOrCtor[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaMethodOptions()
             }

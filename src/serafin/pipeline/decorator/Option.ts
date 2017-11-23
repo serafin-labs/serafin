@@ -16,19 +16,15 @@ import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
  */
 export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null, validation = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        let schemaObject = null;
-        if (typeof schema === "function") {
-            schemaObject = schema();
-        } else {
-            schemaObject = schema;
-        }
-
         // add option metadata to the pipeline
         let optionsSchema: PipelineSchemaMethodOptions
+        if (propertyKey.startsWith('_')) {
+            propertyKey = propertyKey.slice(1);
+        }
         if (!target.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
             target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaMethodOptions()
         }
         optionsSchema = target[OPTIONS_SCHEMAS[propertyKey]]
-        optionsSchema.addOption(option, schemaObject, description, required);
+        optionsSchema.addOption(option, (typeof schema === "function") ? schema() : schema, description, required);
     }
 }
