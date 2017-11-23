@@ -51,24 +51,22 @@ async function main() {
         paths: {}
     });
 
-    setTimeout(async () => {
-        let petPipeline = (new PipelineSourceInMemory(petSchema)) // Initialize an InMemory Pipepeline Source with the model schema
-            .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
-            .pipe(new DefaultPetName("Snowball", 1)) // add custom logic to generate pets name
-        //.pipe(...)  you can then add any pipeline. You can do pretty much anything, included but not limited to: custom buisness rules, logs, events, cache, api rate limiting, user acl, generated properties, fetch relations, result filters, property filters, custom type checking, etc. 
+    let petPipeline = (new PipelineSourceInMemory(petSchema)) // Initialize an InMemory Pipepeline Source with the model schema
+        .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
+        .pipe(new DefaultPetName("Snowball", 1)) // add custom logic to generate pets name
+    //.pipe(...)  you can then add any pipeline. You can do pretty much anything, included but not limited to: custom buisness rules, logs, events, cache, api rate limiting, user acl, generated properties, fetch relations, result filters, property filters, custom type checking, etc. 
 
-        // Print schemas of each part of the pipeline to the console
-        console.log(petPipeline.toString());
+    // Print schemas of each part of the pipeline to the console
+    console.log(petPipeline.toString());
 
-        // register the pipeline to the api so it is exposed automatically
-        // it will create the following routes : /pets (GET, POST) and /pets/:id (GET, PUT, PATCH, DELETE) 
-        api.use(petPipeline, "pet")
+    // register the pipeline to the api so it is exposed automatically
+    // it will create the following routes : /pets (GET, POST) and /pets/:id (GET, PUT, PATCH, DELETE) 
+    api.use(petPipeline, "pet")
 
-        // all the beauty of Serafin is that now, we have a programmatic api with typings that supports all the buissness features we have implemented
-        // let's create some tests data before the server starts
-        var pets = await petPipeline.create([{ name: 'Bob', category: 'dog' }]);
-        let result = await petPipeline.read({}, { count: 'hop' });
-    }, 1000);
+    // all the beauty of Serafin is that now, we have a programmatic api with typings that supports all the buissness features we have implemented
+    // let's create some tests data before the server starts
+    var pets = await petPipeline
+
     // start the server
     var server = app.listen(process.env.PORT || 80, (error: any) => {
         if (error) {
