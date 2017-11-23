@@ -10,12 +10,12 @@ export abstract class PipelineSchemaAbstract {
     /**
      * An array that keep tracks of all references added
      */
-    private refs: { id: string, name: string }[] = []
+    protected refs: { id: string, name: string }[] = []
 
     /**
      * Id of the Schema. It is used to resolve refs.
      */
-    private id: string
+    protected id: string
 
     constructor(protected schemaObject: JSONSchema4, id?: string) {
         this.id = id || schemaObject.id;

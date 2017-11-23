@@ -37,14 +37,28 @@ export abstract class PipelineAbstract<
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
     private validationFunctions = null;
 
+    /**
+     * Attach this pipeline to the given parent.
+     */
+    protected attach(pipeline: PipelineAbstract) {
+        if (this.parent) {
+            this.parent.attach(pipeline)
+        } else {
+            this.parent = pipeline
+        }
+    }
+
+    /**
+     * Find the nearest modelSchema definition
+     */
+    protected findModelSchema() {
+        return this.modelSchema || (this.parent ? this.parent.findModelSchema() : null)
+    }
 
     /**
      * The schema that represents the capabilities of this pipeline
      */
     get schema() {
-        // find the nearest modelSchema defintion
-        let findModelSchema = (target: PipelineAbstract) => target.modelSchema || (target.parent ? findModelSchema(target.parent) : null)
-
         // gather all options used by this pipeline and its parents
         let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
 
@@ -52,7 +66,7 @@ export abstract class PipelineAbstract<
         let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
+        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
     }
 
     /**
@@ -173,10 +187,8 @@ export abstract class PipelineAbstract<
      * @param pipeline The pipeline to link with this one
      */
     pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>) {
-        if (pipeline.parent) {
-            throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
-        }
-        pipeline.parent = this;
+        // attach the pipeline to this one
+        pipeline.attach(this);
 
         // cast the pipeline and combine all interfaces
         var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
@@ -190,10 +202,8 @@ export abstract class PipelineAbstract<
      * @param pipeline The pipeline to link with this one
      */
     project<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
-        if (pipeline.parent) {
-            throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
-        }
-        pipeline.parent = this;
+        // attach the pipeline to this one
+        pipeline.attach(this);
         return <any>pipeline;
     }
 

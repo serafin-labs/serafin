@@ -29,7 +29,13 @@ export abstract class PipelineSourceAbstract<
         super();
         this.parent = null;
         this.modelSchema = modelSchema;
-        this.modelSchema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
+        this.modelSchema.implementedMethods = PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED));
+    }
+    /**
+     * Attach this pipeline to the given parent.
+     */
+    protected attach(pipeline: PipelineAbstract) {
+        throw new Error(`Pipeline Error: A PipelineSource can't be attached to another pipeline.`)
     }
 
     @PipelineSourceAbstract.notImplemented
