@@ -1,6 +1,6 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
+import { PipelineSourceAbstract, description } from '../../serafin/pipeline';
 import { ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
@@ -33,7 +33,7 @@ export class PipelineSourceInMemory<
         return resource;
     }
 
-    private async _read(query: any): Promise<{ results: T[] }> {
+    private async readInMemory(query: any): Promise<{ results: T[] }> {
         if (!query) {
             query = {};
         }
@@ -51,8 +51,7 @@ export class PipelineSourceInMemory<
         return { results: resources } as any;
     }
 
-    @validate
-    async create(resources: CreateResources[], options?: {}) {
+    protected async _create(resources: CreateResources[], options?: {}) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -68,15 +67,12 @@ export class PipelineSourceInMemory<
         return createdResources;
     }
 
-    @validate
-    async read(query?: ReadQuery, options?: {}): Promise<{ results: T[] }> {
-        return this._read(query)
+    protected async _read(query?: ReadQuery, options?: {}): Promise<{ results: T[] }> {
+        return this.readInMemory(query)
     }
 
-
-    @validate
-    async update(id: string, values: UpdateValues, options?: {}): Promise<T> {
-        var resources = await this._read({
+    protected async _update(id: string, values: UpdateValues, options?: {}): Promise<T> {
+        var resources = await this.readInMemory({
             id: id
         });
         if (resources.results.length > 0) {
@@ -92,9 +88,8 @@ export class PipelineSourceInMemory<
         return undefined;
     }
 
-    @validate
-    async patch(query: PatchQuery, values: PatchValues, options?: {}) {
-        var resources = await this._read(query);
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: {}) {
+        var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
         resources.results.forEach(resource => {
@@ -110,9 +105,8 @@ export class PipelineSourceInMemory<
         return updatedResources;
     }
 
-    @validate
-    async delete(query?: DeleteQuery, options?: {}) {
-        var resources = await this._read(query);
+    protected async _delete(query?: DeleteQuery, options?: {}) {
+        var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 
         resources.results.forEach((resource) => {

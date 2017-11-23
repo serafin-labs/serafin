@@ -7,17 +7,10 @@ import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaProperties } from './schema/Properties'
 import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
-
-/**
- * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
- * 
- * @param target 
- * @param method 
- * @param name 
- * @param schema 
- * @param description 
- * @param required 
- */
+import { final } from './decorator/Final'
+import * as Ajv from 'ajv'
+import * as VError from 'verror';
+import { validtionError } from "../error/Error"
 
 /**
  * Abstract Class representing a pipeline.
@@ -42,6 +35,8 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    private validationFunctions = null;
+
 
     /**
      * The schema that represents the capabilities of this pipeline
@@ -52,12 +47,20 @@ export abstract class PipelineAbstract<
 
         // gather all options used by this pipeline and its parents
         let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
- 
+
         // gather all results used by this pipeline and its parents
         let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
         return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
+    }
+
+    /**
+     * The schema that represents the capabilities of the current pipeline
+     */
+    get currentSchema() {
+        // create and return the schema representing the current pipeline
+        return new PipelineSchema(this.modelSchema, getOptionsSchemas(this), getResultsSchema(this));
     }
 
     /**
@@ -72,7 +75,13 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    @final async create(resources: CreateResources[], options?: CreateOptions, contextOptions?: CreateOptions): Promise<T[]> {
+        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        this.validate('create', resources, options);
+        return this._create(resources, options);
+    }
+
+    protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         return this.parent.create(resources, options);
     }
 
@@ -82,7 +91,13 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
+    @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
+        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        this.validate('read', query, options);
+        return this._read(query, options);
+    }
+
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -95,7 +110,13 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+    @final async update(id: string, values: UpdateValues, options?: UpdateOptions, contextOptions?: UpdateOptions): Promise<T> {
+        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        this.validate('update', id, values, options);
+        return this._update(id, values, options);
+    }
+
+    protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         return this.parent.update(id, values, options);
     }
 
@@ -108,7 +129,13 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions, contextOptions?: PatchOptions): Promise<T[]> {
+        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        this.validate('patch', query, values, options);
+        return this._patch(query, values, options);
+    }
+
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         return this.parent.patch(query, values, options);
     }
 
@@ -117,7 +144,13 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    @final async delete(query: DeleteQuery, options?: DeleteOptions, contextOptions?: DeleteOptions): Promise<T[]> {
+        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+        this.validate('delete', query, options);
+        return this._delete(query, options);
+    }
+
+    protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         return this.parent.delete(query, options);
     }
 
@@ -128,7 +161,7 @@ export abstract class PipelineAbstract<
     /**
      * Get a readable description of what this pipeline does
      */
-    toString(): string { 
+    toString(): string {
         let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
@@ -162,6 +195,82 @@ export abstract class PipelineAbstract<
         }
         pipeline.parent = this;
         return <any>pipeline;
+    }
+
+    private compileValidationFunctions() {
+        let ajv = new Ajv();
+        let currentSchema = this.currentSchema.schema;
+        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        ajv.addSchema(currentSchema, "schema");
+
+        this.validationFunctions = {};
+
+        // Create
+        let validateCreateResources = currentSchema.definitions.createValues ? ajv.compile({
+            type: 'array',
+            items: { "$ref": "schema#/definitions/createValues" },
+            minItems: 1
+        }) : () => true;
+        let validateCreateOptions = currentSchema.definitions.createOptions ? ajv.compile({ "$ref": "schema#/definitions/createOptions" }) : () => true;
+        this.validationFunctions['create'] = (params: any[]) => {
+            let [resources, options] = params;
+            if (!validateCreateResources(resources) || !validateCreateOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateCreateResources.errors || validateCreateOptions.errors))
+            }
+        }
+
+        // Read
+        let validateReadQuery = currentSchema.definitions.readQuery ? ajv.compile({ "$ref": "schema#/definitions/readQuery" }) : () => true;
+        let validateReadOptions = currentSchema.definitions.readOptions ? ajv.compile({ "$ref": "schema#/definitions/readOptions" }) : () => true;
+        this.validationFunctions['read'] = (params: any[]) => {
+            let [query, options] = params;
+            if (!validateReadQuery(query || {}) || !validateReadOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateReadQuery.errors || validateReadOptions.errors))
+            }
+        }
+
+        // Update
+        let validateUpdateValues = currentSchema.definitions.updateValues ? ajv.compile({ "$ref": 'schema#/definitions/updateValues' }) : () => true;
+        let validateUpdateOptions = currentSchema.definitions.updateOptions ? ajv.compile({ "$ref": 'schema#/definitions/updateOptions' }) : () => true;
+        this.validationFunctions['update'] = (params: any[]) => {
+            let [id, values, options] = params;
+            if (!validateUpdateValues(values) || !validateUpdateOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateUpdateValues.errors || validateUpdateOptions.errors))
+            }
+        }
+
+        // Patch
+        let validatePatchQuery = currentSchema.definitions.patchQuery ? ajv.compile({ "$ref": 'schema#/definitions/patchQuery' }) : () => true;
+        let validatePatchValues = currentSchema.definitions.patchValues ? ajv.compile({ "$ref": 'schema#/definitions/patchValues' }) : () => true;
+        let validatePatchOptions = currentSchema.definitions.patchOptions ? ajv.compile({ "$ref": 'schema#/definitions/patchOptions' }) : () => true;
+        this.validationFunctions['patch'] = (params: any[]) => {
+            let [query, values, options] = params;
+            if (!validatePatchQuery(query) || !validatePatchValues(values) || !validatePatchOptions(options || {})) {
+                return validtionError(ajv.errorsText(validatePatchQuery.errors || validatePatchValues.errors || validatePatchOptions.errors))
+            }
+        }
+
+        // Delete
+        let validateDeleteQuery = currentSchema.definitions.deleteQuery ? ajv.compile({ "$ref": 'schema#/definitions/deleteQuery' }) : () => true;
+        let validateDeleteOptions = currentSchema.definitions.deleteOptions ? ajv.compile({ "$ref": 'schema#/definitions/deleteOptions' }) : () => true;
+        this.validationFunctions['delete'] = (params: any[]) => {
+            let [query, options] = params;
+            if (!validateDeleteQuery(query || {}) || !validateDeleteOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateDeleteQuery.errors || validateDeleteOptions.errors))
+            }
+        }
+    }
+
+    private validate(method: string, ...params): Promise<void> {
+        if (!this.validationFunctions) {
+            this.compileValidationFunctions();
+        }
+
+        let validate = this.validationFunctions[method];
+        let error = validate(params);
+        if (error) {
+            return Promise.reject(error)
+        }
     }
 }
 
