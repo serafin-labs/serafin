@@ -12,6 +12,8 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validtionError } from "../error/Error"
 
+const CONTEXT_OPTIONS = Symbol('Context options');
+
 /**
  * Abstract Class representing a pipeline.
  * It contains the base type and method definition that all parts of pipelines must extend.
@@ -88,15 +90,15 @@ export abstract class PipelineAbstract<
             options = {};
         }
 
-        if (!Object.getOwnPropertyDescriptor(options, 'context')) {
-            Object.defineProperty(options, 'context', { value: [] });
+        if (!Object.getOwnPropertyDescriptor(options, CONTEXT_OPTIONS)) {
+            Object.defineProperty(options, CONTEXT_OPTIONS, { value: [] });
         }
 
         // Browse this schema options declared as contextual, and eliminates the options that should be but are not in the "context" descriptor
         let schema = this.currentSchema.schema.definitions[schemaName];
         if (schema && schema['properties']) {
             for (let key in schema['properties']) {
-                if (schema['properties'][key]['contextual'] && Object.getOwnPropertyDescriptor(options, 'context').value.indexOf(key) === -1) {
+                if (schema['properties'][key]['contextual'] && Object.getOwnPropertyDescriptor(options, CONTEXT_OPTIONS).value.indexOf(key) === -1) {
                     delete options[key];
                 }
             }
@@ -106,7 +108,7 @@ export abstract class PipelineAbstract<
             // Mark in the options "context" descriptor the options coming from the context and move them
             for (let key in contextOptions) {
                 options[key] = contextOptions[key];
-                Object.getOwnPropertyDescriptor(options, 'context').value.push(key);
+                Object.getOwnPropertyDescriptor(options, CONTEXT_OPTIONS).value.push(key);
             }
         }
 
