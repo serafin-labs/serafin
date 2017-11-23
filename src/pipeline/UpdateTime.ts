@@ -1,4 +1,4 @@
-import { PipelineAbstract, option, description, validate } from '../serafin/pipeline'
+import { PipelineAbstract, option, description } from '../serafin/pipeline'
 
 @description("Adds creation and update timestamps to the resources")
 export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }> {

@@ -8,17 +8,9 @@ import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaMethodOptions } from './schema/MethodOptions'
 import { getOptionsSchemas } from './decorator/optionsSchemaSymbols'
 import { final } from './decorator/Final'
-
-/**
- * Utility method to add option metadata to a pipeline. As options metadata uses a private symbol internally, it is the only way to set it.
- * 
- * @param target 
- * @param method 
- * @param name 
- * @param schema 
- * @param description 
- * @param required 
- */
+import * as Ajv from 'ajv'
+import * as VError from 'verror';
+import { validtionError } from "../error/Error"
 
 /**
  * Abstract Class representing a pipeline.
@@ -43,6 +35,8 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    private validationFunctions = null;
+
 
     /**
      * The schema that represents the capabilities of this pipeline
@@ -59,6 +53,14 @@ export abstract class PipelineAbstract<
     }
 
     /**
+     * The schema that represents the capabilities of the current pipeline
+     */
+    get currentSchema() {
+        // create and return the schema representing the current pipeline
+        return new PipelineSchema(this.modelSchema, getOptionsSchemas(this));
+    }
+
+    /**
      * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
      */
@@ -71,6 +73,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+        this.validate('create', resources, options);
         return this._create(resources, options);
     }
 
@@ -85,6 +88,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+        this.validate('read', query, options);
         return this._read(query, options);
     }
 
@@ -102,6 +106,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
+        this.validate('update', id, values, options);
         return this._update(id, values, options);
     }
 
@@ -119,6 +124,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+        this.validate('patch', query, values, options);
         return this._patch(query, values, options);
     }
 
@@ -132,6 +138,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+        this.validate('delete', query, options);
         return this._delete(query, options);
     }
 
@@ -146,7 +153,7 @@ export abstract class PipelineAbstract<
     /**
      * Get a readable description of what this pipeline does
      */
-    toString(): string { 
+    toString(): string {
         let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
@@ -180,6 +187,82 @@ export abstract class PipelineAbstract<
         }
         pipeline.parent = this;
         return <any>pipeline;
+    }
+
+    private compileValidationFunctions() {
+        let ajv = new Ajv();
+        let currentSchema = this.currentSchema.schema;
+        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        ajv.addSchema(currentSchema, "schema");
+
+        this.validationFunctions = {};
+
+        // Create
+        let validateCreateResources = currentSchema.definitions.createValues ? ajv.compile({
+            type: 'array',
+            items: { "$ref": "schema#/definitions/createValues" },
+            minItems: 1
+        }) : () => true;
+        let validateCreateOptions = currentSchema.definitions.createOptions ? ajv.compile({ "$ref": "schema#/definitions/createOptions" }) : () => true;
+        this.validationFunctions['create'] = (params: any[]) => {
+            let [resources, options] = params;
+            if (!validateCreateResources(resources) || !validateCreateOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateCreateResources.errors || validateCreateOptions.errors))
+            }
+        }
+
+        // Read
+        let validateReadQuery = currentSchema.definitions.readQuery ? ajv.compile({ "$ref": "schema#/definitions/readQuery" }) : () => true;
+        let validateReadOptions = currentSchema.definitions.readOptions ? ajv.compile({ "$ref": "schema#/definitions/readOptions" }) : () => true;
+        this.validationFunctions['read'] = (params: any[]) => {
+            let [query, options] = params;
+            if (!validateReadQuery(query || {}) || !validateReadOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateReadQuery.errors || validateReadOptions.errors))
+            }
+        }
+
+        // Update
+        let validateUpdateValues = currentSchema.definitions.updateValues ? ajv.compile({ "$ref": 'schema#/definitions/updateValues' }) : () => true;
+        let validateUpdateOptions = currentSchema.definitions.updateOptions ? ajv.compile({ "$ref": 'schema#/definitions/updateOptions' }) : () => true;
+        this.validationFunctions['update'] = (params: any[]) => {
+            let [id, values, options] = params;
+            if (!validateUpdateValues(values) || !validateUpdateOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateUpdateValues.errors || validateUpdateOptions.errors))
+            }
+        }
+
+        // Patch
+        let validatePatchQuery = currentSchema.definitions.patchQuery ? ajv.compile({ "$ref": 'schema#/definitions/patchQuery' }) : () => true;
+        let validatePatchValues = currentSchema.definitions.patchValues ? ajv.compile({ "$ref": 'schema#/definitions/patchValues' }) : () => true;
+        let validatePatchOptions = currentSchema.definitions.patchOptions ? ajv.compile({ "$ref": 'schema#/definitions/patchOptions' }) : () => true;
+        this.validationFunctions['patch'] = (params: any[]) => {
+            let [query, values, options] = params;
+            if (!validatePatchQuery(query) || !validatePatchValues(values) || !validatePatchOptions(options || {})) {
+                return validtionError(ajv.errorsText(validatePatchQuery.errors || validatePatchValues.errors || validatePatchOptions.errors))
+            }
+        }
+
+        // Delete
+        let validateDeleteQuery = currentSchema.definitions.deleteQuery ? ajv.compile({ "$ref": 'schema#/definitions/deleteQuery' }) : () => true;
+        let validateDeleteOptions = currentSchema.definitions.deleteOptions ? ajv.compile({ "$ref": 'schema#/definitions/deleteOptions' }) : () => true;
+        this.validationFunctions['delete'] = (params: any[]) => {
+            let [query, options] = params;
+            if (!validateDeleteQuery(query || {}) || !validateDeleteOptions(options || {})) {
+                return validtionError(ajv.errorsText(validateDeleteQuery.errors || validateDeleteOptions.errors))
+            }
+        }
+    }
+
+    private validate(method: string, ...params): Promise<void> {
+        if (!this.validationFunctions) {
+            this.compileValidationFunctions();
+        }
+
+        let validate = this.validationFunctions[method];
+        let error = validate(params);
+        if (error) {
+            return Promise.reject(error)
+        }
     }
 }
 

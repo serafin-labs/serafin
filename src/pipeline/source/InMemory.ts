@@ -1,6 +1,6 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
+import { PipelineSourceAbstract, description } from '../../serafin/pipeline';
 import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
@@ -57,7 +57,6 @@ export class PipelineSourceInMemory<
         return { results: resources } as ReadWrapper;
     }
 
-    @validate
     protected async _create(resources: CreateResources[], options?: CreateOptions) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
@@ -74,13 +73,11 @@ export class PipelineSourceInMemory<
         return createdResources;
     }
 
-    @validate
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
         return this.readInMemory(query)
     }
 
 
-    @validate
     protected async _update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
         var resources = await this.readInMemory({
             id: id
@@ -98,7 +95,6 @@ export class PipelineSourceInMemory<
         return undefined;
     }
 
-    @validate
     protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions) {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
@@ -116,7 +112,6 @@ export class PipelineSourceInMemory<
         return updatedResources;
     }
 
-    @validate
     protected async _delete(query?: DeleteQuery, options?: DeleteOptions) {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
