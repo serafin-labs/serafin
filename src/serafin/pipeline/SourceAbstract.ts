@@ -31,6 +31,12 @@ export abstract class PipelineSourceAbstract<
         this.modelSchema = modelSchema;
         this.modelSchema.setImplementedMethods(PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED)));
     }
+    /**
+     * Attach this pipeline to the given parent.
+     */
+    protected attach(pipeline: PipelineAbstract) {
+        throw new Error(`Pipeline Error: A PipelineSource can't be attached to another pipeline.`)
+    }
 
     @PipelineSourceAbstract.notImplemented
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {

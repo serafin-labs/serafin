@@ -1,6 +1,8 @@
+import * as _ from "lodash";
 import { PipelineSchemaAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
 import { ResourceIdentityInterface } from "./ResourceInterfaces"
+import { PipelineSchema } from "./Pipeline";
 
 /**
  * Defines schemas related to the model that are used by the pipeline for validation.
@@ -40,21 +42,36 @@ export class PipelineSchemaModel<
         this.schemaObject.definitions = this.schemaObject.definitions || {}
         if (methods.indexOf("create") !== -1) {
             this.schemaObject.definitions.createValues = this.schemaObject.definitions.createValues || { "$ref": "#" };
+        } else {
+            delete this.schemaObject.definitions.createValues
         }
         if (methods.indexOf("read") !== -1) {
             this.schemaObject.definitions.readQuery = this.schemaObject.definitions.readQuery || { type: "object" };
+        } else {
+            delete this.schemaObject.definitions.readQuery
         }
         if (methods.indexOf("update") !== -1) {
             this.schemaObject.definitions.updateValues = this.schemaObject.definitions.updateValues || { "$ref": "#" };
+        } else {
+            delete this.schemaObject.definitions.updateValues
         }
         if (methods.indexOf("patch") !== -1) {
-            this.schemaObject.definitions.patchQuery = this.schemaObject.definitions.patchQuery || { type: 'object' };
+            this.schemaObject.definitions.patchQuery = this.schemaObject.definitions.patchQuery || { type: 'object', "minProperties": 1 };
             this.schemaObject.definitions.patchValues = this.schemaObject.definitions.patchValues || { type: 'object', "minProperties": 1 }
+        } else {
+            delete this.schemaObject.definitions.patchQuery
+            delete this.schemaObject.definitions.patchValues
         }
         if (methods.indexOf("delete") !== -1) {
-            this.schemaObject.definitions.deleteQuery = this.schemaObject.definitions.deleteQuery || { type: 'object' }
+            this.schemaObject.definitions.deleteQuery = this.schemaObject.definitions.deleteQuery || { type: 'object', "minProperties": 1 }
+        } else {
+            delete this.schemaObject.definitions.deleteQuery
         }
         return this
+    }
+
+    public clone(): this {
+        return _.cloneDeep(this)
     }
 
     /**
