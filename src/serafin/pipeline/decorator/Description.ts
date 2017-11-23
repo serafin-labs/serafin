@@ -1,6 +1,6 @@
 import * as util from 'util'
-import { OPTIONS_SCHEMAS } from './optionsSchemaSymbols'
-import { PipelineSchemaMethodOptions } from '../schema/MethodOptions'
+import { OPTIONS_SCHEMAS } from './decoratorSymbols'
+import { PipelineSchemaProperties } from '../schema/Properties'
 
 /**
  * Class and method decorator associating a description to it
@@ -14,9 +14,9 @@ export function description(text: string) {
             targetOrCtor['description'] = text;
         } else {
             // Method
-            let optionsSchema: PipelineSchemaMethodOptions
+            let optionsSchema: PipelineSchemaProperties
             if (!targetOrCtor.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
-                targetOrCtor[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaMethodOptions()
+                targetOrCtor[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaProperties()
             }
             optionsSchema = targetOrCtor[OPTIONS_SCHEMAS[propertyKey]]
             optionsSchema.setDescription(text);

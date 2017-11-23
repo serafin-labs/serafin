@@ -280,13 +280,18 @@ export class Api {
                 200: {
                     description: `${_.upperFirst(pluralName)} corresponding to the query`,
                     schema: {
-                        type: 'object',
-                        properties: {
-                            results: {
-                                type: 'array',
-                                items: { "$ref": `#/definitions/${name}` },
-                            }
-                        }
+                        allOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    results: {
+                                        type: 'array',
+                                        items: { "$ref": `#/definitions/${name}` },
+                                    }
+                                }
+                            },
+                            { $ref: `#/definitions/${name}ReadResults` }
+                        ]
                     }
                 },
                 400: {

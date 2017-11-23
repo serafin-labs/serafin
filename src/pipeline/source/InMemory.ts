@@ -1,7 +1,7 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
 import { PipelineSourceAbstract, description, validate } from '../../serafin/pipeline';
-import { ReadWrapperInterface, ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
+import { ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
 import * as _ from 'lodash'
@@ -11,17 +11,11 @@ import * as uuid from "node-uuid"
 export class PipelineSourceInMemory<
     T extends ResourceIdentityInterface,
     ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
-    ReadOptions = {},
-    ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>,
     CreateResources = Partial<T>,
-    CreateOptions = {},
     UpdateValues = Partial<T>,
-    UpdateOptions = {},
     PatchQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
     PatchValues = Partial<T>,
-    PatchOptions = {},
-    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
-    DeleteOptions = {}> extends PipelineSourceAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions> {
+    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateResources, {}, UpdateValues, {}, PatchQuery, PatchValues, {}, DeleteQuery, {}> {
     protected resources: { [index: string]: T };
 
     constructor(schema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
@@ -39,7 +33,7 @@ export class PipelineSourceInMemory<
         return resource;
     }
 
-    private async _read(query: any): Promise<ReadWrapper> {
+    private async _read(query: any): Promise<{ results: T[] }> {
         if (!query) {
             query = {};
         }
@@ -54,11 +48,11 @@ export class PipelineSourceInMemory<
             return true;
         });
 
-        return { results: resources } as ReadWrapper;
+        return { results: resources } as any;
     }
 
     @validate
-    async create(resources: CreateResources[], options?: CreateOptions) {
+    async create(resources: CreateResources[], options?: {}) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -75,13 +69,13 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    async read(query?: ReadQuery, options?: {}): Promise<{ results: T[] }> {
         return this._read(query)
     }
 
 
     @validate
-    async update(id: string, values: Partial<T>, options?: UpdateOptions): Promise<T> {
+    async update(id: string, values: UpdateValues, options?: {}): Promise<T> {
         var resources = await this._read({
             id: id
         });
@@ -91,7 +85,7 @@ export class PipelineSourceInMemory<
                 delete (this.resources[resource.id]);
             }
             // in case it wasn't assigned yet
-            values.id = values.id || id;
+            values["id"] = values["id"] || id;
             this.resources[id] = values as any;
             return values as any;
         }
@@ -99,7 +93,7 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions) {
+    async patch(query: PatchQuery, values: PatchValues, options?: {}) {
         var resources = await this._read(query);
         let updatedResources: T[] = [];
 
@@ -117,7 +111,7 @@ export class PipelineSourceInMemory<
     }
 
     @validate
-    async delete(query?: DeleteQuery, options?: DeleteOptions) {
+    async delete(query?: DeleteQuery, options?: {}) {
         var resources = await this._read(query);
         let deletedResources: T[] = [];
 
