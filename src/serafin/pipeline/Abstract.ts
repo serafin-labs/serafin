@@ -1,12 +1,12 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ReadWrapperInterface, ResourceIdentityInterface } from './schema/ResourceInterfaces';
+import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchema } from './schema/Pipeline'
-import { PipelineSchemaMethodOptions } from './schema/MethodOptions'
-import { getOptionsSchemas } from './decorator/optionsSchemaSymbols'
+import { PipelineSchemaProperties } from './schema/Properties'
+import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
@@ -23,7 +23,7 @@ export abstract class PipelineAbstract<
     T = {},
     ReadQuery = {},
     ReadOptions = {},
-    ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>,
+    ReadWrapper = {},
     CreateResources = {},
     CreateOptions = {},
     UpdateValues = {},
@@ -48,8 +48,11 @@ export abstract class PipelineAbstract<
         // gather all options used by this pipeline and its parents
         let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
 
+        // gather all results used by this pipeline and its parents
+        let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
+
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)))
+        return new PipelineSchema(findModelSchema(this), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
     }
 
     /**
@@ -57,7 +60,7 @@ export abstract class PipelineAbstract<
      */
     get currentSchema() {
         // create and return the schema representing the current pipeline
-        return new PipelineSchema(this.modelSchema, getOptionsSchemas(this));
+        return new PipelineSchema(this.modelSchema, getOptionsSchemas(this), getResultsSchema(this));
     }
 
     /**
@@ -88,13 +91,13 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<ReadWrapper> {
+    @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         options = { ...(options || {}), ...(contextOptions || {}) } as any;
         this.validate('read', query, options);
         return this._read(query, options);
     }
 
-    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<ReadWrapper> {
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -159,7 +162,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 
@@ -169,14 +172,14 @@ export abstract class PipelineAbstract<
      * 
      * @param pipeline The pipeline to link with this one
      */
-    pipe<N extends Partial<T>, NReadQuery, NReadOptions, NReadWrapper extends ReadWrapperInterface<N>, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>) {
+    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>) {
         if (pipeline.parent) {
             throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
         }
         pipeline.parent = this;
 
         // cast the pipeline and combine all interfaces
-        var chainedPipeline: PipelineAbstract<T, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
+        var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
         return chainedPipeline;
     }
 
@@ -186,7 +189,7 @@ export abstract class PipelineAbstract<
      * 
      * @param pipeline The pipeline to link with this one
      */
-    project<N, NReadQuery, NReadOptions, NReadWrapper extends ReadWrapperInterface<N>, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
+    project<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
         if (pipeline.parent) {
             throw new Error("Pipeline Error: The provided pipeline is already attached to an existing parent pipeline")
         }
@@ -274,6 +277,6 @@ export abstract class PipelineAbstract<
 /**
  * Type definition of a Projection Pipeline. It has to be used when the pipeline fondamentaly changes the nature of the data it provides : T -> N
  */
-export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper extends ReadWrapperInterface<T> = ReadWrapperInterface<T>, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper extends ReadWrapperInterface<N> = { results: N[] }, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
+export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper = {}, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper = ReadWrapper, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
 
 }

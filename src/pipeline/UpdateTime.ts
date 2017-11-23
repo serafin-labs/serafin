@@ -1,59 +1,57 @@
-import { PipelineAbstract, option, description } from '../serafin/pipeline'
+import { PipelineAbstract, option, description, result } from '../serafin/pipeline'
 
 @description("Adds creation and update timestamps to the resources")
-export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }> {
+export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }, {}, {}, { lastCreatedAt: number, lastUpdatedAt: number}> {
 
     constructor() {
         super()
     }
 
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
+    @result("lastCreatedAt", { type: "integer" }, true, "Last creation date")
+    @result("lastUpdatedAt", { type: "integer" }, true, "Last modification date")
     protected async _read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }> {
-        return this.parent.read(query, options).then((items) => {
-            let lastCreatedAt = null;
-            let lastUpdatedAt = null;
-            for (const key in items.results) {
-                if (typeof items.results[key] == 'object') {
-                    if (Number(items.results[key]['createdAt']) && (!lastCreatedAt || lastCreatedAt < items.results[key]['createdAt'])) {
-                        lastCreatedAt = items.results[key]['createdAt'];
-                    }
-
-                    if (Number(items.results[key]['updatedAt']) && (!lastUpdatedAt || lastUpdatedAt < items.results[key]['updatedAt'])) {
-                        lastCreatedAt = items.results[key]['updatedAt'];
-                    }
-                }
+        let readWrapper = (await this.parent.read(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, results: { createdAt: number, updatedAt: number }[] }
+        let lastCreatedAt = null;
+        let lastUpdatedAt = null;
+        readWrapper.results.forEach(result => {
+            if (result.createdAt && (!lastCreatedAt || lastCreatedAt < result.createdAt)) {
+                lastCreatedAt = result.createdAt;
             }
-
-            if (lastCreatedAt) {
-                items['createdAt'] = lastCreatedAt.toString();
+            if (result.updatedAt && (!lastUpdatedAt || lastUpdatedAt < result.updatedAt)) {
+                lastCreatedAt = result.updatedAt;
             }
-
-            if (lastUpdatedAt) {
-                items['updatedAt'] = lastUpdatedAt.toString();
-            }
-
-            return Promise.resolve(items);
         });
+
+        if (lastCreatedAt !== null) {
+            readWrapper.lastCreatedAt = lastCreatedAt;
+        }
+
+        if (lastUpdatedAt !== null) {
+            readWrapper.lastUpdatedAt = lastUpdatedAt;
+        }
+
+        return readWrapper
     }
 
     @description("Sets the creation time")
-    protected async _create(resources: {}[], options?: {}) {
+    protected async _create(resources: { createdAt: number }[], options?: {}) {
         resources.forEach(resource => {
-            resource['createdAt'] = Date.now();
+            resource.createdAt = Date.now();
         });
 
         return this.parent.create(resources, options);
     }
 
     @description("Sets the update time")
-    protected async _update(id: string, values: {}, options?: {}) {
-        values['updatedAt'] = Date.now();
+    protected async _update(id: string, values: { updatedAt: number }, options?: {}) {
+        values.updatedAt = Date.now();
         return this.parent.update(id, values, options);
     }
 
     @description("Sets the update time")
-    protected async _patch(query: {}, values: {}, options?: {}) {
-        values['updatedAt'] = Date.now();
+    protected async _patch(query: {}, values: { updatedAt: number }, options?: {}) {
+        values.updatedAt = Date.now();
         return this.parent.patch(query, values, options);
     }
 }
