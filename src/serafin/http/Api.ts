@@ -53,6 +53,18 @@ export class Api {
     }
 
     /**
+     * Filter used to remove input options that are not supposed to be set by the client.
+     * By default all options starting with _ are reserved for internal use and cannot be set by the request
+     */
+    protected isNotAnInternalOption = (name: string) => !name.startsWith("_");
+    protected filterInternalOptions(options: Object) {
+        return _.pickBy(options, (value, key) => this.isNotAnInternalOption(key));
+    }
+    protected filterInternalParameters(parameters: Swagger.Parameter[]) {
+        return parameters.filter((parameter) => this.isNotAnInternalOption(parameter.name))
+    }
+
+    /**
      * Expose a pipeline on this API. All implemented methods are automatically binded to the corrsponding actions and urls.
      * 
      * @param pipeline The pipeline to expose on the API
@@ -115,14 +127,14 @@ export class Api {
 
         if (canRead) {
             let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.openApi);   
-            let readOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.openApi);
+            let readOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.openApi));
             let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
             let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
 
             // get many resources
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // separate options from query based on pipeline metadata
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let query = _.cloneDeep(req.query);
                 let optionsValid = readOptionsFilter(options);
                 let queryValid = readQueryFilter(query);
@@ -143,7 +155,7 @@ export class Api {
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let optionsValid = readOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(readOptionsFilter.errors)), req)
@@ -234,13 +246,13 @@ export class Api {
         
 
         if (canCreate) {
-            let createOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.openApi);
+            let createOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.openApi));
             let createOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/createOptions' });
 
             // create a new resource
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let optionsValid = createOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(createOptionsFilter.errors)), req)
@@ -292,13 +304,13 @@ export class Api {
 
         if (canPatch) {
             let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.openApi)
-            let patchOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.openApi);
+            let patchOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.openApi));
             let patchOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/patchOptions' });
 
             // patch an existing resource
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let optionsValid = patchOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(patchOptionsFilter.errors)), req)
@@ -361,13 +373,13 @@ export class Api {
         }
 
         if (canUpdate) {
-            let updateOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.openApi);
+            let updateOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.openApi));
             let updateOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/updateOptions' });
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let optionsValid = updateOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(updateOptionsFilter.errors)), req)
@@ -428,13 +440,13 @@ export class Api {
         }
 
         if (canDelete) {
-            let deleteOptionsParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.openApi);
+            let deleteOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.openApi));
             let deleteOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/deleteOptions' });
 
             // delete an existing resource
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = _.cloneDeep(req.query);
+                let options = this.filterInternalOptions(_.cloneDeep(req.query));
                 let optionsValid = deleteOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(deleteOptionsFilter.errors)), req)

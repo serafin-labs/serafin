@@ -97,8 +97,7 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    @final async create(resources: CreateResources[], options?: CreateOptions, contextOptions?: CreateOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+    @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         this.validate('create', resources, options);
         return this._create(resources, options);
     }
@@ -113,8 +112,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         this.validate('read', query, options);
 
         if (typeof options == 'object') {
@@ -142,8 +140,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async update(id: string, values: UpdateValues, options?: UpdateOptions, contextOptions?: UpdateOptions): Promise<T> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+    @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
         this.validate('update', id, values, options);
         return this._update(id, values, options);
     }
@@ -161,8 +158,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions, contextOptions?: PatchOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         this.validate('patch', query, values, options);
         return this._patch(query, values, options);
     }
@@ -176,8 +172,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    @final async delete(query: DeleteQuery, options?: DeleteOptions, contextOptions?: DeleteOptions): Promise<T[]> {
-        options = { ...(options || {}), ...(contextOptions || {}) } as any;
+    @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         this.validate('delete', query, options);
         return this._delete(query, options);
     }
