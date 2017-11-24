@@ -294,7 +294,7 @@ export abstract class PipelineAbstract<
         }
     }
 
-    public remapOptions(mapping: { [key: string]: string }): this {
+    public remapOptions<MAP extends { [key: string]: string }>(mapping: MAP): PipelineAbstract<T, ReadQuery, ReadOptions & {[OPT in keyof MAP]: any}, ReadWrapper, CreateResources, CreateOptions & {[OPT in keyof MAP]: any}, UpdateValues, UpdateOptions & {[OPT in keyof MAP]: any}, PatchQuery, PatchValues, PatchOptions & {[OPT in keyof MAP]: any}, DeleteQuery, DeleteOptions & {[OPT in keyof MAP]: any}> {
         this.optionsMapping = mapping;
         for (let key in this.optionsMapping) {
             for (let method in getOptionsSchemas(this)) {
