@@ -55,6 +55,31 @@ export class PipelineSchemaProperties extends PipelineSchemaAbstract {
     }
 
     /**
+     * Rename a property into the schema
+     * 
+     * @param current name 
+     * @param new name
+     */
+    renameProperty(name: string, newName: string): this {
+        if (this.hasProperty(name)) {
+            this.properties[newName] = this.properties[name];
+            this.schemaObject.properties[newName] = this.schemaObject.properties[name];
+            delete (this.properties[name]);
+            delete (this.schemaObject.properties[name]);
+
+            if (Array.isArray(this.schemaObject.required)) {
+                let index = this.schemaObject.required.indexOf(name);
+                if (index !== -1) {
+                    delete (this.schemaObject.required[index]);
+                    this.schemaObject.required.push(newName);
+                }
+            }
+        }
+
+        return this;
+    }
+
+    /**
      * Test if a property exists or not
      * 
      * @param name 

@@ -36,6 +36,7 @@ export abstract class PipelineAbstract<
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
     private validationFunctions = null;
+    private optionsMapping = {};
 
     /**
      * Attach this pipeline to the given parent.
@@ -108,6 +109,16 @@ export abstract class PipelineAbstract<
     @final async read(query?: ReadQuery, options?: ReadOptions, contextOptions?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         options = { ...(options || {}), ...(contextOptions || {}) } as any;
         this.validate('read', query, options);
+
+        if (typeof options == 'object') {
+            for (let key in this.optionsMapping) {
+                if (options[key]) {
+                    options[this.optionsMapping[key]] = options[key];
+                    delete (options[key]);
+                }
+            }
+        }
+
         return this._read(query, options);
     }
 
@@ -281,6 +292,17 @@ export abstract class PipelineAbstract<
         if (error) {
             return Promise.reject(error)
         }
+    }
+
+    public remapOptions(mapping: { [key: string]: string }): this {
+        this.optionsMapping = mapping;
+        for (let key in this.optionsMapping) {
+            for (let method in getOptionsSchemas(this)) {
+                getOptionsSchemas(this)[method].renameProperty(this.optionsMapping[key], key);
+            }
+        }
+        this.validationFunctions = null;
+        return this;
     }
 }
 
