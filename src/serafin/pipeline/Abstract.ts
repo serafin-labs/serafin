@@ -35,8 +35,13 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
+
+    constructor() {
+        this.optionsSchema = _.cloneDeep(getOptionsSchemas(this));
+    }
 
     /**
      * Attach this pipeline to the given parent.
@@ -56,18 +61,20 @@ export abstract class PipelineAbstract<
         return this.modelSchema || (this.parent ? this.parent.findModelSchema() : null)
     }
 
+    protected findAllOptions() {
+        return [this.optionsSchema, ...((this.parent) ? this.parent.findAllOptions() : [])];
+    }
+
+
     /**
      * The schema that represents the capabilities of this pipeline
      */
     get schema() {
-        // gather all options used by this pipeline and its parents
-        let findAllOptions = (target: PipelineAbstract) => target ? [getOptionsSchemas(target), ...findAllOptions(target.parent)] : []
-
         // gather all results used by this pipeline and its parents
         let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(findAllOptions(this)), PipelineSchema.mergeProperties(findAllResults(this)))
+        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(this.findAllOptions()), PipelineSchema.mergeProperties(findAllResults(this)))
     }
 
     /**
@@ -75,7 +82,7 @@ export abstract class PipelineAbstract<
      */
     get currentSchema() {
         // create and return the schema representing the current pipeline
-        return new PipelineSchema(this.modelSchema, getOptionsSchemas(this), getResultsSchema(this));
+        return new PipelineSchema(this.modelSchema, this.optionsSchema, getResultsSchema(this));
     }
 
     /**
@@ -187,7 +194,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, getOptionsSchemas(target), getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, target.optionsSchema, getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 
@@ -294,11 +301,11 @@ export abstract class PipelineAbstract<
         }
     }
 
-    public remapOptions<MAP extends { [key: string]: string }>(mapping: MAP): PipelineAbstract<T, ReadQuery, ReadOptions & {[OPT in keyof MAP]: any}, ReadWrapper, CreateResources, CreateOptions & {[OPT in keyof MAP]: any}, UpdateValues, UpdateOptions & {[OPT in keyof MAP]: any}, PatchQuery, PatchValues, PatchOptions & {[OPT in keyof MAP]: any}, DeleteQuery, DeleteOptions & {[OPT in keyof MAP]: any}> {
+    public remapOptions<MAP extends { [key: string]: string }>(mapping: MAP): PipelineAbstract<T, ReadQuery, ReadOptions & {[OPT in keyof MAP]?: any}, ReadWrapper, CreateResources, CreateOptions & {[OPT in keyof MAP]?: any}, UpdateValues, UpdateOptions & {[OPT in keyof MAP]?: any}, PatchQuery, PatchValues, PatchOptions & {[OPT in keyof MAP]?: any}, DeleteQuery, DeleteOptions & {[OPT in keyof MAP]?: any}> {
         this.optionsMapping = mapping;
         for (let key in this.optionsMapping) {
-            for (let method in getOptionsSchemas(this)) {
-                getOptionsSchemas(this)[method].renameProperty(this.optionsMapping[key], key);
+            for (let method in this.optionsSchema) {
+                this.optionsSchema[method].renameProperty(this.optionsMapping[key], key);
             }
         }
         this.validationFunctions = null;
