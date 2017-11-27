@@ -1,7 +1,3 @@
-import * as Ajv from 'ajv'
-import * as VError from 'verror';
-import { validtionError } from "../../error/Error"
-import { PipelineAbstract } from '../Abstract'
 import { PipelineSchemaProperties } from '../schema/Properties'
 import { OPTIONS_SCHEMAS } from './decoratorSymbols'
 
