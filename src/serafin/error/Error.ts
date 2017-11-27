@@ -1,25 +1,26 @@
 import * as VError from "verror"
 
-function serafinError(name: string, message: string, info?: any, cause?: any) {
+export function serafinError(name: string, message: string, info?: any, cause?: any) {
     let opt: any = {
-        name: name
-    }
+        name: name,
+        constructorOpt: serafinError
+    };
     if (cause) {
-        opt.cause = cause
-    }
+        opt.cause = cause;
+    };
     if (info) {
-        opt.info = info
-    }
-    return new VError(opt, message)
+        opt.info = info;
+    };
+    return new VError(opt, message);
 }
 
 export const NotFoundErrorName = "SerafinNotFoundError";
-export function notFoundError(id: string, info?: any, cause?: Error) { 
+export function notFoundError(id: string, info?: any, cause?: Error) {
     return serafinError(NotFoundErrorName, `The entity ${id} does not exist.`, info, cause)
 }
 
-export const ValidationErrorName = "SerafinValidationError";
-export function validtionError(validationError: string, info?: any, cause?: Error) {
+export const ValidationErrorName = "SerafinSchemaValidationError";
+export function validationError(validationError: string, info?: any, cause?: Error) {
     return serafinError(ValidationErrorName, `Invalid parameters: ${validationError}`, info, cause)
 }
 

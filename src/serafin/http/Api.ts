@@ -6,7 +6,7 @@ import * as VError from 'verror';
 import { JSONSchema4 } from "json-schema"
 import { PipelineAbstract } from "../pipeline/Abstract"
 import { throughJsonSchema } from "../util/throughJsonSchema"
-import { validtionError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
+import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
 
 
@@ -122,7 +122,7 @@ export class Api {
         var resourcesPathWithId = `${resourcesPath}/{id}`;
         this.openApi.paths[resourcesPath] = this.openApi.paths[resourcesPath] || {};
         this.openApi.paths[resourcesPathWithId] = this.openApi.paths[resourcesPathWithId] || {};
-        
+
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
@@ -132,7 +132,7 @@ export class Api {
         // create the routes for this endpoint
 
         if (canRead) {
-            let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.openApi);   
+            let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.openApi);
             let readOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.openApi));
             let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
             let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
@@ -149,10 +149,10 @@ export class Api {
                 let optionsValid = readOptionsFilter(options);
                 let queryValid = readQueryFilter(query);
                 if (!optionsValid || !queryValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
-    
+
                 // run the query
                 pipeline.read(query, options).then(wrapper => {
                     res.status(200).json(wrapper);
@@ -161,7 +161,7 @@ export class Api {
                     handleError(this.apiError(error, req), res, next)
                 });
             })
-    
+
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
@@ -171,11 +171,11 @@ export class Api {
                 }
                 let optionsValid = readOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(readOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(readOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var id = req.params.id
-    
+
                 // run the query
                 pipeline.read({
                     id: id
@@ -256,7 +256,7 @@ export class Api {
                 }
             }
         }
-        
+
 
         if (canCreate) {
             let createOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.openApi));
@@ -271,7 +271,7 @@ export class Api {
                 }
                 let optionsValid = createOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(createOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(createOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var data = req.body
@@ -332,7 +332,7 @@ export class Api {
                 }
                 let optionsValid = patchOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(patchOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(patchOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var patch = req.body
@@ -404,7 +404,7 @@ export class Api {
                 }
                 let optionsValid = updateOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(updateOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(updateOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var data = req.body
@@ -474,7 +474,7 @@ export class Api {
                 }
                 let optionsValid = deleteOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validtionError(ajv.errorsText(deleteOptionsFilter.errors)), req)
+                    let error = this.apiError(validationError(ajv.errorsText(deleteOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var id = req.params.id
@@ -526,7 +526,7 @@ export class Api {
                 }
             }
         }
-        
+
         // attach the router to the express app
         this.application.use(endpointPath, router);
         // return this for easy chaining of operations
