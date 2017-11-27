@@ -2,7 +2,6 @@ import * as util from 'util';
 import * as _ from 'lodash';
 import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
-import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
 import { PipelineSchemaRelations } from './schema/Relations'
 import { PipelineSchema } from './schema/Pipeline'
@@ -11,7 +10,7 @@ import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbol
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
-import { validtionError } from "../error/Error"
+import { validationError, serafinError, } from "../error/Error"
 
 /**
  * Abstract Class representing a pipeline.
@@ -110,6 +109,19 @@ export abstract class PipelineAbstract<
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
 
+    private prepareOptionsMapping(options) {
+        if (typeof options == 'object') {
+            for (let key in this.optionsMapping) {
+                if (options[key]) {
+                    options[this.optionsMapping[key]] = options[key];
+                    delete (options[key]);
+                }
+            }
+        }
+
+        return options;
+    }
+
     /**
      * Create new resources based on `resources` input array.
      * 
@@ -118,7 +130,7 @@ export abstract class PipelineAbstract<
      */
     @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
         await this.validate('create', resources, options);
-        return this._create(resources, options);
+        return this._create(resources, this.prepareOptionsMapping(options));
     }
 
     protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
@@ -133,17 +145,7 @@ export abstract class PipelineAbstract<
      */
     @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
         await this.validate('read', query, options);
-
-        if (typeof options == 'object') {
-            for (let key in this.optionsMapping) {
-                if (options[key]) {
-                    options[this.optionsMapping[key]] = options[key];
-                    delete (options[key]);
-                }
-            }
-        }
-
-        return this._read(query, options);
+        return this._read(query, this.prepareOptionsMapping(options));
     }
 
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
@@ -165,7 +167,7 @@ export abstract class PipelineAbstract<
     }
 
     protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        return this.parent.update(id, values, options);
+        return this.parent.update(id, values, this.prepareOptionsMapping(options));
     }
 
     /**
@@ -179,7 +181,7 @@ export abstract class PipelineAbstract<
      */
     @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
         await this.validate('patch', query, values, options);
-        return this._patch(query, values, options);
+        return this._patch(query, values, this.prepareOptionsMapping(options));
     }
 
     protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
@@ -193,7 +195,7 @@ export abstract class PipelineAbstract<
      */
     @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
         await this.validate('delete', query, options);
-        return this._delete(query, options);
+        return this._delete(query, this.prepareOptionsMapping(options));
     }
 
     protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
@@ -257,7 +259,7 @@ export abstract class PipelineAbstract<
         this.validationFunctions['create'] = (params: any[]) => {
             let [resources, options] = params;
             if (!validateCreateResources(resources) || !validateCreateOptions(options || {})) {
-                return validtionError(ajv.errorsText(validateCreateResources.errors || validateCreateOptions.errors))
+                throw validationError(ajv.errorsText(validateCreateResources.errors || validateCreateOptions.errors))
             }
         }
 
@@ -267,7 +269,7 @@ export abstract class PipelineAbstract<
         this.validationFunctions['read'] = (params: any[]) => {
             let [query, options] = params;
             if (!validateReadQuery(query || {}) || !validateReadOptions(options || {})) {
-                return validtionError(ajv.errorsText(validateReadQuery.errors || validateReadOptions.errors))
+                throw validationError(ajv.errorsText(validateReadQuery.errors || validateReadOptions.errors))
             }
         }
 
@@ -277,7 +279,7 @@ export abstract class PipelineAbstract<
         this.validationFunctions['update'] = (params: any[]) => {
             let [id, values, options] = params;
             if (!validateUpdateValues(values) || !validateUpdateOptions(options || {})) {
-                return validtionError(ajv.errorsText(validateUpdateValues.errors || validateUpdateOptions.errors))
+                throw validationError(ajv.errorsText(validateUpdateValues.errors || validateUpdateOptions.errors))
             }
         }
 
@@ -288,7 +290,7 @@ export abstract class PipelineAbstract<
         this.validationFunctions['patch'] = (params: any[]) => {
             let [query, values, options] = params;
             if (!validatePatchQuery(query) || !validatePatchValues(values) || !validatePatchOptions(options || {})) {
-                return validtionError(ajv.errorsText(validatePatchQuery.errors || validatePatchValues.errors || validatePatchOptions.errors))
+                throw validationError(ajv.errorsText(validatePatchQuery.errors || validatePatchValues.errors || validatePatchOptions.errors))
             }
         }
 
@@ -298,20 +300,24 @@ export abstract class PipelineAbstract<
         this.validationFunctions['delete'] = (params: any[]) => {
             let [query, options] = params;
             if (!validateDeleteQuery(query || {}) || !validateDeleteOptions(options || {})) {
-                return validtionError(ajv.errorsText(validateDeleteQuery.errors || validateDeleteOptions.errors))
+                throw validationError(ajv.errorsText(validateDeleteQuery.errors || validateDeleteOptions.errors))
             }
         }
     }
 
-    private validate(method: string, ...params): Promise<void> {
+    private async validate(method: string, ...params): Promise<void> {
         if (!this.validationFunctions) {
             this.compileValidationFunctions();
         }
-
         let validate = this.validationFunctions[method];
-        let error = validate(params);
-        if (error) {
-            return Promise.reject(error)
+
+        try {
+            validate(params);
+        } catch (error) {
+            return Promise.reject(serafinError('SerafinValidationError',
+                `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
+                { constructor: Object.getPrototypeOf(this).constructor.name, method: method },
+                error));
         }
     }
 
