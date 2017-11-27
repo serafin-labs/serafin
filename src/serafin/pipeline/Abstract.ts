@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaModel } from './schema/Model'
-import { PipelineSchemaRelations } from './schema/Relations'
+import { PipelineRelations } from './Relations'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaProperties } from './schema/Properties'
 import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
@@ -35,7 +35,7 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
-    protected relationsSchema: PipelineSchemaRelations = null;
+    protected relationsSchema: PipelineRelations = null;
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
@@ -99,7 +99,7 @@ export abstract class PipelineAbstract<
     /**
      * Get a list of relations for this pipeline
      */
-    get relations(): PipelineSchemaRelations {
+    get relations(): PipelineRelations {
         return this.findRelationsSchema();
     }
 
