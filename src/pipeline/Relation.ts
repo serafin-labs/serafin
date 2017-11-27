@@ -2,7 +2,7 @@ import { PipelineAbstract, option, description, result, PipelineRelationInterfac
 import * as _ from 'lodash'
 
 @description("Defines a related entity and a way to fetch it")
-export class Relation<T> extends PipelineAbstract<T, {}, { fetchRelations?: string[] }, { }> {
+export class Relation<T> extends PipelineAbstract<T, {}, { link?: string[] }, { }> {
 
     constructor(protected relation: PipelineRelationInterface, protected fetchEnabled = true) {
         super()
@@ -16,10 +16,10 @@ export class Relation<T> extends PipelineAbstract<T, {}, { fetchRelations?: stri
     } 
 
     @description("Fetch relations for resulting objects")
-    @option('fetchRelations', { type: "array", items: { type: "string" } }, false, 'An array of string that represents relations to fetch')
-    protected async _read(query?: {}, options?: { fetchRelations?: string[]  }): Promise<{ results: T[] }> {
+    @option('link', { type: "array", items: { type: "string" } }, false, 'An array of string that represents relations to fetch')
+    protected async _read(query?: {}, options?: { link?: string[]  }): Promise<{ results: T[] }> {
         let resources = await this.parent.read(query, options);
-        if (this.fetchEnabled && options && options.fetchRelations && options.fetchRelations.indexOf(this.relation.name) !== -1) {
+        if (this.fetchEnabled && options && options.link && options.link.indexOf(this.relation.name) !== -1) {
             if (this.relation.query) {
                 for (let r of resources.results) {
                     r[this.relation.name] = await this.relation.query(r);
