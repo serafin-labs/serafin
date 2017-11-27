@@ -1,7 +1,7 @@
 import { PipelineAbstract, description } from '../../serafin/pipeline';
 
 @description("Pipeline used to generate pet names if you don't have an idea.")
-export class DefaultPetName extends PipelineAbstract<{ name?: string }> {
+export class DefaultPetName extends PipelineAbstract {
     constructor(private baseName: string, private currentCount: number = 0) {
         super();
     }
@@ -11,7 +11,7 @@ export class DefaultPetName extends PipelineAbstract<{ name?: string }> {
     }
 
     @description("Generate pet names for new Pets if they were not provided.")
-    protected async _create(resources: { name: string }[], options?: {}) {
+    protected async _create(resources: { name: string }[], options?: {}): Promise<{ name: string }[]> {
         resources.forEach(resource => {
             if (!resource.name) {
                 resource.name = this.generatePetName()
@@ -21,7 +21,7 @@ export class DefaultPetName extends PipelineAbstract<{ name?: string }> {
     }
 
     @description("Generate a new Pet name for the updated Pet if it was not provided.")
-    protected async _update(id: string, values: { name: string }, options?: {}) {
+    protected async _update(id: string, values: { name: string }, options?: {}): Promise<{ name: string }> {
         if (!values.name) {
             values.name = this.generatePetName()
         }
