@@ -10,7 +10,13 @@ import { validtionError, notFoundError, ValidationErrorName, NotFoundErrorName, 
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
 
 
-
+export interface ApiOptions {
+    /**
+     * If provided, the Api will use this function to gather internal options for this request.
+     * It can be used for example to pass _user or _role to the underlying pipeline.
+     */
+    internalOptions?: (req: express.Request) => Object
+}
 
 /**
  * Api class represents a set of endpoints based on pipelines.
@@ -34,7 +40,7 @@ export class Api {
      * @param application the express app the Api will rely on to register endpoints
      * @param openApi Base open api document. To be used to provide general information about the api.
      */
-    constructor(protected application: express.Application, protected openApi: Swagger.Spec = <any>{}) {
+    constructor(protected application: express.Application, protected openApi: Swagger.Spec = <any>{}, protected options: ApiOptions = {}) {
         // init open Api specs
         this.openApi.paths = this.openApi.paths || {};
         this.openApi.definitions = this.openApi.definitions || {};
@@ -135,6 +141,10 @@ export class Api {
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // separate options from query based on pipeline metadata
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
+                let internalOptions
                 let query = _.cloneDeep(req.query);
                 let optionsValid = readOptionsFilter(options);
                 let queryValid = readQueryFilter(query);
@@ -156,6 +166,9 @@ export class Api {
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
                 let optionsValid = readOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(readOptionsFilter.errors)), req)
@@ -253,6 +266,9 @@ export class Api {
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
                 let optionsValid = createOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(createOptionsFilter.errors)), req)
@@ -311,6 +327,9 @@ export class Api {
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
                 let optionsValid = patchOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(patchOptionsFilter.errors)), req)
@@ -380,6 +399,9 @@ export class Api {
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
                 let optionsValid = updateOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(updateOptionsFilter.errors)), req)
@@ -447,6 +469,9 @@ export class Api {
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
                 let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                if (this.options.internalOptions) {
+                    _.merge(options, this.options.internalOptions(req))
+                }
                 let optionsValid = deleteOptionsFilter(options);
                 if (!optionsValid) {
                     let error = this.apiError(validtionError(ajv.errorsText(deleteOptionsFilter.errors)), req)
