@@ -4,6 +4,7 @@ import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
 import * as jsonSchemaMergeAllOf from 'json-schema-merge-allof';
 import { PipelineSchemaModel } from './schema/Model'
+import { PipelineSchemaRelations } from './schema/Relations'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaProperties } from './schema/Properties'
 import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
@@ -35,6 +36,7 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    protected relationsSchema: PipelineSchemaRelations = null;
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
@@ -61,6 +63,16 @@ export abstract class PipelineAbstract<
         return this.modelSchema || (this.parent ? this.parent.findModelSchema() : null)
     }
 
+    /**
+     * Find the nearest relationsSchema definition
+     */
+    protected findRelationsSchema() {
+        return this.relationsSchema || (this.parent ? this.parent.findRelationsSchema() : null)
+    }
+
+    /**
+     * gather all options used by this pipeline and its parents
+     */
     protected findAllOptions() {
         return [this.optionsSchema, ...((this.parent) ? this.parent.findAllOptions() : [])];
     }
@@ -86,6 +98,13 @@ export abstract class PipelineAbstract<
     }
 
     /**
+     * Get a list of relations for this pipeline
+     */
+    get relations(): PipelineSchemaRelations {
+        return this.findRelationsSchema();
+    }
+
+    /**
      * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
      * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
      */
@@ -98,7 +117,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
-        this.validate('create', resources, options);
+        await this.validate('create', resources, options);
         return this._create(resources, options);
     }
 
@@ -113,7 +132,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
-        this.validate('read', query, options);
+        await this.validate('read', query, options);
 
         if (typeof options == 'object') {
             for (let key in this.optionsMapping) {
@@ -141,7 +160,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        this.validate('update', id, values, options);
+        await this.validate('update', id, values, options);
         return this._update(id, values, options);
     }
 
@@ -159,7 +178,7 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
-        this.validate('patch', query, values, options);
+        await this.validate('patch', query, values, options);
         return this._patch(query, values, options);
     }
 
@@ -173,7 +192,7 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
-        this.validate('delete', query, options);
+        await this.validate('delete', query, options);
         return this._delete(query, options);
     }
 
