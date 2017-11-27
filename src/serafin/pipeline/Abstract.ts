@@ -91,6 +91,19 @@ export abstract class PipelineAbstract<
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
 
+    private prepareOptionsMapping(options) {
+        if (typeof options == 'object') {
+            for (let key in this.optionsMapping) {
+                if (options[key]) {
+                    options[this.optionsMapping[key]] = options[key];
+                    delete (options[key]);
+                }
+            }
+        }
+
+        return options;
+    }
+
     /**
      * Create new resources based on `resources` input array.
      * 
@@ -98,8 +111,8 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
-        this.validate('create', resources, options);
-        return this._create(resources, options);
+        await this.validate('create', resources, options);
+        return this._create(resources, this.prepareOptionsMapping(options));
     }
 
     protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
@@ -113,18 +126,8 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
-        this.validate('read', query, options);
-
-        if (typeof options == 'object') {
-            for (let key in this.optionsMapping) {
-                if (options[key]) {
-                    options[this.optionsMapping[key]] = options[key];
-                    delete (options[key]);
-                }
-            }
-        }
-
-        return this._read(query, options);
+        await this.validate('read', query, options);
+        return this._read(query, this.prepareOptionsMapping(options));
     }
 
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
@@ -141,12 +144,12 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        this.validate('update', id, values, options);
+        await this.validate('update', id, values, options);
         return this._update(id, values, options);
     }
 
     protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        return this.parent.update(id, values, options);
+        return this.parent.update(id, values, this.prepareOptionsMapping(options));
     }
 
     /**
@@ -159,8 +162,8 @@ export abstract class PipelineAbstract<
      * @param options 
      */
     @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
-        this.validate('patch', query, values, options);
-        return this._patch(query, values, options);
+        await this.validate('patch', query, values, options);
+        return this._patch(query, values, this.prepareOptionsMapping(options));
     }
 
     protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
@@ -173,8 +176,8 @@ export abstract class PipelineAbstract<
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
-        this.validate('delete', query, options);
-        return this._delete(query, options);
+        await this.validate('delete', query, options);
+        return this._delete(query, this.prepareOptionsMapping(options));
     }
 
     protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
