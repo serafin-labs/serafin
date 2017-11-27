@@ -48,7 +48,7 @@ export class PipelineSourceInMemory<
             return true;
         });
 
-        return { results: resources } as any;
+        return { results: _.cloneDeep(resources) } as any;
     }
 
     protected async _create(resources: CreateResources[], options?: {}) {
@@ -56,7 +56,7 @@ export class PipelineSourceInMemory<
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
             if (!this.resources[resource["id"]]) {
-                this.resources[resource["id"]] = <any>identifiedResource;
+                this.resources[resource["id"]] = <any>_.cloneDeep(identifiedResource);
                 createdResources.push(<any>identifiedResource);
             } else {
                 // Todo: put the conflict test at beginning (for atomicity)
@@ -82,7 +82,7 @@ export class PipelineSourceInMemory<
             }
             // in case it wasn't assigned yet
             values["id"] = values["id"] || id;
-            this.resources[id] = values as any;
+            this.resources[id] = _.cloneDeep(values) as any;
             return values as any;
         }
         return undefined;
@@ -98,7 +98,7 @@ export class PipelineSourceInMemory<
             if (resource.id !== id) {
                 delete (this.resources[resource.id]);
             }
-            this.resources[id] = resource;
+            this.resources[id] = _.cloneDeep(resource);
             updatedResources.push(resource);
         });
 
