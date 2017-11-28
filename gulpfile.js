@@ -19,7 +19,8 @@ gulpTasks.runner(gulp, __dirname + '/' + main, __dirname + '/lib/build.txt', __d
 gulpTasks.test(gulp, __dirname + '/lib/**/test/*.js', __dirname + '/lib/coverage');
 gulpTasksModel(gulp, __dirname + '/src/example/petstore/**/*.model.json', __dirname + '/src/example/petstore/model', 'petstore', {
     modelSchemaPath: "../../../serafin/pipeline/schema/Model"
-}); pTasks.test(gulp, __dirname + '/lib/**/test/*.js', __dirname + '/lib/coverage');
+});
+gulpTasks.test(gulp, __dirname + '/lib/**/test/*.js', __dirname + '/lib/coverage');
 gulpTasksModel(gulp, __dirname + '/src/example/petstore/**/*.model.json', __dirname + '/src/example/petstore/model', 'petstore', {
     modelSchemaPath: "../../../serafin/pipeline/schema/Model"
 });
