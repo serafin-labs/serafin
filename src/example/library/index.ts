@@ -59,7 +59,8 @@ async function main() {
             .pipe(new Paginate())
             .pipe(new Relation({ name: 'author', localKey: 'authorId', pipeline: authorPipeline, type: "oneToOne" }));
 
-        let categoryPipeline = (new PipelineSourceInMemory(categorySchema));
+        let categoryPipeline = (new PipelineSourceInMemory(categorySchema))
+            .pipe(new Relation({ name: 'book', foreignKey: 'categoriesId', pipeline: bookPipeline, type: "oneToMany" }));;
 
         await authorPipeline.create([
             { id: '1', firstName: 'Jules', lastName: 'Vernes' },
