@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import * as express from "express"
 import { PipelineAbstract } from "../serafin/pipeline/Abstract"
-import { Api } from "../serafin/http/Api"
+import { Api } from "../serafin/api/Api"
 
 describe('Api', function () {
     it('should be initialized with an express app', function () {
