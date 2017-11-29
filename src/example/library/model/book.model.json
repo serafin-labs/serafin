@@ -15,12 +15,22 @@
         "summary": {
             "description": "Book summary",
             "type": "string"
+        },
+        "authorId": {
+            "description": "Let's consider there's only one author",
+            "type": "string"
+        },
+        "categories": {
+            "description": "Book categories",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
         }
     },
     "required": [
         "id",
         "title"
     ],
-    "additionalProperties": false,
-    "definitions": {}
+    "additionalProperties": false
 }
