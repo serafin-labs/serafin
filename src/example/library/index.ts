@@ -88,7 +88,9 @@ async function main() {
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
         let bidule = await bookPipeline.read({}, { count: 5, link: ['author'] });
 
-        api.use(bookPipeline, "book")
+        api.use(bookPipeline, "book");
+        api.use(authorPipeline, "author");
+        api.use(categoryPipeline, "category", "categories");
     }, 1000);
 
     // start the server
