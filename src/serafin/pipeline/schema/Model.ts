@@ -51,7 +51,7 @@ export class PipelineSchemaModel<
         this.schemaObject.definitions = this.schemaObject.definitions || {}
         if (Array.isArray(this._implementedMethods)) {
             if (methods.indexOf("create") !== -1) {
-                this.schemaObject.definitions.createValues = this.schemaObject.definitions.createValues || this.toDefinitionSchema(SCHEMA_FILTER.NO_ID, SCHEMA_FILTER.NO_ID);
+                this.schemaObject.definitions.createValues = this.schemaObject.definitions.createValues || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.NO_ID);
             } else {
                 delete this.schemaObject.definitions.createValues
             }
@@ -61,7 +61,7 @@ export class PipelineSchemaModel<
                 delete this.schemaObject.definitions.readQuery
             }
             if (methods.indexOf("update") !== -1) {
-                this.schemaObject.definitions.updateValues = this.schemaObject.definitions.updateValues || this.toDefinitionSchema(SCHEMA_FILTER.NO_ID, SCHEMA_FILTER.NO_ID);
+                this.schemaObject.definitions.updateValues = this.schemaObject.definitions.updateValues || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.NO_ID);
             } else {
                 delete this.schemaObject.definitions.updateValues
             }
