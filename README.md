@@ -60,7 +60,7 @@ A very simple example looks like that :
 ```typescript
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import { Api, PipelineSourceInMemory, PipelineSchemaModel } from '@serafin/api';
+import { Api, PipelineSourceInMemory, PipelineSchemaModel, RestTransport } from '@serafin/api';
 
 // express initialization
 let app = express();
@@ -75,6 +75,7 @@ let api = new Api(app, {
         },
         paths: {}
     });
+api.configure(new RestTransport());
 
 // Declare a Schema for our "entity"
 let aModelSchema = new PipelineSchemaModel({ type: 'object' });
@@ -148,8 +149,6 @@ This means that the schema modifications and the options you add endup beeing pa
 ### Model Interfaces generation
 
 The biggest part of the model relies on JSON Schema. But **Typescript** needs **Interfaces** to provide good type checking. To avoid you creating those **Interfaces** by hand, we created a gulp task based on **json-schema-to-typescript**.
-
-**-> Single Source Of Truth principle**.
 
 Checkout [serafin-framework/gulp-serafin-json-schema-to-typescript](https://github.com/serafin-framework/gulp-serafin-json-schema-to-typescript)
 
