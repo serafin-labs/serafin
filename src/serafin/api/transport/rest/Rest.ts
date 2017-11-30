@@ -4,13 +4,13 @@ import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import { JSONSchema4 } from "json-schema"
-import { PipelineAbstract } from "../pipeline/Abstract"
-import { throughJsonSchema } from "../util/throughJsonSchema"
-import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "./openApiUtils"
+import { TransportInterface } from "../TransportInterface"
+import { PipelineAbstract } from "../../../pipeline/Abstract"
+import { Api } from "../../Api"
+import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "../../openApiUtils"
 
-
-export interface ApiOptions {
+export interface RestOptions {
     /**
      * If provided, the Api will use this function to gather internal options for this request.
      * It can be used for example to pass _user or _role to the underlying pipeline.
@@ -18,71 +18,27 @@ export interface ApiOptions {
     internalOptions?: (req: express.Request) => Object
 }
 
-/**
- * Api class represents a set of endpoints based on pipelines.
- * It will register all routes for the endpoints and for metadata (swagger / open API).
- */
-export class Api {
+export class RestTransport implements TransportInterface {
+    protected api: Api
+    constructor(protected options: RestOptions = {}) {
+    }
 
-    /**
-     * Map of all exposed pipelines
-     */
-    protected pipelineByName: { [name: string]: PipelineAbstract } = {}
-
-    /**
-     * Base path of the API
-     */
-    protected get basePath(): string {
-        return this.openApi.basePath || ""
+    init(api: Api) {
+        this.api = api;
     }
 
     /**
-     * @param application the express app the Api will rely on to register endpoints
-     * @param openApi Base open api document. To be used to provide general information about the api.
-     */
-    constructor(protected application: express.Application, protected openApi: Swagger.Spec = <any>{}, protected options: ApiOptions = {}) {
-        // init open Api specs
-        this.openApi.paths = this.openApi.paths || {};
-        this.openApi.definitions = this.openApi.definitions || {};
-        this.openApi.definitions.Error = {
-            type: "object",
-            properties: {
-                code: { type: "number" },
-                message: { type: "string" }
-            }
-        }
-
-        // setup endpoints for api metadata
-        this.application.get(this.basePath + "/api.json", (req, res) => {
-            res.json(this.openApi).end();
-        });
-    }
-
-    /**
-     * Filter used to remove input options that are not supposed to be set by the client.
-     * By default all options starting with _ are reserved for internal use and cannot be set by the request
-     */
-    protected isNotAnInternalOption = (name: string) => !name.startsWith("_");
-    protected filterInternalOptions(options: Object) {
-        return _.pickBy(options, (value, key) => this.isNotAnInternalOption(key));
-    }
-    protected filterInternalParameters(parameters: Swagger.Parameter[]) {
-        return parameters.filter((parameter) => this.isNotAnInternalOption(parameter.name))
-    }
-
-    /**
-     * Expose a pipeline on this API. All implemented methods are automatically binded to the corrsponding actions and urls.
+     * Use the given pipeline.
      * 
-     * @param pipeline The pipeline to expose on the API
-     * @param name The singular name of the underlying resource. It is used to generate the url of the endpoint.
-     * @param pluralName The plural name the underlying resource. It is used to generate the url of the endpoint. If not provided, it defaults to `${name}s`
+     * @param pipeline 
+     * @param name 
+     * @param pluralName 
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string = `${name}s`): this {
+    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
         // register the pipeline
-        this.pipelineByName[name] = pipeline;
 
         // setup the router
-        let endpointPath = `${this.basePath}/${pluralName}`;
+        let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
         let router = express.Router();
 
@@ -108,8 +64,8 @@ export class Api {
 
         // import pipeline schemas to openApi definitions
         var pipelineSchema = pipeline.schema;
-        this.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(pipelineSchema.schema)), `#/definitions/${name}`) as any
-        flattenSchemas(this.openApi.definitions as any)
+        this.api.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(pipelineSchema.schema)), `#/definitions/${name}`) as any
+        flattenSchemas(this.api.openApi.definitions as any)
 
         // determine what are the available actions
         let canRead = !!pipelineSchema.schema.definitions.readQuery
@@ -120,8 +76,8 @@ export class Api {
 
         // prepare open API metadata for each endpoint
         var resourcesPathWithId = `${resourcesPath}/{id}`;
-        this.openApi.paths[resourcesPath] = this.openApi.paths[resourcesPath] || {};
-        this.openApi.paths[resourcesPathWithId] = this.openApi.paths[resourcesPathWithId] || {};
+        this.api.openApi.paths[resourcesPath] = this.api.openApi.paths[resourcesPath] || {};
+        this.api.openApi.paths[resourcesPathWithId] = this.api.openApi.paths[resourcesPathWithId] || {};
 
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
@@ -132,15 +88,15 @@ export class Api {
         // create the routes for this endpoint
 
         if (canRead) {
-            let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.openApi);
-            let readOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.openApi));
+            let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.api.openApi);
+            let readOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.api.openApi));
             let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
             let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
 
             // get many resources
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // separate options from query based on pipeline metadata
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
@@ -149,7 +105,7 @@ export class Api {
                 let optionsValid = readOptionsFilter(options);
                 let queryValid = readQueryFilter(query);
                 if (!optionsValid || !queryValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
 
@@ -158,20 +114,20 @@ export class Api {
                     res.status(200).json(wrapper);
                     res.end();
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
                 let optionsValid = readOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(readOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(readOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var id = req.params.id
@@ -187,13 +143,13 @@ export class Api {
                     }
                     res.end();
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
 
             // general get
-            this.openApi.paths[resourcesPath]["get"] = {
+            this.api.openApi.paths[resourcesPath]["get"] = {
                 description: `Find ${_.upperFirst(pluralName)}`,
                 operationId: `find${_.upperFirst(pluralName)}`,
                 parameters: removeDuplicatedParameters(readQueryParameters.concat(readOptionsParameters)),
@@ -227,7 +183,7 @@ export class Api {
             }
 
             // get by id
-            this.openApi.paths[resourcesPathWithId]["get"] = {
+            this.api.openApi.paths[resourcesPathWithId]["get"] = {
                 description: `Get one ${_.upperFirst(name)} by its id`,
                 operationId: `get${_.upperFirst(name)}ById`,
                 parameters: [{
@@ -259,19 +215,19 @@ export class Api {
 
 
         if (canCreate) {
-            let createOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.openApi));
+            let createOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.api.openApi));
             let createOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/createOptions' });
 
             // create a new resource
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
                 let optionsValid = createOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(createOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(createOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var data = req.body
@@ -283,12 +239,12 @@ export class Api {
                     }
                     res.status(201).json(createdResources[0])
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // post a new resource
-            this.openApi.paths[resourcesPath]["post"] = {
+            this.api.openApi.paths[resourcesPath]["post"] = {
                 description: `Create a new ${_.upperFirst(name)}`,
                 operationId: `add${_.upperFirst(name)}`,
                 parameters: removeDuplicatedParameters(createOptionsParameters).concat([{
@@ -319,20 +275,20 @@ export class Api {
         }
 
         if (canPatch) {
-            let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.openApi)
-            let patchOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.openApi));
+            let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.api.openApi)
+            let patchOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.api.openApi));
             let patchOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/patchOptions' });
 
             // patch an existing resource
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
                 let optionsValid = patchOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(patchOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(patchOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var patch = req.body
@@ -349,12 +305,12 @@ export class Api {
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // patch by id
-            this.openApi.paths[resourcesPathWithId]["patch"] = {
+            this.api.openApi.paths[resourcesPathWithId]["patch"] = {
                 description: `Patch a ${_.upperFirst(name)} using its id`,
                 operationId: `patch${_.upperFirst(name)}`,
                 parameters: removeDuplicatedParameters(patchOptionsParameters).concat([
@@ -392,19 +348,19 @@ export class Api {
         }
 
         if (canUpdate) {
-            let updateOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.openApi));
+            let updateOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.api.openApi));
             let updateOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/updateOptions' });
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
                 let optionsValid = updateOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(updateOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(updateOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var data = req.body
@@ -419,12 +375,12 @@ export class Api {
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // put by id
-            this.openApi.paths[resourcesPathWithId]["put"] = {
+            this.api.openApi.paths[resourcesPathWithId]["put"] = {
                 description: `Put a ${_.upperFirst(name)} using its id`,
                 operationId: `put${_.upperFirst(name)}`,
                 parameters: removeDuplicatedParameters(updateOptionsParameters).concat([
@@ -462,19 +418,19 @@ export class Api {
         }
 
         if (canDelete) {
-            let deleteOptionsParameters = this.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.openApi));
+            let deleteOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.api.openApi));
             let deleteOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/deleteOptions' });
 
             // delete an existing resource
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 // extract parameters
-                let options = this.filterInternalOptions(_.cloneDeep(req.query));
+                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
                 if (this.options.internalOptions) {
                     _.merge(options, this.options.internalOptions(req))
                 }
                 let optionsValid = deleteOptionsFilter(options);
                 if (!optionsValid) {
-                    let error = this.apiError(validationError(ajv.errorsText(deleteOptionsFilter.errors)), req)
+                    let error = Api.apiError(validationError(ajv.errorsText(deleteOptionsFilter.errors)), req)
                     return handleError(error, res, next);
                 }
                 var id = req.params.id
@@ -490,12 +446,12 @@ export class Api {
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(this.apiError(error, req), res, next)
+                    handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // delete by id
-            this.openApi.paths[resourcesPathWithId]["delete"] = {
+            this.api.openApi.paths[resourcesPathWithId]["delete"] = {
                 description: `Delete a ${_.upperFirst(name)} using its id`,
                 operationId: `delete${_.upperFirst(name)}`,
                 parameters: removeDuplicatedParameters(deleteOptionsParameters).concat([
@@ -528,26 +484,6 @@ export class Api {
         }
 
         // attach the router to the express app
-        this.application.use(endpointPath, router);
-        // return this for easy chaining of operations
-        return this;
-    }
-
-    /**
-     * Create an error object that contains info about the request context
-     * 
-     * @param cause 
-     * @param req 
-     */
-    protected apiError(cause: any, req: express.Request) {
-        return new VError({
-            name: "SerafinRequestError",
-            cause: cause,
-            info: {
-                url: req.url,
-                method: req.method,
-                ip: req.ip
-            }
-        }, `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`)
+        this.api.application.use(endpointPath, router);
     }
 }
