@@ -1,6 +1,6 @@
 import { fail } from 'assert';
 import * as express from 'express';
-import { Api, RestTransport } from '../../serafin/api';
+import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { petSchema } from './model/Pet';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
@@ -50,7 +50,11 @@ async function main() {
         ],
         paths: {}
     });
-    api.configure(new RestTransport());
+    api.configure(new RestTransport())
+        .configure(new GraphQLTransport({
+            graphiql: true,
+            schema: true
+        }));
 
     let petPipeline = (new PipelineSourceInMemory(petSchema)) // Initialize an InMemory Pipepeline Source with the model schema
         .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
@@ -61,7 +65,7 @@ async function main() {
     console.log(petPipeline.toString());
 
     // register the pipeline to the api so it is exposed automatically
-    // it will create the following routes : /pets (GET, POST) and /pets/:id (GET, PUT, PATCH, DELETE) 
+    // it will create the following routes : /pets (GET, POST) and /pets/:id (GET, PUT, PATCH, DELETE) and the graphql endpoints /graphql and /graphqlSchema
     api.use(petPipeline, "pet")
 
     // all the beauty of Serafin is that now, we have a programmatic api with typings that supports all the buissness features we have implemented
