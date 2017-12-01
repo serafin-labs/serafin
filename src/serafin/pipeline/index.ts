@@ -9,4 +9,4 @@ export { PipelineRelationInterface, PipelineRelations } from "./Relations"
 
 // pipeline
 export { PipelineAbstract } from "./Abstract"
-export { PipelineSourceAbstract } from "./SourceAbstract"
+export { PipelineSourceAbstract, Patch } from "./SourceAbstract"

@@ -1,6 +1,6 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineSourceAbstract, description } from '../../serafin/pipeline';
+import { PipelineSourceAbstract, Patch, description } from '../../serafin/pipeline';
 import { ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
@@ -10,12 +10,12 @@ import * as uuid from "node-uuid"
 @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineSourceInMemory<
     T extends ResourceIdentityInterface,
-    ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    ReadQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
     CreateResources = Partial<T>,
     UpdateValues = Partial<T>,
-    PatchQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    PatchQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
     PatchValues = Partial<T>,
-    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateResources, {}, UpdateValues, {}, PatchQuery, PatchValues, {}, DeleteQuery, {}> {
+    DeleteQuery extends Patch<ResourceIdentityInterface> = Patch<T>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateResources, {}, UpdateValues, {}, PatchQuery, PatchValues, {}, DeleteQuery, {}> {
     protected resources: { [index: string]: T };
 
     constructor(schema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
@@ -40,7 +40,25 @@ export class PipelineSourceInMemory<
 
         let resources = _.filter(this.resources, resource => {
             for (var property in query) {
-                if (query[property] != resource[property as string]) {
+                if (!resource[property]) {
+                    return false;
+                } else if (Array.isArray(query[property])) {
+                    if (Array.isArray(resource[property])) {
+                        // query property: array, resource property: array
+
+                        throw Error('Array to array queries are not handled');
+                    } else if (query[property].indexOf(resource[property]) === -1) {
+                        // query property: array, resource property: other
+                        return false;
+                    }
+                } else if (Array.isArray(resource[property])) {
+                    // query property: other, resource property: array
+                    if (resource[property].indexOf(query[property]) === -1) {
+                        return false;
+                    }
+                }
+                else if (query[property] != resource[property]) {
+                    // query property: other, resource property: other
                     return false;
                 }
             }

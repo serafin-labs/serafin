@@ -56,7 +56,7 @@ export class PipelineSchemaModel<
                 delete this.schemaObject.definitions.createValues
             }
             if (methods.indexOf("read") !== -1) {
-                this.schemaObject.definitions.readQuery = this.schemaObject.definitions.readQuery || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.NONE);
+                this.schemaObject.definitions.readQuery = this.schemaObject.definitions.readQuery || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.NONE, true);
             } else {
                 delete this.schemaObject.definitions.readQuery
             }
@@ -66,21 +66,21 @@ export class PipelineSchemaModel<
                 delete this.schemaObject.definitions.updateValues
             }
             if (methods.indexOf("patch") !== -1) {
-                this.schemaObject.definitions.patchQuery = this.schemaObject.definitions.patchQuery || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.ONLY_ID);
+                this.schemaObject.definitions.patchQuery = this.schemaObject.definitions.patchQuery || this.toDefinitionSchema(SCHEMA_FILTER.ALL, SCHEMA_FILTER.ONLY_ID, true);
                 this.schemaObject.definitions.patchValues = this.schemaObject.definitions.patchValues || this.toDefinitionSchema(SCHEMA_FILTER.NO_ID, SCHEMA_FILTER.NONE);
             } else {
                 delete this.schemaObject.definitions.patchQuery
                 delete this.schemaObject.definitions.patchValues
             }
             if (methods.indexOf("delete") !== -1) {
-                this.schemaObject.definitions.deleteQuery = this.schemaObject.definitions.deleteQuery || this.toDefinitionSchema(SCHEMA_FILTER.ONLY_ID, SCHEMA_FILTER.ONLY_ID);
+                this.schemaObject.definitions.deleteQuery = this.schemaObject.definitions.deleteQuery || this.toDefinitionSchema(SCHEMA_FILTER.ONLY_ID, SCHEMA_FILTER.ONLY_ID, true);
             } else {
                 delete this.schemaObject.definitions.deleteQuery
             }
         }
     }
 
-    private toDefinitionSchema(propertiesFilter: SCHEMA_FILTER, requiredFilter: SCHEMA_FILTER) {
+    private toDefinitionSchema(propertiesFilter: SCHEMA_FILTER, requiredFilter: SCHEMA_FILTER, toArray: boolean = false) {
         let schema: JSONSchema4 = {
             type: 'object',
             properties: _.clone(this.schemaObject.properties),
@@ -99,6 +99,18 @@ export class PipelineSchemaModel<
             (propertiesFilter === SCHEMA_FILTER.ONLY_ID && (schema.properties = _.pick(schema.properties, 'id'))) ||
             (propertiesFilter === SCHEMA_FILTER.NO_ID && (schema.properties = _.omit(schema.properties, 'id'))) ||
             (schema.properties = {});
+
+        if (toArray === true) {
+            for (let key in schema.properties) {
+                let description = schema.properties[key].description;
+                delete schema.properties[key].description;
+                if (schema.properties[key].type === 'array' && schema.properties[key].items) {
+                    schema.properties[key] = { oneOf: [schema.properties[key].items, schema.properties[key]], description: description };
+                } else {
+                    schema.properties[key] = { oneOf: [schema.properties[key], { type: 'array', items: schema.properties[key] }], description: description };
+                }
+            }
+        }
 
         return schema;
     }
