@@ -1,14 +1,13 @@
 import { fail } from 'assert';
 import * as VError from 'VError';
 import * as express from 'express';
-import { Api } from '../../serafin/http';
+import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { bookSchema } from './model/Book';
 import { authorSchema } from './model/Author';
 import { categorySchema } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
 import { PipelineSchemaModel } from '../../serafin/pipeline';
-
 import { Relation } from '../../pipeline/Relation';
 import { PipelineRelations } from '../../serafin/pipeline/Relations';
 
@@ -50,17 +49,21 @@ async function main() {
         paths: {}
     });
 
+    api.configure(new RestTransport());
+
     // Timeout to ease debugging
     setTimeout(async () => {
         let authorPipeline = (new PipelineSourceInMemory(authorSchema))
             .pipe(new Paginate());
 
+        let categoryPipeline = (new PipelineSourceInMemory(categorySchema));
+
         let bookPipeline = (new PipelineSourceInMemory(bookSchema))
             .pipe(new Paginate())
-            .pipe(new Relation({ name: 'author', localKey: 'authorId', pipeline: authorPipeline, type: "oneToOne" }));
+            .pipe(new Relation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } }))
+            .pipe(new Relation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } }));
 
-        let categoryPipeline = (new PipelineSourceInMemory(categorySchema))
-            .pipe(new Relation({ name: 'book', foreignKey: 'categoriesId', pipeline: bookPipeline, type: "oneToMany" }));;
+        authorPipeline = authorPipeline.pipe(new Relation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } }));
 
         await authorPipeline.create([
             { id: '1', firstName: 'Jules', lastName: 'Vernes' },
@@ -77,16 +80,17 @@ async function main() {
         ]);
 
         await bookPipeline.create([
-            { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", authorId: '1', categories: ['1'] },
-            { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", authorId: '1', categories: ['1'] },
-            { title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categories: ['2', '4'] },
-            { title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", authorId: '2', categories: ['5', '4', '2'] },
-            { title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", authorId: '2', categories: ['5', '4', '2'] },
-            { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categories: ['5', '4', '2'] },
+            { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", authorId: '1', categoryIds: ['1'] },
+            { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", authorId: '1', categoryIds: ['1'] },
+            { title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categoryIds: ['2', '4'] },
+            { title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", authorId: '2', categoryIds: ['5', '4', '2'] },
+            { title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", authorId: '2', categoryIds: ['5', '4', '2'] },
+            { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categoryIds: ['5', '4', '2'] },
         ]);
 
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
-        let bidule = await bookPipeline.read({}, { count: 5, link: ['author'] });
+
+        console.log(await bookPipeline.read({}, { count: 5 }));
 
         api.use(bookPipeline, "book");
         api.use(authorPipeline, "author");

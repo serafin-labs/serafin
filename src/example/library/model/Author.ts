@@ -4,47 +4,20 @@ import { PipelineSchemaModel } from "../../../serafin/pipeline/schema/Model";
  * Author object.
  */
 export interface Author {
-  /**
-   * Author identifier
-   */
   id: string;
-  /**
-   * Author first name
-   */
   firstName: string;
-  /**
-   * Author last name
-   */
   lastName?: string;
 }
 
 export interface CreateValues {
-  /**
-   * Author identifier
-   */
   id?: string;
-  /**
-   * Author first name
-   */
   firstName: string;
-  /**
-   * Author last name
-   */
   lastName?: string;
 }
 
 export interface UpdateValues {
-  /**
-   * Author identifier
-   */
   id?: string;
-  /**
-   * Author first name
-   */
   firstName: string;
-  /**
-   * Author last name
-   */
   lastName?: string;
 }
 
@@ -52,49 +25,31 @@ export interface ReadQuery {
   /**
    * Author identifier
    */
-  id?: string;
+  id?: (string | string[]);
   /**
    * Author first name
    */
-  firstName?: string;
+  firstName?: (string | string[]);
   /**
    * Author last name
    */
-  lastName?: string;
+  lastName?: (string | string[]);
 }
 
 export interface PatchQuery {
-  /**
-   * Author identifier
-   */
-  id: string;
-  /**
-   * Author first name
-   */
-  firstName?: string;
-  /**
-   * Author last name
-   */
-  lastName?: string;
+  id: (string | string[]);
+  firstName?: (string | string[]);
+  lastName?: (string | string[]);
 }
 
 export interface PatchValues {
-  /**
-   * Author first name
-   */
   firstName?: string;
-  /**
-   * Author last name
-   */
   lastName?: string;
 }
 
 export interface DeleteQuery {
-  /**
-   * Author identifier
-   */
   id: string;
 }
 
 
-export var authorSchema = new PipelineSchemaModel<Author, ReadQuery, CreateValues, UpdateValues, PatchQuery, PatchValues, DeleteQuery>({"$schema":"http://json-schema.org/draft-04/schema#","type":"object","id":"/Author","description":"Author object.","properties":{"id":{"type":"string","description":"Author identifier"},"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"required":["id","firstName"],"additionalProperties":false,"definitions":{"createValues":{"type":"object","properties":{"id":{"type":"string","description":"Author identifier"},"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"additionalProperties":false,"required":["firstName"]},"updateValues":{"type":"object","properties":{"id":{"type":"string","description":"Author identifier"},"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"additionalProperties":false,"required":["firstName"]},"readQuery":{"type":"object","properties":{"id":{"type":"string","description":"Author identifier"},"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"additionalProperties":false},"patchQuery":{"type":"object","properties":{"id":{"type":"string","description":"Author identifier"},"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"additionalProperties":false,"required":["id"]},"patchValues":{"type":"object","properties":{"firstName":{"description":"Author first name","type":"string"},"lastName":{"description":"Author last name","type":"string"}},"additionalProperties":false},"deleteQuery":{"type":"object","properties":{"id":{"type":"string","description":"Author identifier"}},"additionalProperties":false,"required":["id"]}}}, "/Author");
+export var authorSchema = new PipelineSchemaModel<Author, ReadQuery, CreateValues, UpdateValues, PatchQuery, PatchValues, DeleteQuery>({"$schema":"http://json-schema.org/draft-04/schema#","type":"object","id":"/Author","description":"Author object.","properties":{"id":{"type":"string"},"firstName":{"type":"string"},"lastName":{"type":"string"}},"required":["id","firstName"],"additionalProperties":false,"definitions":{"createValues":{"type":"object","properties":{"id":{"type":"string"},"firstName":{"type":"string"},"lastName":{"type":"string"}},"additionalProperties":false,"required":["firstName"]},"updateValues":{"type":"object","properties":{"id":{"type":"string"},"firstName":{"type":"string"},"lastName":{"type":"string"}},"additionalProperties":false,"required":["firstName"]},"readQuery":{"type":"object","properties":{"id":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}],"description":"Author identifier"},"firstName":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}],"description":"Author first name"},"lastName":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}],"description":"Author last name"}},"additionalProperties":false},"patchQuery":{"type":"object","properties":{"id":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},"firstName":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]},"lastName":{"oneOf":[{"type":"string"},{"type":"array","items":{"type":"string"}}]}},"additionalProperties":false,"required":["id"]},"patchValues":{"type":"object","properties":{"firstName":{"type":"string"},"lastName":{"type":"string"}},"additionalProperties":false},"deleteQuery":{"type":"object","properties":{"id":{"type":"string"}},"additionalProperties":false,"required":["id"]}}}, "/Author");

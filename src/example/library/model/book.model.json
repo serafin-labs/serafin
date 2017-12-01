@@ -20,7 +20,7 @@
             "description": "Let's consider there's only one author",
             "type": "string"
         },
-        "categories": {
+        "categoryIds": {
             "description": "Book categories",
             "type": "array",
             "items": {
