@@ -5,23 +5,25 @@ import { PipelineSchemaModel } from './schema/Model'
 
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
 
+export type Patch<T> = {[P in keyof T]?: T[P] | T[P][]};
+
 /**
  * Base class for a source pipeline. A source pipeline is supposed to be the initial pipeline, 
  * that directly connects to the data source to make actions persistent.
  */
 export abstract class PipelineSourceAbstract<
     T extends ResourceIdentityInterface,
-    ReadQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    ReadQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
     ReadOptions = {},
     ReadWrapper = {},
     CreateResources = Partial<T>,
     CreateOptions = {},
     UpdateValues = Partial<T>,
     UpdateOptions = {},
-    PatchQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    PatchQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
     PatchValues = Partial<T>,
     PatchOptions = {},
-    DeleteQuery extends Partial<ResourceIdentityInterface> = Partial<T>,
+    DeleteQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
