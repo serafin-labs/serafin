@@ -1,14 +1,14 @@
-import * as Ajv from "ajv";
 import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
+import * as Ajv from "ajv";
 import { JSONSchema4 } from "json-schema"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
+import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "../../openApiUtils"
 
 export interface RestOptions {
     /**
@@ -35,12 +35,11 @@ export class RestTransport implements TransportInterface {
      * @param pluralName 
      */
     use(pipeline: PipelineAbstract, name: string, pluralName: string) {
-        // register the pipeline
-
         // setup the router
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
         let router = express.Router();
+        let openApi = new OpenApi(this.api, pipeline.schema, resourcesPath, name, pluralName);
 
         // error handling closure for this endpoint
         let handleError = (error, res: express.Response, next: (err?: any) => void) => {
@@ -64,8 +63,6 @@ export class RestTransport implements TransportInterface {
 
         // import pipeline schemas to openApi definitions
         var pipelineSchema = pipeline.schema;
-        this.api.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(_.cloneDeep(pipelineSchema.schema)), `#/definitions/${name}`) as any
-        flattenSchemas(this.api.openApi.definitions as any)
 
         // determine what are the available actions
         let canRead = !!pipelineSchema.schema.definitions.readQuery
@@ -74,22 +71,13 @@ export class RestTransport implements TransportInterface {
         let canPatch = !!pipelineSchema.schema.definitions.patchValues
         let canDelete = !!pipelineSchema.schema.definitions.deleteQuery
 
-        // prepare open API metadata for each endpoint
-        var resourcesPathWithId = `${resourcesPath}/{id}`;
-        this.api.openApi.paths[resourcesPath] = this.api.openApi.paths[resourcesPath] || {};
-        this.api.openApi.paths[resourcesPathWithId] = this.api.openApi.paths[resourcesPathWithId] || {};
-
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
         ajv.addSchema(pipelineSchema.schema, "pipelineSchema");
 
-
         // create the routes for this endpoint
-
         if (canRead) {
-            let readQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.readQuery || null, this.api.openApi);
-            let readOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.readOptions || null, this.api.openApi));
             let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
             let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
 
@@ -147,75 +135,10 @@ export class RestTransport implements TransportInterface {
                 });
             })
 
-
-            // general get
-            this.api.openApi.paths[resourcesPath]["get"] = {
-                description: `Find ${_.upperFirst(pluralName)}`,
-                operationId: `find${_.upperFirst(pluralName)}`,
-                parameters: removeDuplicatedParameters(readQueryParameters.concat(readOptionsParameters)),
-                responses: {
-                    200: {
-                        description: `${_.upperFirst(pluralName)} corresponding to the query`,
-                        schema: {
-                            allOf: [
-                                {
-                                    type: 'object',
-                                    properties: {
-                                        results: {
-                                            type: 'array',
-                                            items: { "$ref": `#/definitions/${name}` },
-                                        }
-                                    }
-                                },
-                                { $ref: `#/definitions/${name}ReadResults` }
-                            ]
-                        }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
-
-            // get by id
-            this.api.openApi.paths[resourcesPathWithId]["get"] = {
-                description: `Get one ${_.upperFirst(name)} by its id`,
-                operationId: `get${_.upperFirst(name)}ById`,
-                parameters: [{
-                    in: "path",
-                    name: "id",
-                    type: "string",
-                    required: true
-                }],
-                responses: {
-                    200: {
-                        description: `${_.upperFirst(name)} corresponding to the provided id`,
-                        schema: { $ref: `#/definitions/${name}` }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    404: {
-                        description: "Not Found",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
+            openApi.addReadDoc();
         }
 
-
         if (canCreate) {
-            let createOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.createOptions || null, this.api.openApi));
             let createOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/createOptions' });
 
             // create a new resource
@@ -241,42 +164,12 @@ export class RestTransport implements TransportInterface {
                 }).catch(error => {
                     handleError(Api.apiError(error, req), res, next)
                 });
-            })
+            });
 
-            // post a new resource
-            this.api.openApi.paths[resourcesPath]["post"] = {
-                description: `Create a new ${_.upperFirst(name)}`,
-                operationId: `add${_.upperFirst(name)}`,
-                parameters: removeDuplicatedParameters(createOptionsParameters).concat([{
-                    in: "body",
-                    name: name,
-                    description: `The ${_.upperFirst(name)} to be created.`,
-                    schema: { $ref: `#/definitions/${name}CreateValues` }
-                }]),
-                responses: {
-                    201: {
-                        description: `${_.upperFirst(name)} created`,
-                        schema: { $ref: `#/definitions/${name}` }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    409: {
-                        description: "Conflict",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
+            openApi.addCreateDoc();
         }
 
         if (canPatch) {
-            let patchQueryParameters = schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchQuery || null, this.api.openApi)
-            let patchOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.patchOptions || null, this.api.openApi));
             let patchOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/patchOptions' });
 
             // patch an existing resource
@@ -309,46 +202,10 @@ export class RestTransport implements TransportInterface {
                 });
             })
 
-            // patch by id
-            this.api.openApi.paths[resourcesPathWithId]["patch"] = {
-                description: `Patch a ${_.upperFirst(name)} using its id`,
-                operationId: `patch${_.upperFirst(name)}`,
-                parameters: removeDuplicatedParameters(patchOptionsParameters).concat([
-                    {
-                        in: "body",
-                        name: name,
-                        description: `The patch of ${_.upperFirst(name)}.`,
-                        schema: { $ref: `#/definitions/${name}PatchValues` }
-                    }, {
-                        in: "path",
-                        name: "id",
-                        type: "string",
-                        required: true
-                    }
-                ]),
-                responses: {
-                    200: {
-                        description: `Updated ${_.upperFirst(name)}`,
-                        schema: { $ref: `#/definitions/${name}` }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    404: {
-                        description: "Not Found",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
+            openApi.addPatchDoc();
         }
 
         if (canUpdate) {
-            let updateOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.updateOptions || null, this.api.openApi));
             let updateOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/updateOptions' });
 
             // put an existing resource
@@ -377,48 +234,12 @@ export class RestTransport implements TransportInterface {
                 }).catch(error => {
                     handleError(Api.apiError(error, req), res, next)
                 });
-            })
+            });
 
-            // put by id
-            this.api.openApi.paths[resourcesPathWithId]["put"] = {
-                description: `Put a ${_.upperFirst(name)} using its id`,
-                operationId: `put${_.upperFirst(name)}`,
-                parameters: removeDuplicatedParameters(updateOptionsParameters).concat([
-                    {
-                        in: "body",
-                        name: name,
-                        description: `The ${_.upperFirst(name)} to be updated.`,
-                        schema: { $ref: `#/definitions/${name}UpdateValues` }
-                    }, {
-                        in: "path",
-                        name: "id",
-                        type: "string",
-                        required: true
-                    }
-                ]),
-                responses: {
-                    200: {
-                        description: `Updated ${_.upperFirst(name)}`,
-                        schema: { $ref: `#/definitions/${name}` }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    404: {
-                        description: "Not Found",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
+            openApi.addUpdateDoc();
         }
 
         if (canDelete) {
-            let deleteOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(pipelineSchema.schema.definitions.deleteOptions || null, this.api.openApi));
             let deleteOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/deleteOptions' });
 
             // delete an existing resource
@@ -448,39 +269,9 @@ export class RestTransport implements TransportInterface {
                 }).catch(error => {
                     handleError(Api.apiError(error, req), res, next)
                 });
-            })
+            });
 
-            // delete by id
-            this.api.openApi.paths[resourcesPathWithId]["delete"] = {
-                description: `Delete a ${_.upperFirst(name)} using its id`,
-                operationId: `delete${_.upperFirst(name)}`,
-                parameters: removeDuplicatedParameters(deleteOptionsParameters).concat([
-                    {
-                        in: "path",
-                        name: "id",
-                        type: "string",
-                        required: true
-                    }
-                ]),
-                responses: {
-                    200: {
-                        description: `Deleted ${_.upperFirst(name)}`,
-                        schema: { $ref: `#/definitions/${name}` }
-                    },
-                    400: {
-                        description: "Bad request",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    404: {
-                        description: "Not Found",
-                        schema: { $ref: '#/definitions/Error' }
-                    },
-                    default: {
-                        description: "Unexpected error",
-                        schema: { $ref: '#/definitions/Error' }
-                    }
-                }
-            }
+            openApi.addDeleteDoc();
         }
 
         // attach the router to the express app
