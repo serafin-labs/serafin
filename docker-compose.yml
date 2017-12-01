@@ -5,9 +5,16 @@ services:
     command: "npm run-script dev"
     ports:
       - "80:80"
-      - "8080:8080"
       - "5858:5858"
       - "9229:9229"
     volumes:
       - .:/srv
       - ~/.ssh/id_rsa:/home/node/.ssh/id_rsa:ro
+  swagger:
+    image: swaggerapi/swagger-ui
+    links:
+      - app
+    ports:
+      - "8080:8080"
+    environment:
+      API_URL: http://localhost/api.json
