@@ -8,7 +8,7 @@ import { categorySchema } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
 import { PipelineSchemaModel } from '../../serafin/pipeline';
-import { Relation } from '../../pipeline/Relation';
+import { Links } from '../../pipeline/Links';
 import { PipelineRelations } from '../../serafin/pipeline/Relations';
 
 async function main() {
@@ -54,16 +54,15 @@ async function main() {
     // Timeout to ease debugging
     setTimeout(async () => {
         let authorPipeline = (new PipelineSourceInMemory(authorSchema))
-            .pipe(new Paginate());
+            .pipe(new Paginate())
+            .pipe(new Links());
 
-        let categoryPipeline = (new PipelineSourceInMemory(categorySchema));
+        let categoryPipeline = (new PipelineSourceInMemory(categorySchema))
+            .pipe(new Links());
 
         let bookPipeline = (new PipelineSourceInMemory(bookSchema))
             .pipe(new Paginate())
-            .pipe(new Relation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } }))
-            .pipe(new Relation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } }));
-
-        authorPipeline = authorPipeline.pipe(new Relation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } }));
+            .pipe(new Links());
 
         await authorPipeline.create([
             { id: '1', firstName: 'Jules', lastName: 'Vernes' },
@@ -87,6 +86,11 @@ async function main() {
             { title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", authorId: '2', categoryIds: ['5', '4', '2'] },
             { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categoryIds: ['5', '4', '2'] },
         ]);
+
+        bookPipeline = bookPipeline.addRelation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } })
+            .addRelation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } })
+            .addRelation({ name: 'adventureBook', pipeline: bookPipeline, query: { categoryIds: '1' } });
+        authorPipeline = authorPipeline.addRelation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } });
 
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
 
