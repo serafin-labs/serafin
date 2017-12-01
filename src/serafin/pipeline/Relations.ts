@@ -7,6 +7,7 @@ export interface PipelineRelationInterface {
     name: string
     pipeline: PipelineAbstract
     query: ((o: any) => Promise<any>) | object | QueryTemplate
+    type?: 'one' | 'many'
 }
 
 /**
@@ -25,11 +26,28 @@ export class PipelineRelations {
      * 
      * @param relation 
      */
-    addRelation(relation: PipelineRelationInterface) {
+    addRelation(relation: PipelineRelationInterface, pipeline?: PipelineAbstract) {
         // Converts the query object into a templated query (so that it doesn't have to be used explicitely)
         if (typeof relation.query === 'object' && !(relation.query instanceof QueryTemplate)) {
             relation.query = new QueryTemplate(relation.query);
         }
+
+        // If a local non-array value references a foreign field that is unique (here we handle only the id), then the relation references a single item
+        // In any other case, many items can be referenced 
+        if (pipeline) {
+            relation.type = 'many';
+            if (relation.query instanceof QueryTemplate && relation.query.queryTemplate['id']) {
+                let queryValue = relation.query.queryTemplate['id'];
+                if (!Array.isArray(queryValue) && (
+                    typeof queryValue !== 'string' ||
+                    queryValue.charAt(0) != ':' ||
+                    pipeline.schema.schema.properties[queryValue.substring(1)].type !== 'array'
+                )) {
+                    relation.type = 'one';
+                }
+            }
+        }
+
         this.relations.push(relation);
         return this;
     }

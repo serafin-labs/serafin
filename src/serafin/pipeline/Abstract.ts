@@ -107,7 +107,7 @@ export abstract class PipelineAbstract<
     }
 
     public addRelation(relation: PipelineRelationInterface): this {
-        this.relationsSchema.addRelation(relation);
+        this.relationsSchema.addRelation(relation, this);
         return this;
     }
 

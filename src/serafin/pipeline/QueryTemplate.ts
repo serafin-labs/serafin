@@ -1,11 +1,11 @@
 import * as _ from 'lodash'
 
 export class QueryTemplate {
-    constructor(private query: object) {
+    constructor(public queryTemplate: object) {
     }
 
     hydrate(resource: object): object {
-        let query = _.clone(this.query);
+        let query = _.clone(this.queryTemplate);
 
         for (let key in query) {
             // resource parameter beginning with :
