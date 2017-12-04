@@ -1,6 +1,7 @@
 import * as graphql from "graphql"
 import * as _ from "lodash"
 import * as jsonpointer from 'jsonpointer';
+import * as GraphQLJSON from 'graphql-type-json';
 import { JSONSchema4 } from "json-schema"
 
 const jsonSchemaToGraphQLTypes = {
@@ -21,7 +22,7 @@ function pathToSchemaName(path: string) {
  * 
  * @param schema 
  */
-export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string): { [name: string]: { schema: graphql.GraphQLObjectType, fields: any } } {
+export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
     let schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: any } } = {};
     let _jsonSchemaToGraphQL = (schema: JSONSchema4, name: string) => {
         let isInputType = name.endsWith("Query") || name.endsWith("Options");
@@ -35,27 +36,26 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string): 
                     type: _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
                 }
             });
-            let object = !isInputType ? new graphql.GraphQLObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            }) : new graphql.GraphQLInputObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            });
-            schemaByNames[name] = {
-                schema: object,
-                fields: fields
-
-            }; // keep a reference to reuse it
+            let schemaObject = {
+                schema: !isInputType ? new graphql.GraphQLObjectType({
+                    name: name || schema.title,
+                    description: schema.description,
+                    fields: () => schemaObject.fields()
+                }) : new graphql.GraphQLInputObjectType({
+                    name: name || schema.title,
+                    description: schema.description,
+                    fields: () => schemaObject.fields()
+                }),
+                fields: () => fields
+            }
+            schemaByNames[name] = schemaObject; // keep a reference to reuse it
 
             if (schema.definitions) {
                 for (let definition in schema.definitions) {
                     _jsonSchemaToGraphQL(schema.definitions[definition], `${name}${_.upperFirst(definition)}`)
                 }
             }
-            return object
+            return schemaObject.schema
         }
         if (schema.type === "array") {
             return new graphql.GraphQLList(_jsonSchemaToGraphQL(schema.items, `${name}Element`))
@@ -63,29 +63,20 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string): 
         if (["integer", "number", "boolean", "string"].indexOf(schema.type as string) !== -1) {
             return jsonSchemaToGraphQLTypes[schema.type as string];
         }
-        if (schema.type) {
-            throw new Error(`'${schema.type}' type is not supported with GraphQL transport.`)
-        }
         if (schema.$ref) {
             if (!schema.$ref.startsWith("#")) {
                 throw Error(`$ref is only supported for local references`)
             }
             return _jsonSchemaToGraphQL(jsonpointer.get(rootSchema, schema.$ref.substr(1)), `${rootName}${pathToSchemaName(schema.$ref)}`)
         }
-        if (schema.allOf || schema.oneOf || schema.anyOf) {
-            // TODO handle this case by combining properties of all subschemas
-            let fields = {}
-            let object = new graphql.GraphQLInputObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            });
-
-            schemaByNames[name] = {
-                schema: object,
-                fields: fields
-            };
-            return object
+        if (schema.oneOf || schema.anyOf) {
+            return GraphQLJSON
+        }
+        if (schema.allOf) {
+            return GraphQLJSON
+        }
+        if (schema.type) {
+            throw new Error(`'${schema.type}' type is not supported with GraphQL transport.`)
         }
         throw Error(`The input JSON schema contains fields that can't be converted to GraphQL Schema: ${JSON.stringify(schema)}`)
     }

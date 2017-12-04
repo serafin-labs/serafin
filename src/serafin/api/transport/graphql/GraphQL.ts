@@ -40,6 +40,7 @@ export interface GraphQLOptions {
  */
 export class GraphQLTransport implements TransportInterface {
     private api: Api
+    private graphQlModelTypes: { pipeline: PipelineAbstract, schema: graphql.GraphQLObjectType }[] = [];
     private graphQlSchemaQueries: any = {};
     private _graphQlSchema: graphql.GraphQLSchema;
     private get graphQlSchema() {
@@ -89,6 +90,7 @@ export class GraphQLTransport implements TransportInterface {
      */
     use(pipeline: PipelineAbstract, name: string, pluralName: string) {
         let pipelineSchema = pipeline.schema;
+        let relations = pipeline.relations;
 
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
@@ -121,8 +123,44 @@ export class GraphQLTransport implements TransportInterface {
         // create the graphql query schema from the pipeline metadata
         let schemaName = _.upperFirst(name)
         let graphQLSchemas = jsonSchemaToGraphQL(pipelineSchema.schema, schemaName);
+        let modelSchema = graphQLSchemas[schemaName];
+        this.graphQlModelTypes.push({
+            pipeline: pipeline,
+            schema: modelSchema.schema
+        });
+        for (let relation of relations.relations) {
+            let existingFieldsFunction = modelSchema.fields;
+            modelSchema.fields = ((relation, existingFieldsFunction) => () => {
+                let existingFields = existingFieldsFunction();
+                let pipeline = typeof relation.pipeline === "function" ? relation.pipeline() : relation.pipeline
+                let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
+                if (relation.type === "one") {
+                    existingFields[relation.name] = {
+                        type: relationType.schema,
+                        resolve: async (entity) => {
+                            let results = await relations.fetchRelationForResource(relation, entity)
+                            return results[0];
+                        }
+                    }
+                } else {
+                    existingFields[relation.name] = {
+                        type: new graphql.GraphQLList(relationType.schema),
+                        resolve: async (entity) => {
+                            let results = await relations.fetchRelationForResource(relation, entity)
+                            return results;
+                        }
+                    }
+                }
+                return existingFields
+            })(relation, existingFieldsFunction)
+        }
         let readResultSchema = graphQLSchemas[`${schemaName}ReadResults`];
-        readResultSchema.fields.results = { type: new graphql.GraphQLList(graphQLSchemas[schemaName].schema) };
+        let existingFieldsFunction = readResultSchema.fields
+        readResultSchema.fields = () => {
+            let existingFields = existingFieldsFunction();
+            existingFields.results = { type: new graphql.GraphQLList(modelSchema.schema) };
+            return existingFields
+        }
         this.graphQlSchemaQueries[pluralName] = {
             type: readResultSchema.schema,
             args: {
@@ -135,4 +173,6 @@ export class GraphQLTransport implements TransportInterface {
             }
         };
     }
+
+
 }
