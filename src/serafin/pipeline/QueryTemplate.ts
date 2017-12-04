@@ -1,26 +1,45 @@
 import * as _ from 'lodash'
+import { escape } from 'querystring';
 
 export class QueryTemplate {
     constructor(public queryTemplate: object) {
     }
 
     hydrate(resource: object): object {
-        let query = _.clone(this.queryTemplate);
+        return QueryTemplate.hydrateParts(this.queryTemplate, resource);
+    }
 
-        for (let key in query) {
-            // resource parameter beginning with :
-            if (typeof query[key] === 'string' && query[key].substring(0, 1) === ':') {
-                if (!resource[query[key].substring(1)]) {
-                    throw new Error(`Resource field ${resource[query[key]].substring(1)} not found`);
+    getTemplatedParts() {
+        return _.pickBy(this.queryTemplate, (o) => QueryTemplate.isTemplated(o));
+    }
+
+    getNonTemplatedParts() {
+        return _.pickBy(this.queryTemplate, (o) => !QueryTemplate.isTemplated(o));
+    }
+
+    static hydrateParts(query: object, resource: object) {
+        return _.mapValues(query, (o, key) => {
+            if (QueryTemplate.isTemplated(o)) {
+                if (!resource[o.substring(1)]) {
+                    throw new Error(`Resource field ${o.substring(1)} not found`);
                 } else {
-                    query[key] = resource[query[key].substring(1)];
+                    return resource[o.substring(1)];
                 }
-                // : are escaped
-            } else if (typeof query[key] === 'string' && query[key].substring(0, 2) === '\:') {
-                query[key] = query[key].substring(1);
+            } else {
+                return QueryTemplate.escape(o);
             }
+        });
+    }
+
+    static escape(value) {
+        if (value === 'string' && value.substring(0, 2) === '\:') {
+            return value.substring(1);
         }
 
-        return query;
+        return value;
+    }
+
+    private static isTemplated(value) {
+        return (typeof value === 'string' && value.substring(0, 1) === ':');
     }
 }
