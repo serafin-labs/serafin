@@ -1,12 +1,4 @@
-/**
- * This file was automatically generated. DO NOT MODIFY.
- */
 import { PipelineSchemaModel } from "../../../serafin/pipeline/schema/Model";
-
-/**
- * Represents fields that can be used to update an existing Pet.
- */
-export type UpdateValues = CreateValues;
 
 /**
  * Schema of a Pet object.
@@ -33,6 +25,7 @@ export interface Pet {
    */
   photoUrls?: string[];
 }
+
 /**
  * Represents fields that can be used to create a new Pet.
  */
@@ -54,6 +47,34 @@ export interface CreateValues {
    */
   photoUrls?: string[];
 }
+
+/**
+ * Represents fields that can be used to update an existing Pet.
+ */
+export type UpdateValues = CreateValues;
+
+/**
+ * Represents fields that can be used to create a new Pet.
+ */
+export interface CreateValues {
+  /**
+   * The name of the Pet. If not provided the API generate one automatically.
+   */
+  name: string;
+  /**
+   * The category of the pet.
+   */
+  category: ("cat" | "dog" | "tiger");
+  /**
+   * A list of tags to ease classification.
+   */
+  tags?: string[];
+  /**
+   * Urls to photos of this Pet.
+   */
+  photoUrls?: string[];
+}
+
 /**
  * Represents fields that can be used to patch an existing Pet.
  */
@@ -75,6 +96,7 @@ export interface PatchValues {
    */
   photoUrls?: string[];
 }
+
 /**
  * Represents fields that can be used to select Pets to patch.
  */
@@ -88,6 +110,7 @@ export interface PatchQuery {
    */
   name?: string;
 }
+
 /**
  * Represents fields that can be used to select Pets to delete.
  */
@@ -97,6 +120,7 @@ export interface DeleteQuery {
    */
   id: string;
 }
+
 /**
  * Represents fields that can be used to find Pets.
  */

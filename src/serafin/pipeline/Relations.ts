@@ -1,21 +1,20 @@
 import * as _ from 'lodash'
 import { PipelineAbstract } from "./Abstract"
 import { validationError } from "../error/Error"
+import { QueryTemplate } from './QueryTemplate';
 
 export interface PipelineRelationInterface {
-    type: "oneToOne" | "oneToMany" | "manyToOne" | "manyToMany"
     name: string
     pipeline: PipelineAbstract
-    localKey?: string
-    foreignKey?: string
-    query?: (o: any) => Promise<any>
+    query: ((o: any) => Promise<any>) | object | QueryTemplate
+    type?: 'one' | 'many'
 }
 
 /**
  * Represents relations of this pipeline
  */
 export class PipelineRelations {
-    constructor (public relations: PipelineRelationInterface[] = []) {
+    constructor(public relations: PipelineRelationInterface[] = []) {
     }
 
     clone(): PipelineRelations {
@@ -27,12 +26,30 @@ export class PipelineRelations {
      * 
      * @param relation 
      */
-    addRelation(relation: PipelineRelationInterface) {
-        if (!relation.query && ((relation.type === "oneToMany" && !relation.foreignKey) || relation.type === "manyToMany" || (relation.type === "manyToOne" && !relation.localKey))) {
-            throw new Error(`The relation ${relation.name} (${relation.type}) is not covered by default implementations. You have to provide a query fonction.`)
+    addRelation(relation: PipelineRelationInterface, pipeline?: PipelineAbstract) {
+        // Converts the query object into a templated query (so that it doesn't have to be used explicitely)
+        if (typeof relation.query === 'object' && !(relation.query instanceof QueryTemplate)) {
+            relation.query = new QueryTemplate(relation.query);
         }
+
+        // If a local non-array value references a foreign field that is unique (here we handle only the id), then the relation references a single item
+        // In any other case, many items can be referenced 
+        if (pipeline) {
+            relation.type = 'many';
+            if (relation.query instanceof QueryTemplate && relation.query.queryTemplate['id']) {
+                let queryValue = relation.query.queryTemplate['id'];
+                if (!Array.isArray(queryValue) && (
+                    typeof queryValue !== 'string' ||
+                    queryValue.charAt(0) != ':' ||
+                    pipeline.schema.schema.properties[queryValue.substring(1)].type !== 'array'
+                )) {
+                    relation.type = 'one';
+                }
+            }
+        }
+
         this.relations.push(relation);
-        return this
+        return this;
     }
 
     /**
@@ -47,32 +64,13 @@ export class PipelineRelations {
         if (!relation) {
             throw validationError(`Relation ${relationName} does not exist.`)
         }
-        if (relation.query) {
+        if (typeof relation.query === 'function') {
             for (let r of resources) {
                 r[relation.name] = await relation.query(r);
             }
-        } else if ((relation.type === "oneToOne" || relation.type === "manyToOne") && relation.localKey) {
+        } else if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
             for (let r of resources) {
-                if (r[relation.localKey]) {
-                    let relatedResources = await relation.pipeline.read({
-                        id: r[relation.localKey]
-                    });
-                    r[relation.name] = relatedResources.results.length > 0 ? relatedResources.results[0] : null
-                }
-            }
-        } else if (relation.type === "oneToOne" && relation.foreignKey) {
-            for (let r of resources) {
-                let relatedResources = await relation.pipeline.read({
-                    [relation.foreignKey]: r.id
-                });
-                r[relation.name] = relatedResources.results.length > 0 ? relatedResources.results[0] : null
-            }
-        } else if (relation.type === "oneToMany" && relation.foreignKey) {
-            for (let r of resources) {
-                let relatedResources = await relation.pipeline.read({
-                    [relation.foreignKey]: r.id
-                });
-                r[relation.name] = relatedResources.results
+                r[relation.name] = (await relation.pipeline.read(relation.query.hydrate(r))).results;
             }
         }
     }

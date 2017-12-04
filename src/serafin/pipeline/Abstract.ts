@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaModel } from './schema/Model'
-import { PipelineRelations } from './Relations'
+import { PipelineRelations, PipelineRelationInterface } from './Relations'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaProperties } from './schema/Properties'
 import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
@@ -53,6 +53,9 @@ export abstract class PipelineAbstract<
         } else {
             this.parent = pipeline
         }
+
+        let existingRelations = pipeline.relations;
+        this.relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations();
     }
 
     /**
@@ -101,6 +104,11 @@ export abstract class PipelineAbstract<
      */
     get relations(): PipelineRelations {
         return this.findRelationsSchema();
+    }
+
+    public addRelation(relation: PipelineRelationInterface): this {
+        this.relationsSchema.addRelation(relation, this);
+        return this;
     }
 
     /**

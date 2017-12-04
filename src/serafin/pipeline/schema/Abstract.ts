@@ -20,6 +20,13 @@ export abstract class PipelineSchemaAbstract {
     constructor(protected schemaObject: JSONSchema4, id?: string) {
         this.id = id || schemaObject.id;
         this.schemaObject = schemaObject;
+        if (schemaObject.properties) {
+            for (var key in schemaObject.properties) {
+                if (['oneOf', 'anyOf', 'allOf'].indexOf(key) !== -1) {
+                    throw Error("Operators 'oneOf', 'anyOf', 'allOf' unsupported at the properties first level");
+                }
+            }
+        }
     }
 
     /**
