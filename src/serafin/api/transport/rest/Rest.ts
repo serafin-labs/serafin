@@ -9,6 +9,7 @@ import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
+import { JsonHal } from './JsonHal';
 
 export interface RestOptions {
     /**
@@ -99,6 +100,19 @@ export class RestTransport implements TransportInterface {
 
                 // run the query
                 pipeline.read(query, options).then(wrapper => {
+                    if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
+                        let links = (new JsonHal(endpointPath, this.api, pipeline.relations)).links();
+                        wrapper["_links"] = links;
+                        if (wrapper.results) {
+                            wrapper.results = wrapper.results.map((result) => {
+                                if (result['id']) {
+                                    result['_links'] = (new JsonHal(endpointPath + `/${result['id']}`, this.api, pipeline.relations)).links(result);
+                                }
+                                return result;
+                            });
+                        }
+                    }
+
                     res.status(200).json(wrapper);
                     res.end();
                 }).catch(error => {
@@ -125,6 +139,9 @@ export class RestTransport implements TransportInterface {
                     id: id
                 }, options).then(wrapper => {
                     if (wrapper.results.length > 0) {
+                        if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
+                            wrapper.results[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.results[0]);
+                        }
                         res.status(200).json(wrapper.results[0])
                     } else {
                         throw notFoundError(`${name}:${id}`)
