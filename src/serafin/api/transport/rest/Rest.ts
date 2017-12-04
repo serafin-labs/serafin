@@ -270,6 +270,18 @@ export class RestTransport implements TransportInterface {
 
         // attach the router to the express app
         this.api.application.use(endpointPath, router);
+
+        this.api.application.get(this.api.basePath, (req: express.Request, res: express.Response, next: (err?: any) => void) => {
+            if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
+                res.status(200).json({
+                    _links: _.mapValues(this.api.pipelineByName, (pipeline, key) => {
+                        return { href: `${this.api.basePath}/${key}` }
+                    })
+                });
+            } else {
+                throw notFoundError('/');
+            }
+        });
     }
 
     private extractOptionsAndQuery(req: express.Request, ajv: Ajv.Ajv, optionsFilter: Ajv.ValidateFunction, queryFilter: Ajv.ValidateFunction = null): { options: object, query: object } {
