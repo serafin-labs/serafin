@@ -9,7 +9,7 @@ export class Links<T> extends PipelineAbstract<T, {}, { link?: string[] }, {}> {
         let resources = await this.parent.read(query, options);
         let relations = this.relations;
         if (options && options.link) {
-            await Promise.all(_.map(relations.relations, (rel) =>
+            await Promise.all(_.map(relations.list, (rel) =>
                 options.link.indexOf(rel.name) !== -1 && this.relationsSchema.fetch(rel.name, resources.results)
             ));
         }
