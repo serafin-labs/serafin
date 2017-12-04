@@ -75,12 +75,14 @@ async function main() {
             { id: '2', name: 'introspection' },
             { id: '3', name: 'relaxation' },
             { id: '4', name: 'religion' },
-            { id: '5', name: 'must-have' }
+            { id: '5', name: 'must-have' },
+            { id: '6', name: 'comedy' }
         ]);
 
         await bookPipeline.create([
             { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", authorId: '1', categoryIds: ['1'] },
             { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", authorId: '1', categoryIds: ['1'] },
+            { title: 'Clovis Dardentor', summary: "A comedic novel", authorId: '1', categoryIds: ['6'] },
             { title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categoryIds: ['2', '4'] },
             { title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", authorId: '2', categoryIds: ['5', '4', '2'] },
             { title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", authorId: '2', categoryIds: ['5', '4', '2'] },
@@ -89,8 +91,8 @@ async function main() {
 
         bookPipeline = bookPipeline.addRelation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } })
             .addRelation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } })
-            .addRelation({ name: 'adventureBook', pipeline: bookPipeline, query: { categoryIds: '1' } });
-        authorPipeline = authorPipeline.addRelation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } });
+        authorPipeline = authorPipeline.addRelation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } })
+            .addRelation({ name: 'adventureBooks', pipeline: bookPipeline, query: { authorId: ':id', categoryIds: '1' } });;
 
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
 
