@@ -4,7 +4,6 @@ import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { petSchema } from './model/Pet';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
-import { PipelineSchemaModel } from '../../serafin/pipeline';
 
 import { DefaultPetName } from './DefaultPetName';
 

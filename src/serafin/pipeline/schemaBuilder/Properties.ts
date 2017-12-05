@@ -1,11 +1,11 @@
 import { description } from '../decorator/Description';
-import { PipelineSchemaAbstract } from "./Abstract"
+import { PipelineSchemaBuilderAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
 
 /**
  *  Schema that represents a set of properties for a pipeline
  */
-export class PipelineSchemaProperties extends PipelineSchemaAbstract {
+export class PipelineSchemaBuilderProperties extends PipelineSchemaBuilderAbstract {
 
     /**
      * An array of all the registered properties separetly
@@ -101,7 +101,7 @@ export class PipelineSchemaProperties extends PipelineSchemaAbstract {
     /**
      * Merge the current properties schema with another one. This operation modifies the schema.
      */
-    merge(otherProperties: PipelineSchemaProperties): this {
+    merge(otherProperties: PipelineSchemaBuilderProperties): this {
         if (!otherProperties) {
             return this
         }

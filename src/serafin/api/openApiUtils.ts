@@ -89,7 +89,7 @@ export function schemaToSwaggerParameter(schema: JSONSchema4, spec: Swagger.Spec
         return schemaToSwaggerParameter(jsonpointer.get(spec, schema.$ref.substr(1)), spec)
     }
     if (schema && schema.type === "object") {
-        let results = []
+        let data = []
         for (let property in schema.properties) {
             let propertySchema = schema.properties[property]
             if (["string", "number", "boolean", "integer"].indexOf(propertySchema.type as string) !== -1) {
@@ -111,7 +111,7 @@ export function schemaToSwaggerParameter(schema: JSONSchema4, spec: Swagger.Spec
                 if (propertySchema.default) {
                     parameter.default = propertySchema.default
                 }
-                results.push(parameter)
+                data.push(parameter)
             }
             if (propertySchema.type === "array" && ["string", "number", "boolean", "integer"].indexOf(propertySchema.items["type"] as string) !== -1) {
                 // if the array contains a primitive type
@@ -129,19 +129,19 @@ export function schemaToSwaggerParameter(schema: JSONSchema4, spec: Swagger.Spec
                 if (propertySchema.default) {
                     parameter.default = propertySchema.default
                 }
-                results.push(parameter)
+                data.push(parameter)
             }
         }
         if (schema.oneOf) {
-            results = results.concat(schema.oneOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.oneOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.anyOf) {
-            results = results.concat(schema.anyOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.anyOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.allOf) {
-            results = results.concat(schema.allOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.allOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
-        return results
+        return data;
     }
     return []
 }

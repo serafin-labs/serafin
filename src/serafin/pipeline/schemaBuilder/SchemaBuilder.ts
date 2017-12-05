@@ -1,9 +1,9 @@
 import * as _ from 'lodash'
-import { PipelineSchemaProperties } from './Properties'
+import { PipelineSchemaBuilderAbstract } from "./Abstract"
+import { PipelineSchemaBuilderProperties } from './Properties'
 import { PipelineAbstract } from '../Abstract'
 import { JSONSchema4 } from "json-schema"
-import { PipelineSchemaAbstract } from './Abstract';
-import { PipelineSchemaModel } from './Model';
+import { PipelineSchemaBuilderModel } from './Model';
 import { ResourceIdentityInterface } from './ResourceInterfaces';
 
 const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
@@ -12,14 +12,14 @@ const OPTIONS_SCHEMAS = Symbol('optionsSchemas');
  * Represents the complete schema of the pipeline.
  * It's a combination of the model schema and all options schemas.
  */
-export class PipelineSchema<T extends ResourceIdentityInterface> extends PipelineSchemaAbstract {
-    constructor(modelSchema: PipelineSchemaModel<T>, optionsSchemas: {
-        create?: PipelineSchemaProperties
-        read?: PipelineSchemaProperties
-        update?: PipelineSchemaProperties
-        patch?: PipelineSchemaProperties
-        delete?: PipelineSchemaProperties
-    }, readResultsSchema: PipelineSchemaProperties, description?: string, title?: string) {
+export class PipelineSchemaBuilder<T extends ResourceIdentityInterface> extends PipelineSchemaBuilderAbstract {
+    constructor(modelSchema: PipelineSchemaBuilderModel<T>, optionsSchemas: {
+        create?: PipelineSchemaBuilderProperties
+        read?: PipelineSchemaBuilderProperties
+        update?: PipelineSchemaBuilderProperties
+        patch?: PipelineSchemaBuilderProperties
+        delete?: PipelineSchemaBuilderProperties
+    }, readDataSchema: PipelineSchemaBuilderProperties, description?: string, title?: string) {
         let schema
         if (!modelSchema) {
             schema = {
@@ -44,18 +44,18 @@ export class PipelineSchema<T extends ResourceIdentityInterface> extends Pipelin
             schema.definitions[`${method}Options`] = optionsSchema
         }
         // add it to the pipeline schema
-        if (readResultsSchema) {
-            schema.definitions[`readResults`] = _.cloneDeep(readResultsSchema.schema)
+        if (readDataSchema) {
+            schema.definitions[`readData`] = _.cloneDeep(readDataSchema.schema)
         }
         super(schema)
     }
 
     static mergeOptions(allOptions: {
-        create?: PipelineSchemaProperties
-        read?: PipelineSchemaProperties
-        update?: PipelineSchemaProperties
-        patch?: PipelineSchemaProperties
-        delete?: PipelineSchemaProperties
+        create?: PipelineSchemaBuilderProperties
+        read?: PipelineSchemaBuilderProperties
+        update?: PipelineSchemaBuilderProperties
+        patch?: PipelineSchemaBuilderProperties
+        delete?: PipelineSchemaBuilderProperties
     }[]) {
         return allOptions.reduce((result, val) => {
             for (let key in result) {
@@ -64,11 +64,11 @@ export class PipelineSchema<T extends ResourceIdentityInterface> extends Pipelin
                 }
             }
             return result
-        }, { create: new PipelineSchemaProperties(), read: new PipelineSchemaProperties(), update: new PipelineSchemaProperties(), patch: new PipelineSchemaProperties(), delete: new PipelineSchemaProperties()})
+        }, { create: new PipelineSchemaBuilderProperties(), read: new PipelineSchemaBuilderProperties(), update: new PipelineSchemaBuilderProperties(), patch: new PipelineSchemaBuilderProperties(), delete: new PipelineSchemaBuilderProperties() })
     }
 
 
-    static mergeProperties(allProperties: PipelineSchemaProperties[]) {
-        return allProperties.reduce((result, val) => result.merge(val), new PipelineSchemaProperties())
+    static mergeProperties(allProperties: PipelineSchemaBuilderProperties[]) {
+        return allProperties.reduce((result, val) => result.merge(val), new PipelineSchemaBuilderProperties())
     }
 }
