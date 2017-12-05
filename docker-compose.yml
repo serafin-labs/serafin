@@ -18,3 +18,7 @@ services:
       - "8080:8080"
     environment:
       API_URL: http://localhost/api.json
+  swagger-editor:
+    image: swaggerapi/swagger-editor:latest
+    ports:
+      - "8081:8080"

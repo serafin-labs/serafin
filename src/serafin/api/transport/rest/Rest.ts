@@ -1,4 +1,3 @@
-import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';

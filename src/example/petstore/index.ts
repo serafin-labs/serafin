@@ -24,30 +24,21 @@ async function main() {
     // create the Api class from Serafin, with the general information about the Api
     // it will create the route /api.json to provide the Open Api Spec
     let api = new Api(app, {
-        "swagger": "2.0",
+        "openapi": "3.0.0",
         "info": {
             "version": "1.0.0",
             "title": "Sample Petstore Api",
             "description": "Sample Petstore Api",
             "termsOfService": "None",
-            "contact": {
-                "name": "no one"
-            },
             "license": {
                 "name": "MIT",
                 "url": "http://github.com/gruntjs/grunt/blob/master/LICENSE-MIT"
             }
         },
-        "host": "127.0.0.1",
-        "schemes": [
-            "http"
-        ],
-        "consumes": [
-            "application/json"
-        ],
-        "produces": [
-            "application/json"
-        ],
+        "servers": [{
+            "url": "http://127.0.0.1",
+            "description": "development server"
+        }],
         paths: {}
     });
     api.configure(new RestTransport())
