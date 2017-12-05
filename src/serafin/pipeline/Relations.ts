@@ -5,7 +5,7 @@ import { QueryTemplate } from './QueryTemplate';
 
 export interface PipelineRelationInterface {
     name: string
-    pipeline: PipelineAbstract
+    pipeline: PipelineAbstract | (() => PipelineAbstract)
     query: ((o: any) => Promise<any>) | object | QueryTemplate
     type?: 'one' | 'many'
 }
@@ -61,6 +61,9 @@ export class PipelineRelations {
      */
     async fetch(relationName: string, resources: any[]) {
         let relation = _.find(this.list, r => r.name === relationName);
+        if (typeof relation.pipeline === "function") {
+            relation.pipeline = relation.pipeline()
+        }
         if (!relation) {
             throw validationError(`Relation ${relationName} does not exist.`)
         }
@@ -70,8 +73,22 @@ export class PipelineRelations {
             }
         } else if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
             for (let r of resources) {
-                r[relation.name] = (await relation.pipeline.read(relation.query.hydrate(r))).results;
+                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(r))).results;
             }
+        }
+    }
+
+    /**
+     * Fetch the relation of the given resource and return the result directly
+     * @param relation
+     * @param resource
+     */
+    async fetchRelationForResource(relation: PipelineRelationInterface, resource: any): Promise<any> {
+        if (typeof relation.pipeline === "function") {
+            relation.pipeline = relation.pipeline()
+        }
+        if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
+            return (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(resource))).results;
         }
     }
 }

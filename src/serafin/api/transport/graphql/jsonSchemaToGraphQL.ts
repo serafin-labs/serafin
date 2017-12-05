@@ -1,8 +1,12 @@
 import * as graphql from "graphql"
 import * as _ from "lodash"
 import * as jsonpointer from 'jsonpointer';
+import * as GraphQLJSON from 'graphql-type-json';
 import { JSONSchema4 } from "json-schema"
 
+/**
+ * Basic types that can be converted to JSON Schema directly
+ */
 const jsonSchemaToGraphQLTypes = {
     boolean: graphql.GraphQLBoolean,
     number: graphql.GraphQLFloat,
@@ -10,84 +14,97 @@ const jsonSchemaToGraphQLTypes = {
     string: graphql.GraphQLString
 }
 
+/**
+ * Utility function to create a name for a given path
+ * @param path 
+ */
 function pathToSchemaName(path: string) {
-    return _.upperFirst(path.split("#").pop().split("/").pop())
+    return path.split("#").pop().split("/").filter(v => v !== "definitions").map(v => _.upperFirst(v)).join("")
 }
 
 /**
  * This function expect a schema with only local references.
- * allOf, anyOf, oneOf, not, additionalProperties, null type, any type are not supported.
- * If you use any of this functionality in your schema, you may not ba able to plug graphql transport.
+ * not, additionalProperties, patternProperties are not supported.
+ * If you use any of this functionality in your schema, you may not be able to convert it to graphql format.
  * 
- * @param schema 
+ * @param rootSchema the JSON schema to convert
+ * @param rootName name of the main schema object
+ * @param optionsFilter filter function applied to 'options' objects. 'true' means that the property is kept.
  */
-export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string): { [name: string]: { schema: graphql.GraphQLObjectType, fields: any } } {
+export function jsonSchemaToGraphQL(rootSchema: JSONSchema4, rootName: string, optionsFilter: (name: string) => boolean): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
+    // the result schema objects for the given JSON schema
     let schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: any } } = {};
+
+    // let's define the recursive method to convert JSON schemas
     let _jsonSchemaToGraphQL = (schema: JSONSchema4, name: string) => {
-        let isInputType = name.endsWith("Query") || name.endsWith("Options");
+        // if this schema was already converted, let's use the existing reference
         if (name in schemaByNames) {
             return schemaByNames[name]
         }
+        let result;
+        // if our object name contains Query or Options, it means it's an input type for Serafin pipelines
+        let isInputType = name.search("Query") !== -1 || name.search("Options") !== -1;
+
+        // if the schema type is "object" and we have properties definied, we can convert it to GraphQLObjectType or GraphQLInputObjectType
         if (schema.type === "object" || (!schema.hasOwnProperty("type") && schema.properties)) {
-            // create the corresponding GraphQLObjectType
-            let fields = _.mapValues(schema.properties, (propertySchema, propertyName) => {
+            // filter internal options, so they don't appear in the schema
+            let properties = name.endsWith("Options") ? _.pickBy(schema.properties, (v, n) => optionsFilter(n)) : schema.properties;
+            // map all properties to their graphql equivalent
+            let fields = _.mapValues(properties, (propertySchema, propertyName) => {
                 return {
                     type: _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
                 }
             });
-            let object = !isInputType ? new graphql.GraphQLObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            }) : new graphql.GraphQLInputObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            });
-            schemaByNames[name] = {
-                schema: object,
-                fields: fields
-
-            }; // keep a reference to reuse it
-
-            if (schema.definitions) {
-                for (let definition in schema.definitions) {
-                    _jsonSchemaToGraphQL(schema.definitions[definition], `${name}${_.upperFirst(definition)}`)
-                }
+            // create the resulting object
+            // here we keep fields as a function to be able to extend it before it is used
+            let schemaObject = {
+                schema: !isInputType ? new graphql.GraphQLObjectType({
+                    name: name || schema.title,
+                    description: schema.description,
+                    fields: () => schemaObject.fields()
+                }) : new graphql.GraphQLInputObjectType({
+                    name: name || schema.title,
+                    description: schema.description,
+                    fields: () => schemaObject.fields()
+                }),
+                fields: () => fields
             }
-            return object
-        }
-        if (schema.type === "array") {
-            return new graphql.GraphQLList(_jsonSchemaToGraphQL(schema.items, `${name}Element`))
-        }
-        if (["integer", "number", "boolean", "string"].indexOf(schema.type as string) !== -1) {
-            return jsonSchemaToGraphQLTypes[schema.type as string];
-        }
-        if (schema.type) {
-            throw new Error(`'${schema.type}' type is not supported with GraphQL transport.`)
-        }
-        if (schema.$ref) {
+            schemaByNames[name] = schemaObject; // keep a reference to reuse it
+
+            result = schemaObject.schema
+        } else if (schema.type === "array") {
+            // convert 'array' to GraphQLList
+            if (Array.isArray(schema.items)) {
+                // if items is a list, we can't provide an accurate type for the list
+                result = new graphql.GraphQLList(GraphQLJSON);
+            } else {
+                result = new graphql.GraphQLList(_jsonSchemaToGraphQL(schema.items, `${name}Element`))
+            }
+        } else if (["integer", "number", "boolean", "string"].indexOf(schema.type as string) !== -1) {
+            // convert basic types
+            result = jsonSchemaToGraphQLTypes[schema.type as string];
+        } else if (schema.$ref) {
+            // if we have an external ref, throw an error
             if (!schema.$ref.startsWith("#")) {
                 throw Error(`$ref is only supported for local references`)
             }
-            return _jsonSchemaToGraphQL(jsonpointer.get(rootSchema, schema.$ref.substr(1)), `${rootName}${pathToSchemaName(schema.$ref)}`)
+            result = _jsonSchemaToGraphQL(jsonpointer.get(rootSchema, schema.$ref.substr(1)), `${rootName}${pathToSchemaName(schema.$ref)}`)
+        } else if (schema.oneOf || schema.anyOf || schema.allOf) {
+            // there is no way currently to handle Union for input in graphql, so GraphQLJSON is our best option. The pipeline will verify its format anyway
+            result = GraphQLJSON
+        } else {
+            // if we endup here, the schema is empty or contains unexpected/unsupported fields. The only acceptable result is a JSON object.
+            result = GraphQLJSON
         }
-        if (schema.allOf || schema.oneOf || schema.anyOf) {
-            // TODO handle this case by combining properties of all subschemas
-            let fields = {}
-            let object = new graphql.GraphQLInputObjectType({
-                name: name || schema.title,
-                description: schema.description,
-                fields: fields
-            });
 
-            schemaByNames[name] = {
-                schema: object,
-                fields: fields
-            };
-            return object
+        // if definitions are included along with the schema, we convert them also
+        if (schema.definitions) {
+            for (let definition in schema.definitions) {
+                _jsonSchemaToGraphQL(schema.definitions[definition], `${name}${_.upperFirst(definition)}`)
+            }
         }
-        throw Error(`The input JSON schema contains fields that can't be converted to GraphQL Schema: ${JSON.stringify(schema)}`)
+
+        return result
     }
     _jsonSchemaToGraphQL(rootSchema, rootName)
     return schemaByNames
