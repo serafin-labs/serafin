@@ -160,8 +160,8 @@ export class GraphQLTransport implements TransportInterface {
                             if (entity[relation.name]) {
                                 return entity[relation.name]
                             }
-                            let results = await relations.fetchRelationForResource(relation, entity)
-                            return results[0];
+                            let data = await relations.fetchRelationForResource(relation, entity)
+                            return data[0];
                         }
                     }
                 } else {
@@ -171,8 +171,8 @@ export class GraphQLTransport implements TransportInterface {
                             if (entity[relation.name]) {
                                 return entity[relation.name]
                             }
-                            let results = await relations.fetchRelationForResource(relation, entity)
-                            return results;
+                            let data = await relations.fetchRelationForResource(relation, entity)
+                            return data;
                         }
                     }
                 }
@@ -180,18 +180,18 @@ export class GraphQLTransport implements TransportInterface {
             })(relation, existingFieldsFunction)
         }
 
-        // extend the readResults schemas as it only contains extra fields
-        let readResultSchema = graphQLSchemas[`${schemaName}ReadResults`];
-        let existingFieldsFunction = readResultSchema.fields
-        readResultSchema.fields = () => {
+        // extend the readData schemas as it only contains extra fields
+        let readDataSchema = graphQLSchemas[`${schemaName}ReadData`];
+        let existingFieldsFunction = readDataSchema.fields
+        readDataSchema.fields = () => {
             let existingFields = existingFieldsFunction();
-            existingFields.results = { type: new graphql.GraphQLList(modelSchema.schema) };
+            existingFields.data = { type: new graphql.GraphQLList(modelSchema.schema) };
             return existingFields
         }
 
         // create the main query function for this pipeline
         this.graphQlSchemaQueries[pluralName] = {
-            type: readResultSchema.schema,
+            type: readDataSchema.schema,
             args: {
                 query: {
                     type: graphQLSchemas[`${schemaName}ReadQuery`].schema

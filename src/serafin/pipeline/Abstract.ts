@@ -6,7 +6,7 @@ import { PipelineSchemaModel } from './schema/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
 import { PipelineSchema } from './schema/Pipeline'
 import { PipelineSchemaProperties } from './schema/Properties'
-import { getOptionsSchemas, getResultsSchema } from './decorator/decoratorSymbols'
+import { getOptionsSchemas, getDataSchema } from './decorator/decoratorSymbols'
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
@@ -85,10 +85,10 @@ export abstract class PipelineAbstract<
      */
     get schema() {
         // gather all results used by this pipeline and its parents
-        let findAllResults = (target: PipelineAbstract) => target ? [getResultsSchema(target), ...findAllResults(target.parent)] : []
+        let findAllData = (target: PipelineAbstract) => target ? [getDataSchema(target), ...findAllData(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(this.findAllOptions()), PipelineSchema.mergeProperties(findAllResults(this)))
+        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(this.findAllOptions()), PipelineSchema.mergeProperties(findAllData(this)))
     }
 
     /**
@@ -96,7 +96,7 @@ export abstract class PipelineAbstract<
      */
     get currentSchema() {
         // create and return the schema representing the current pipeline
-        return new PipelineSchema(this.modelSchema, this.optionsSchema, getResultsSchema(this));
+        return new PipelineSchema(this.modelSchema, this.optionsSchema, getDataSchema(this));
     }
 
     /**
@@ -151,12 +151,12 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
+    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
         this.validate('read', query, options);
         return this._read(query, this.prepareOptionsMapping(options));
     }
 
-    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
         return this.parent.read(query, options);
     }
 
@@ -218,7 +218,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, target.optionsSchema, getResultsSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, target.optionsSchema, getDataSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 

@@ -74,7 +74,7 @@ export class PipelineRelations {
             }
         } else if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
             for (let r of resources) {
-                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(r))).results;
+                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(r))).data;
             }
         }
     }
@@ -89,7 +89,7 @@ export class PipelineRelations {
             relation.pipeline = relation.pipeline()
         }
         if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
-            return (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(resource))).results;
+            return (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(resource))).data;
         }
     }
 }

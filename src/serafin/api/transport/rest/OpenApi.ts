@@ -42,13 +42,13 @@ export class OpenApi {
                             {
                                 type: 'object',
                                 properties: {
-                                    results: {
+                                    data: {
                                         type: 'array',
                                         items: { "$ref": `#/definitions/${this.name}` },
                                     }
                                 }
                             },
-                            { $ref: `#/definitions/${this.name}ReadResults` }
+                            { $ref: `#/definitions/${this.name}ReadData` }
                         ]
                     }
                 },

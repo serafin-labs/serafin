@@ -19,7 +19,7 @@ export class PipelineSchema<T extends ResourceIdentityInterface> extends Pipelin
         update?: PipelineSchemaProperties
         patch?: PipelineSchemaProperties
         delete?: PipelineSchemaProperties
-    }, readResultsSchema: PipelineSchemaProperties, description?: string, title?: string) {
+    }, readDataSchema: PipelineSchemaProperties, description?: string, title?: string) {
         let schema
         if (!modelSchema) {
             schema = {
@@ -44,8 +44,8 @@ export class PipelineSchema<T extends ResourceIdentityInterface> extends Pipelin
             schema.definitions[`${method}Options`] = optionsSchema
         }
         // add it to the pipeline schema
-        if (readResultsSchema) {
-            schema.definitions[`readResults`] = _.cloneDeep(readResultsSchema.schema)
+        if (readDataSchema) {
+            schema.definitions[`readData`] = _.cloneDeep(readDataSchema.schema)
         }
         super(schema)
     }
@@ -64,7 +64,7 @@ export class PipelineSchema<T extends ResourceIdentityInterface> extends Pipelin
                 }
             }
             return result
-        }, { create: new PipelineSchemaProperties(), read: new PipelineSchemaProperties(), update: new PipelineSchemaProperties(), patch: new PipelineSchemaProperties(), delete: new PipelineSchemaProperties()})
+        }, { create: new PipelineSchemaProperties(), read: new PipelineSchemaProperties(), update: new PipelineSchemaProperties(), patch: new PipelineSchemaProperties(), delete: new PipelineSchemaProperties() })
     }
 
 

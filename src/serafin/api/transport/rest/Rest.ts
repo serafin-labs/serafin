@@ -100,8 +100,8 @@ export class RestTransport implements TransportInterface {
                     if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
                         let links = (new JsonHal(endpointPath, this.api, pipeline.relations)).links();
                         wrapper["_links"] = links;
-                        if (wrapper.results) {
-                            wrapper.results = wrapper.results.map((result) => {
+                        if (wrapper.data) {
+                            wrapper.data = wrapper.data.map((result) => {
                                 if (result['id']) {
                                     result['_links'] = (new JsonHal(endpointPath + `/${result['id']}`, this.api, pipeline.relations)).links(result);
                                 }
@@ -131,11 +131,11 @@ export class RestTransport implements TransportInterface {
                 pipeline.read({
                     id: id
                 }, pipelineParams.options).then(wrapper => {
-                    if (wrapper.results.length > 0) {
+                    if (wrapper.data.length > 0) {
                         if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
-                            wrapper.results[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.results[0]);
+                            wrapper.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.data[0]);
                         }
-                        res.status(200).json(wrapper.results[0])
+                        res.status(200).json(wrapper.data[0])
                     } else {
                         throw notFoundError(`${name}:${id}`)
                     }

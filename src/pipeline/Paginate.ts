@@ -9,7 +9,7 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
     @option('page', { type: "integer" }, false, "Offset of the first page to read (one page represents 'count' resources)")
     @option('count', { type: "integer" }, false, "Number of resources to return")
     @result('count', { type: "integer" }, false, "Number of resources available")
-    protected async _read(query?: {}, options?: { offset?: number, count?: number, page?: number }): Promise<{ count: number, results: {}[] }> {
+    protected async _read(query?: {}, options?: { offset?: number, count?: number, page?: number }): Promise<{ count: number, data: {}[] }> {
         let resources = await this.parent.read(query, options);
         let offset = 0;
 
@@ -17,14 +17,14 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
             if (options.offset) {
                 offset = options.offset;
             } else if ("page" in options && options.count) {
-                offset = (resources.results.length / options.count) * options.page;
+                offset = (resources.data.length / options.count) * options.page;
             }
 
             if (options.count) {
-                resources.results = resources.results.slice(offset, offset + options.count);
+                resources.data = resources.data.slice(offset, offset + options.count);
             }
         }
 
-        return { ...resources, count: resources.results.length };
+        return { ...resources, count: resources.data.length };
     }
 }
