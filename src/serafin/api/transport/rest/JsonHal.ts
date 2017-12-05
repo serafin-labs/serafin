@@ -13,7 +13,7 @@ export class JsonHal {
         let links = { self: { href: this.selfUrl } };
 
         if (this.relations) {
-            for (let rel of this.relations.relations) {
+            for (let rel of this.relations.list) {
                 let link: object = null;
                 if (resource) {
                     link = this.createNonTemplatedLink(rel, resource);

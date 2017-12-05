@@ -14,11 +14,11 @@ export interface PipelineRelationInterface {
  * Represents relations of this pipeline
  */
 export class PipelineRelations {
-    constructor(public relations: PipelineRelationInterface[] = []) {
+    constructor(public list: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>[] = []) {
     }
 
     clone(): PipelineRelations {
-        return new PipelineRelations(this.relations.map(r => _.clone(r)))
+        return new PipelineRelations(this.list.map(r => _.clone(r)))
     }
 
     /**
@@ -48,7 +48,7 @@ export class PipelineRelations {
             }
         }
 
-        this.relations.push(relation);
+        this.list.push(relation);
         return this;
     }
 
@@ -60,7 +60,7 @@ export class PipelineRelations {
      * @param resources 
      */
     async fetch(relationName: string, resources: any[]) {
-        let relation = _.find(this.relations, r => r.name === relationName);
+        let relation = _.find(this.list, r => r.name === relationName);
         if (typeof relation.pipeline === "function") {
             relation.pipeline = relation.pipeline()
         }

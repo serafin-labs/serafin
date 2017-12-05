@@ -106,7 +106,7 @@ export abstract class PipelineAbstract<
         return this.findRelationsSchema();
     }
 
-    public addRelation(relation: PipelineRelationInterface): this {
+    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
         this.relationsSchema.addRelation(relation, this);
         return this;
     }

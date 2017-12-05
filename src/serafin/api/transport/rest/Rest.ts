@@ -8,7 +8,7 @@ import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
-import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
+import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { JsonHal } from './JsonHal';
 
 export interface RestOptions {
@@ -72,6 +72,10 @@ export class RestTransport implements TransportInterface {
         let canPatch = !!pipelineSchema.schema.definitions.patchValues
         let canDelete = !!pipelineSchema.schema.definitions.deleteQuery
 
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.readQuery, pipelineSchema.schema.definitions.readOptions);
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.patchQuery, pipelineSchema.schema.definitions.patchOptions);
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.deleteQuery, pipelineSchema.schema.definitions.deleteOptions);
+
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
@@ -84,22 +88,15 @@ export class RestTransport implements TransportInterface {
 
             // get many resources
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // separate options from query based on pipeline metadata
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
-                }
-                let internalOptions
-                let query = _.cloneDeep(req.query);
-                let optionsValid = readOptionsFilter(options);
-                let queryValid = readQueryFilter(query);
-                if (!optionsValid || !queryValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(optionsValid ? readQueryFilter.errors : readOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter, readQueryFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
 
                 // run the query
-                pipeline.read(query, options).then(wrapper => {
+                pipeline.read(pipelineParams.query, pipelineParams.options).then(wrapper => {
                     if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
                         let links = (new JsonHal(endpointPath, this.api, pipeline.relations)).links();
                         wrapper["_links"] = links;
@@ -122,22 +119,18 @@ export class RestTransport implements TransportInterface {
 
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // extract parameters
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
+                let id = req.params.id
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
-                let optionsValid = readOptionsFilter(options);
-                if (!optionsValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(readOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
-                }
-                var id = req.params.id
 
                 // run the query
                 pipeline.read({
                     id: id
-                }, options).then(wrapper => {
+                }, pipelineParams.options).then(wrapper => {
                     if (wrapper.results.length > 0) {
                         if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
                             wrapper.results[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.results[0]);
@@ -160,20 +153,17 @@ export class RestTransport implements TransportInterface {
 
             // create a new resource
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // extract parameters
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, createOptionsFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
-                let optionsValid = createOptionsFilter(options);
-                if (!optionsValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(createOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
-                }
+
                 var data = req.body
 
                 // run the query
-                pipeline.create([data], options).then(createdResources => {
+                pipeline.create([data], pipelineParams.options).then(createdResources => {
                     if (createdResources.length !== 1) {
                         throw new Error(`Api Error: unexpected create result for endpoint ${resourcesPath}`)
                     }
@@ -191,23 +181,20 @@ export class RestTransport implements TransportInterface {
 
             // patch an existing resource
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // extract parameters
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, patchOptionsFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
-                let optionsValid = patchOptionsFilter(options);
-                if (!optionsValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(patchOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
-                }
+
                 var patch = req.body
                 var id = req.params.id
 
                 // run the query
                 pipeline.patch({
                     id: id
-                }, patch, options).then(updatedResources => {
+                }, patch, pipelineParams.options).then(updatedResources => {
                     if (updatedResources.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
@@ -227,21 +214,18 @@ export class RestTransport implements TransportInterface {
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // extract parameters
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, updateOptionsFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
-                let optionsValid = updateOptionsFilter(options);
-                if (!optionsValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(updateOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
-                }
+
                 var data = req.body
                 var id = req.params.id
 
                 // run the query
-                pipeline.update(id, data, options).then(updatedResource => {
+                pipeline.update(id, data, pipelineParams.options).then(updatedResource => {
                     if (!updatedResource) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
@@ -261,22 +245,19 @@ export class RestTransport implements TransportInterface {
 
             // delete an existing resource
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                // extract parameters
-                let options = this.api.filterInternalOptions(_.cloneDeep(req.query));
-                if (this.options.internalOptions) {
-                    _.merge(options, this.options.internalOptions(req))
+                let pipelineParams = null;
+                try {
+                    pipelineParams = this.extractOptionsAndQuery(req, ajv, deleteOptionsFilter);
+                } catch (e) {
+                    return handleError(e, res, next);
                 }
-                let optionsValid = deleteOptionsFilter(options);
-                if (!optionsValid) {
-                    let error = Api.apiError(validationError(ajv.errorsText(deleteOptionsFilter.errors)), req)
-                    return handleError(error, res, next);
-                }
-                var id = req.params.id
+
+                let id = req.params.id;
 
                 // run the query
                 pipeline.delete({
                     id: id
-                }, options).then(deletedResources => {
+                }, pipelineParams.options).then(deletedResources => {
                     if (deletedResources.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
@@ -293,5 +274,48 @@ export class RestTransport implements TransportInterface {
 
         // attach the router to the express app
         this.api.application.use(endpointPath, router);
+
+        this.api.application.get(this.api.basePath, (req: express.Request, res: express.Response, next: (err?: any) => void) => {
+            if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
+                res.status(200).json({
+                    _links: _.mapValues(this.api.pipelineByName, (pipeline, key) => {
+                        return { href: `${this.api.basePath}/${key}` }
+                    })
+                });
+            } else {
+                throw notFoundError('/');
+            }
+        });
+    }
+
+    private extractOptionsAndQuery(req: express.Request, ajv: Ajv.Ajv, optionsFilter: Ajv.ValidateFunction, queryFilter: Ajv.ValidateFunction = null): { options: object, query: object } {
+        let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query));
+        if (this.options.internalOptions) {
+            _.merge(pipelineOptions, this.options.internalOptions(req));
+        }
+        let optionsValid = optionsFilter(pipelineOptions);
+
+        let pipelineQuery = {};
+        let queryValid = true;
+        if (queryFilter !== null) {
+            pipelineQuery = _.cloneDeep(req.query)
+            let queryValid = queryFilter(pipelineQuery) as boolean;
+        }
+
+        if (!optionsValid || !queryValid) {
+            throw Api.apiError(validationError(ajv.errorsText(optionsValid ? queryFilter.errors : optionsFilter.errors)), req)
+        }
+
+        return { options: pipelineOptions, query: pipelineQuery };
+    }
+
+    private testOptionsAndQueryConflict(optionsSchema: JSONSchema4, querySchema: JSONSchema4): void {
+        if (optionsSchema && querySchema) {
+            let intersection = _.intersection(Object.keys(optionsSchema.properties), Object.keys(querySchema.properties));
+            if (intersection.length > 0) {
+                throw serafinError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
+                    { conflict: intersection, optionsSchema: optionsSchema, querySchema: querySchema });
+            }
+        }
     }
 }
