@@ -1,8 +1,8 @@
 import * as _ from "lodash";
-import { PipelineSchemaAbstract } from "./Abstract"
+import { PipelineSchemaBuilderAbstract } from "./Abstract"
 import { JSONSchema4 } from "json-schema"
 import { ResourceIdentityInterface } from "./ResourceInterfaces"
-import { PipelineSchema } from "./Pipeline";
+import { PipelineSchemaBuilder } from "./SchemaBuilder";
 
 enum SCHEMA_FILTER {
     NONE = 0,
@@ -14,14 +14,14 @@ enum SCHEMA_FILTER {
 /**
  * Defines schemas related to the model that are used by the pipeline for validation.
  */
-export class PipelineSchemaModel<
+export class PipelineSchemaBuilderModel<
     T extends ResourceIdentityInterface = ResourceIdentityInterface,
     ReadQuery = any,
     CreateValues = any,
     UpdateValues = any,
     PatchQuery = any,
     PatchValues = any,
-    DeleteQuery = any> extends PipelineSchemaAbstract {
+    DeleteQuery = any> extends PipelineSchemaBuilderAbstract {
 
     /**
      * The path of the main model schema

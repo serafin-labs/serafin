@@ -37,23 +37,19 @@ export class OpenApi {
             responses: {
                 200: {
                     description: `${_.upperFirst(this.pluralName)} corresponding to the query`,
-                    content: {
-                        "application/json": {
-                            schema: {
-                                allOf: [
-                                    {
-                                        type: 'object',
-                                        properties: {
-                                            results: {
-                                                type: 'array',
-                                                items: { "$ref": `#/components/schemas/${this.name}` },
-                                            }
-                                        }
-                                    },
-                                    { $ref: `#/components/schemas/${this.name}ReadResults` }
-                                ]
-                            }
-                        }
+                    schema: {
+                        allOf: [
+                            {
+                                type: 'object',
+                                properties: {
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/definitions/${this.name}` },
+                                    }
+                                }
+                            },
+                            { $ref: `#/definitions/${this.name}ReadResults` }
+                        ]
                     }
                 },
                 400: {

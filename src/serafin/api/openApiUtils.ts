@@ -88,7 +88,7 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
         return schemaToOpenApiParameter(jsonpointer.get(spec, schema.$ref.substr(1)), spec)
     }
     if (schema && schema.type === "object") {
-        let results = []
+        let data = []
         for (let property in schema.properties) {
             let propertySchemaObject: SchemaObject
             let propertySchema = schema.properties[property]
@@ -113,19 +113,19 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
                 if (propertySchemaObject.type === 'array') {
                     parameter.style = "form"
                 }
-                results.push(parameter)
+                data.push(parameter)
             }
         }
         if (schema.oneOf) {
-            results = results.concat(schema.oneOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.oneOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.anyOf) {
-            results = results.concat(schema.anyOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.anyOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.allOf) {
-            results = results.concat(schema.allOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.allOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
-        return results
+        return data;
     }
     return []
 }

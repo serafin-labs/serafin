@@ -1,7 +1,7 @@
 import { notImplementedError } from "../error/Error"
 import { PipelineAbstract } from './Abstract';
-import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
-import { PipelineSchemaModel } from './schema/Model'
+import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
+import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
 
@@ -27,11 +27,11 @@ export abstract class PipelineSourceAbstract<
     DeleteOptions = {}>
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions>
 {
-    constructor(modelSchema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
+    constructor(modelSchema: PipelineSchemaBuilderModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
         super();
         this.parent = null;
-        this.modelSchema = modelSchema;
-        this.modelSchema.implementedMethods = PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED));
+        this.modelSchemaBuilder = modelSchema;
+        this.modelSchemaBuilder.implementedMethods = PipelineAbstract.getCRUDMethods().filter((methodName) => !Object.getOwnPropertyDescriptor(this[methodName], METHOD_NOT_IMPLEMENTED));
     }
     /**
      * Attach this pipeline to the given parent.
@@ -41,7 +41,7 @@ export abstract class PipelineSourceAbstract<
     }
 
     @PipelineSourceAbstract.notImplemented
-    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ results: T[] } & ReadWrapper> {
+    protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name);
     }
 
