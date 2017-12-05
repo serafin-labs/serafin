@@ -57,7 +57,7 @@ export class Api {
     /**
      * Filter function used to test if an option name is internal or not
      */
-    protected isNotAnInternalOption = (name: string) => !name.startsWith("_");
+    isNotAnInternalOption = (name: string) => !name.startsWith("_");
 
     /**
      * Filter used to remove input options that are not supposed to be set by the client.
