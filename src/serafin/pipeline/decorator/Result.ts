@@ -1,4 +1,4 @@
-import { PipelineSchemaProperties } from '../schema/Properties'
+import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
 import { READ_DATA_SCHEMA } from './decoratorSymbols'
 
 
@@ -13,11 +13,11 @@ import { READ_DATA_SCHEMA } from './decoratorSymbols'
 export function result(name: string, schema: Object, required: boolean = true, description: string = null) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
         // add option metadata to the pipeline
-        let dataSchema: PipelineSchemaProperties
+        let dataSchemaBuilder: PipelineSchemaBuilderProperties
         if (!target.hasOwnProperty(READ_DATA_SCHEMA)) {
-            target[READ_DATA_SCHEMA] = new PipelineSchemaProperties()
+            target[READ_DATA_SCHEMA] = new PipelineSchemaBuilderProperties()
         }
-        dataSchema = target[READ_DATA_SCHEMA]
-        dataSchema.addProperty(name, schema, description, required);
+        dataSchemaBuilder = target[READ_DATA_SCHEMA]
+        dataSchemaBuilder.addProperty(name, schema, description, required);
     }
 }

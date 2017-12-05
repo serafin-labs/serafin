@@ -1,9 +1,9 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
 import { PipelineSourceAbstract, Patch, description } from '../../serafin/pipeline';
-import { ResourceIdentityInterface } from '../../serafin/pipeline/schema/ResourceInterfaces';
+import { ResourceIdentityInterface } from '../../serafin/pipeline/schemaBuilder/ResourceInterfaces';
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
-import { PipelineSchemaModel } from '../../serafin/pipeline/schema/Model'
+import { PipelineSchemaBuilderModel } from '../../serafin/pipeline/schemaBuilder/Model'
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 
@@ -18,8 +18,8 @@ export class PipelineSourceInMemory<
     DeleteQuery extends Patch<ResourceIdentityInterface> = Patch<T>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateResources, {}, UpdateValues, {}, PatchQuery, PatchValues, {}, DeleteQuery, {}> {
     protected resources: { [index: string]: T };
 
-    constructor(schema: PipelineSchemaModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
-        super(schema);
+    constructor(schemaBuilderModel: PipelineSchemaBuilderModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
+        super(schemaBuilderModel);
         this.resources = {} as { [index: string]: T };
     }
 

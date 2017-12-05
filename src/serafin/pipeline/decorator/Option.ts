@@ -1,4 +1,4 @@
-import { PipelineSchemaProperties } from '../schema/Properties'
+import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
 import { OPTIONS_SCHEMAS } from './decoratorSymbols'
 
 /**
@@ -16,11 +16,11 @@ export function option(option: string, schema: Object | (() => Object), required
         if (propertyKey.startsWith('_')) {
             propertyKey = propertyKey.slice(1);
         }
-        let optionsSchema: PipelineSchemaProperties;
+        let optionsSchemaBuilder: PipelineSchemaBuilderProperties;
         if (!target.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
-            target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaProperties()
+            target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaBuilderProperties()
         }
-        optionsSchema = target[OPTIONS_SCHEMAS[propertyKey]];
-        optionsSchema.addProperty(option, (typeof schema === "function") ? schema() : schema, description, required);
+        optionsSchemaBuilder = target[OPTIONS_SCHEMAS[propertyKey]];
+        optionsSchemaBuilder.addProperty(option, (typeof schema === "function") ? schema() : schema, description, required);
     }
 }

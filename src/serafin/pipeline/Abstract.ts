@@ -1,11 +1,11 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ResourceIdentityInterface } from './schema/ResourceInterfaces';
+import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
 import { JSONSchema4 } from "json-schema"
-import { PipelineSchemaModel } from './schema/Model'
+import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
-import { PipelineSchema } from './schema/Pipeline'
-import { PipelineSchemaProperties } from './schema/Properties'
+import { PipelineSchemaBuilder } from './schemaBuilder/SchemaBuilder'
+import { PipelineSchemaBuilderProperties } from './schemaBuilder/Properties'
 import { getOptionsSchemas, getDataSchema } from './decorator/decoratorSymbols'
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
@@ -34,7 +34,7 @@ export abstract class PipelineAbstract<
     DeleteQuery = {},
     DeleteOptions = {}> {
 
-    protected modelSchema: PipelineSchemaModel<ResourceIdentityInterface> = null;
+    protected modelSchemaBuilder: PipelineSchemaBuilderModel<ResourceIdentityInterface> = null;
     protected relationsSchema: PipelineRelations = null;
     protected optionsSchema: {} = null;
     private validationFunctions = null;
@@ -62,7 +62,7 @@ export abstract class PipelineAbstract<
      * Find the nearest modelSchema definition
      */
     protected findModelSchema() {
-        return this.modelSchema || (this.parent ? this.parent.findModelSchema() : null)
+        return this.modelSchemaBuilder || (this.parent ? this.parent.findModelSchema() : null)
     }
 
     /**
@@ -83,20 +83,20 @@ export abstract class PipelineAbstract<
     /**
      * The schema that represents the capabilities of this pipeline
      */
-    get schema() {
+    get schemaBuilder() {
         // gather all results used by this pipeline and its parents
         let findAllData = (target: PipelineAbstract) => target ? [getDataSchema(target), ...findAllData(target.parent)] : []
 
         // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchema(this.findModelSchema(), PipelineSchema.mergeOptions(this.findAllOptions()), PipelineSchema.mergeProperties(findAllData(this)))
+        return new PipelineSchemaBuilder(this.findModelSchema(), PipelineSchemaBuilder.mergeOptions(this.findAllOptions()), PipelineSchemaBuilder.mergeProperties(findAllData(this)))
     }
 
     /**
      * The schema that represents the capabilities of the current pipeline
      */
-    get currentSchema() {
+    get currentSchemaBuilder() {
         // create and return the schema representing the current pipeline
-        return new PipelineSchema(this.modelSchema, this.optionsSchema, getDataSchema(this));
+        return new PipelineSchemaBuilder(this.modelSchemaBuilder, this.optionsSchema, getDataSchema(this));
     }
 
     /**
@@ -218,7 +218,7 @@ export abstract class PipelineAbstract<
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchema(target.modelSchema, target.optionsSchema, getDataSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchemaBuilder(target.modelSchemaBuilder, target.optionsSchema, getDataSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 
@@ -251,19 +251,19 @@ export abstract class PipelineAbstract<
 
     private compileValidationFunctions() {
         let ajv = new Ajv();
-        let currentSchema = this.currentSchema.schema;
+        let currentSchemaBuilder = this.currentSchemaBuilder.schema;
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
-        ajv.addSchema(currentSchema, "schema");
+        ajv.addSchema(currentSchemaBuilder, "schema");
 
         this.validationFunctions = {};
 
         // Create
-        let validateCreateResources = currentSchema.definitions.createValues ? ajv.compile({
+        let validateCreateResources = currentSchemaBuilder.definitions.createValues ? ajv.compile({
             type: 'array',
             items: { "$ref": "schema#/definitions/createValues" },
             minItems: 1
         }) : () => true;
-        let validateCreateOptions = currentSchema.definitions.createOptions ? ajv.compile({ "$ref": "schema#/definitions/createOptions" }) : () => true;
+        let validateCreateOptions = currentSchemaBuilder.definitions.createOptions ? ajv.compile({ "$ref": "schema#/definitions/createOptions" }) : () => true;
         this.validationFunctions['create'] = (params: any[]) => {
             let [resources, options] = params;
             if (!validateCreateResources(resources) || !validateCreateOptions(options || {})) {
@@ -272,8 +272,8 @@ export abstract class PipelineAbstract<
         }
 
         // Read
-        let validateReadQuery = currentSchema.definitions.readQuery ? ajv.compile({ "$ref": "schema#/definitions/readQuery" }) : () => true;
-        let validateReadOptions = currentSchema.definitions.readOptions ? ajv.compile({ "$ref": "schema#/definitions/readOptions" }) : () => true;
+        let validateReadQuery = currentSchemaBuilder.definitions.readQuery ? ajv.compile({ "$ref": "schema#/definitions/readQuery" }) : () => true;
+        let validateReadOptions = currentSchemaBuilder.definitions.readOptions ? ajv.compile({ "$ref": "schema#/definitions/readOptions" }) : () => true;
         this.validationFunctions['read'] = (params: any[]) => {
             let [query, options] = params;
             if (!validateReadQuery(query || {}) || !validateReadOptions(options || {})) {
@@ -282,8 +282,8 @@ export abstract class PipelineAbstract<
         }
 
         // Update
-        let validateUpdateValues = currentSchema.definitions.updateValues ? ajv.compile({ "$ref": 'schema#/definitions/updateValues' }) : () => true;
-        let validateUpdateOptions = currentSchema.definitions.updateOptions ? ajv.compile({ "$ref": 'schema#/definitions/updateOptions' }) : () => true;
+        let validateUpdateValues = currentSchemaBuilder.definitions.updateValues ? ajv.compile({ "$ref": 'schema#/definitions/updateValues' }) : () => true;
+        let validateUpdateOptions = currentSchemaBuilder.definitions.updateOptions ? ajv.compile({ "$ref": 'schema#/definitions/updateOptions' }) : () => true;
         this.validationFunctions['update'] = (params: any[]) => {
             let [id, values, options] = params;
             if (!validateUpdateValues(values) || !validateUpdateOptions(options || {})) {
@@ -292,9 +292,9 @@ export abstract class PipelineAbstract<
         }
 
         // Patch
-        let validatePatchQuery = currentSchema.definitions.patchQuery ? ajv.compile({ "$ref": 'schema#/definitions/patchQuery' }) : () => true;
-        let validatePatchValues = currentSchema.definitions.patchValues ? ajv.compile({ "$ref": 'schema#/definitions/patchValues' }) : () => true;
-        let validatePatchOptions = currentSchema.definitions.patchOptions ? ajv.compile({ "$ref": 'schema#/definitions/patchOptions' }) : () => true;
+        let validatePatchQuery = currentSchemaBuilder.definitions.patchQuery ? ajv.compile({ "$ref": 'schema#/definitions/patchQuery' }) : () => true;
+        let validatePatchValues = currentSchemaBuilder.definitions.patchValues ? ajv.compile({ "$ref": 'schema#/definitions/patchValues' }) : () => true;
+        let validatePatchOptions = currentSchemaBuilder.definitions.patchOptions ? ajv.compile({ "$ref": 'schema#/definitions/patchOptions' }) : () => true;
         this.validationFunctions['patch'] = (params: any[]) => {
             let [query, values, options] = params;
             if (!validatePatchQuery(query) || !validatePatchValues(values) || !validatePatchOptions(options || {})) {
@@ -303,8 +303,8 @@ export abstract class PipelineAbstract<
         }
 
         // Delete
-        let validateDeleteQuery = currentSchema.definitions.deleteQuery ? ajv.compile({ "$ref": 'schema#/definitions/deleteQuery' }) : () => true;
-        let validateDeleteOptions = currentSchema.definitions.deleteOptions ? ajv.compile({ "$ref": 'schema#/definitions/deleteOptions' }) : () => true;
+        let validateDeleteQuery = currentSchemaBuilder.definitions.deleteQuery ? ajv.compile({ "$ref": 'schema#/definitions/deleteQuery' }) : () => true;
+        let validateDeleteOptions = currentSchemaBuilder.definitions.deleteOptions ? ajv.compile({ "$ref": 'schema#/definitions/deleteOptions' }) : () => true;
         this.validationFunctions['delete'] = (params: any[]) => {
             let [query, options] = params;
             if (!validateDeleteQuery(query || {}) || !validateDeleteOptions(options || {})) {

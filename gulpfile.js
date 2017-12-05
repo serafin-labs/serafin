@@ -25,5 +25,5 @@ gulpTasksModel(gulp, __dirname + '/src/example/petstore/**/*.model.json', __dirn
     modelSchemaPath: "../../../serafin/pipeline/schema/Model"
 });
 gulpTasksModel(gulp, __dirname + '/src/example/library/**/*.model.json', __dirname + '/src/example/library/model', 'library', {
-    modelSchemaPath: "../../../serafin/pipeline/schema/Model"
+    modelSchemaPath: "../../../serafin/pipeline"
 });

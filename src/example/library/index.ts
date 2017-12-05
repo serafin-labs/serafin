@@ -7,7 +7,6 @@ import { authorSchema } from './model/Author';
 import { categorySchema } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
-import { PipelineSchemaModel } from '../../serafin/pipeline';
 import { Links } from '../../pipeline/Links';
 import { PipelineRelations } from '../../serafin/pipeline/Relations';
 

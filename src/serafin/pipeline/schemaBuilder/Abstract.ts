@@ -6,7 +6,7 @@ import { throughJsonSchema } from "../../util/throughJsonSchema"
 /**
  * Represents a Schema and its dependencies
  */
-export abstract class PipelineSchemaAbstract {
+export abstract class PipelineSchemaBuilderAbstract {
     /**
      * An array that keep tracks of all references added
      */

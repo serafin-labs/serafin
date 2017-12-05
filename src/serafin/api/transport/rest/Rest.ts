@@ -40,7 +40,7 @@ export class RestTransport implements TransportInterface {
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
         let router = express.Router();
-        let openApi = new OpenApi(this.api, pipeline.schema, resourcesPath, name, pluralName);
+        let openApi = new OpenApi(this.api, pipeline.schemaBuilder, resourcesPath, name, pluralName);
 
         // error handling closure for this endpoint
         let handleError = (error, res: express.Response, next: (err?: any) => void) => {
@@ -63,23 +63,23 @@ export class RestTransport implements TransportInterface {
         };
 
         // import pipeline schemas to openApi definitions
-        var pipelineSchema = pipeline.schema;
+        var pipelineSchemaBuilder = pipeline.schemaBuilder;
 
         // determine what are the available actions
-        let canRead = !!pipelineSchema.schema.definitions.readQuery
-        let canCreate = !!pipelineSchema.schema.definitions.createValues
-        let canUpdate = !!pipelineSchema.schema.definitions.updateValues
-        let canPatch = !!pipelineSchema.schema.definitions.patchValues
-        let canDelete = !!pipelineSchema.schema.definitions.deleteQuery
+        let canRead = !!pipelineSchemaBuilder.schema.definitions.readQuery
+        let canCreate = !!pipelineSchemaBuilder.schema.definitions.createValues
+        let canUpdate = !!pipelineSchemaBuilder.schema.definitions.updateValues
+        let canPatch = !!pipelineSchemaBuilder.schema.definitions.patchValues
+        let canDelete = !!pipelineSchemaBuilder.schema.definitions.deleteQuery
 
-        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.readQuery, pipelineSchema.schema.definitions.readOptions);
-        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.patchQuery, pipelineSchema.schema.definitions.patchOptions);
-        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.deleteQuery, pipelineSchema.schema.definitions.deleteOptions);
+        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.readQuery, pipelineSchemaBuilder.schema.definitions.readOptions);
+        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.patchQuery, pipelineSchemaBuilder.schema.definitions.patchOptions);
+        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.deleteQuery, pipelineSchemaBuilder.schema.definitions.deleteOptions);
 
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
         ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
-        ajv.addSchema(pipelineSchema.schema, "pipelineSchema");
+        ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
 
         // create the routes for this endpoint
         if (canRead) {

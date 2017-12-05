@@ -1,5 +1,5 @@
 import { PipelineAbstract } from '../Abstract'
-import { PipelineSchemaProperties } from '../schema/Properties'
+import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
 
 /**
  * Symbols where schema of options are stored
@@ -17,11 +17,11 @@ export const OPTIONS_SCHEMAS = {
  */
 export function getOptionsSchemas(target: PipelineAbstract) {
     let result: {
-        create?: PipelineSchemaProperties
-        read?: PipelineSchemaProperties
-        update?: PipelineSchemaProperties
-        patch?: PipelineSchemaProperties
-        delete?: PipelineSchemaProperties
+        create?: PipelineSchemaBuilderProperties
+        read?: PipelineSchemaBuilderProperties
+        update?: PipelineSchemaBuilderProperties
+        patch?: PipelineSchemaBuilderProperties
+        delete?: PipelineSchemaBuilderProperties
     } = {};
     PipelineAbstract.getCRUDMethods().forEach(method => {
         if (target[OPTIONS_SCHEMAS[method]]) {

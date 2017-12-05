@@ -42,7 +42,7 @@ export class PipelineRelations {
                 if (!Array.isArray(queryValue) && (
                     typeof queryValue !== 'string' ||
                     queryValue.charAt(0) != ':' ||
-                    pipeline.schema.schema.properties[queryValue.substring(1)].type !== 'array'
+                    pipeline.schemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array'
                 )) {
                     relation.type = 'one';
                 }
