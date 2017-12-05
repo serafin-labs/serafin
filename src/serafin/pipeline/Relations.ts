@@ -14,7 +14,8 @@ export interface PipelineRelationInterface {
  * Represents relations of this pipeline
  */
 export class PipelineRelations {
-    constructor(public list: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>[] = []) {
+
+    constructor(public list: PipelineRelationInterface[] = []) {
     }
 
     clone(): PipelineRelations {

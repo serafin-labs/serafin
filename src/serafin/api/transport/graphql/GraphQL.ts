@@ -133,7 +133,7 @@ export class GraphQLTransport implements TransportInterface {
         });
 
         // add relations of this model as sub fields of the graphql schema
-        for (let relation of relations.relations) {
+        for (let relation of relations.list) {
             let existingFieldsFunction = modelSchema.fields;
             modelSchema.fields = ((relation, existingFieldsFunction) => () => {
                 // get the existing fields of the unerlying function
@@ -157,6 +157,9 @@ export class GraphQLTransport implements TransportInterface {
                     existingFields[relation.name] = {
                         type: relationType.schema,
                         resolve: async (entity) => {
+                            if (entity[relation.name]) {
+                                return entity[relation.name]
+                            }
                             let results = await relations.fetchRelationForResource(relation, entity)
                             return results[0];
                         }
@@ -165,6 +168,9 @@ export class GraphQLTransport implements TransportInterface {
                     existingFields[relation.name] = {
                         type: new graphql.GraphQLList(relationType.schema),
                         resolve: async (entity) => {
+                            if (entity[relation.name]) {
+                                return entity[relation.name]
+                            }
                             let results = await relations.fetchRelationForResource(relation, entity)
                             return results;
                         }
