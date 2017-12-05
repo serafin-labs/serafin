@@ -8,7 +8,7 @@ import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
-import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
+import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { JsonHal } from './JsonHal';
 
 export interface RestOptions {
@@ -71,6 +71,10 @@ export class RestTransport implements TransportInterface {
         let canUpdate = !!pipelineSchema.schema.definitions.updateValues
         let canPatch = !!pipelineSchema.schema.definitions.patchValues
         let canDelete = !!pipelineSchema.schema.definitions.deleteQuery
+
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.readQuery, pipelineSchema.schema.definitions.readOptions);
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.patchQuery, pipelineSchema.schema.definitions.patchOptions);
+        this.testOptionsAndQueryConflict(pipelineSchema.schema.definitions.deleteQuery, pipelineSchema.schema.definitions.deleteOptions);
 
         // prepare Ajv filters
         let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
@@ -285,23 +289,16 @@ export class RestTransport implements TransportInterface {
     }
 
     private extractOptionsAndQuery(req: express.Request, ajv: Ajv.Ajv, optionsFilter: Ajv.ValidateFunction, queryFilter: Ajv.ValidateFunction = null): { options: object, query: object } {
-        let reqQuery = _.cloneDeep(req.query);
-        let pipelineQuery = {};
-
-        if (reqQuery['query']) {
-            pipelineQuery = reqQuery['query'];
-            delete reqQuery['query'];
-        }
-
-        let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(reqQuery));
+        let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query));
         if (this.options.internalOptions) {
             _.merge(pipelineOptions, this.options.internalOptions(req));
         }
         let optionsValid = optionsFilter(pipelineOptions);
 
+        let pipelineQuery = {};
         let queryValid = true;
         if (queryFilter !== null) {
-            pipelineQuery = { ..._.cloneDeep(reqQuery), ...pipelineQuery };
+            pipelineQuery = _.cloneDeep(req.query)
             let queryValid = queryFilter(pipelineQuery) as boolean;
         }
 
@@ -310,5 +307,15 @@ export class RestTransport implements TransportInterface {
         }
 
         return { options: pipelineOptions, query: pipelineQuery };
+    }
+
+    private testOptionsAndQueryConflict(optionsSchema: JSONSchema4, querySchema: JSONSchema4): void {
+        if (optionsSchema && querySchema) {
+            let intersection = _.intersection(Object.keys(optionsSchema.properties), Object.keys(querySchema.properties));
+            if (intersection.length > 0) {
+                throw serafinError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
+                    { conflict: intersection, optionsSchema: optionsSchema, querySchema: querySchema });
+            }
+        }
     }
 }
