@@ -1,7 +1,6 @@
 import * as util from 'util';
 import * as _ from 'lodash';
 import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
-import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
 import { PipelineSchemaBuilder } from './schemaBuilder/SchemaBuilder'

@@ -1,4 +1,4 @@
-import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "openapi3-ts"
+import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "../openApi"
 import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 

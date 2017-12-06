@@ -2,7 +2,7 @@ import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import * as Ajv from "ajv";
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../../../openApi"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
@@ -308,7 +308,7 @@ export class RestTransport implements TransportInterface {
         return { options: pipelineOptions, query: pipelineQuery };
     }
 
-    private testOptionsAndQueryConflict(optionsSchema: JSONSchema4, querySchema: JSONSchema4): void {
+    private testOptionsAndQueryConflict(optionsSchema: JSONSchema, querySchema: JSONSchema): void {
         if (optionsSchema && querySchema) {
             let intersection = _.intersection(Object.keys(optionsSchema.properties), Object.keys(querySchema.properties));
             if (intersection.length > 0) {

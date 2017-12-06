@@ -2,8 +2,7 @@ import * as Ajv from "ajv";
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
-import { OpenAPIObject, ParameterObject } from "openapi3-ts"
-import { JSONSchema4 } from "json-schema"
+import { OpenAPIObject, ParameterObject } from "../openApi"
 import { PipelineAbstract } from "../pipeline/Abstract"
 import { throughJsonSchema } from "../util/throughJsonSchema"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"

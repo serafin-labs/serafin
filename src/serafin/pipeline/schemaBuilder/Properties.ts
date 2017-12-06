@@ -1,6 +1,6 @@
 import { description } from '../decorator/Description';
 import { PipelineSchemaBuilderAbstract } from "./Abstract"
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../../openApi"
 
 /**
  *  Schema that represents a set of properties for a pipeline
@@ -12,7 +12,7 @@ export class PipelineSchemaBuilderProperties extends PipelineSchemaBuilderAbstra
      */
     public properties: {
         [name: string]: {
-            schema: JSONSchema4,
+            schema: JSONSchema,
             description: string,
             required: boolean
         }
@@ -22,7 +22,7 @@ export class PipelineSchemaBuilderProperties extends PipelineSchemaBuilderAbstra
         let schema = {
             type: 'object',
             properties: {}
-        } as JSONSchema4;
+        } as JSONSchema;
         super(schema)
         this.properties = {}
     }
@@ -35,7 +35,7 @@ export class PipelineSchemaBuilderProperties extends PipelineSchemaBuilderAbstra
      * @param description 
      * @param required 
      */
-    addProperty(name: string, schema: JSONSchema4, description: string, required: boolean): this {
+    addProperty(name: string, schema: JSONSchema, description: string, required: boolean): this {
         this.properties[name] = {
             schema: schema,
             description: description,

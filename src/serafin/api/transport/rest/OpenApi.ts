@@ -1,7 +1,6 @@
 import * as _ from 'lodash';
 import * as jsonpointer from 'jsonpointer';
-import { JSONSchema4 } from "json-schema";
-import { OpenAPIObject, ParameterObject } from "openapi3-ts"
+import { OpenAPIObject, ParameterObject } from "../../../openApi"
 import { Api } from "../../Api"
 
 import { throughJsonSchema } from "../../../util/throughJsonSchema";

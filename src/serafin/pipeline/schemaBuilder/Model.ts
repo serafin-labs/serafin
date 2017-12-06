@@ -1,6 +1,6 @@
 import * as _ from "lodash";
 import { PipelineSchemaBuilderAbstract } from "./Abstract"
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../../openApi"
 import { ResourceIdentityInterface } from "./ResourceInterfaces"
 import { PipelineSchemaBuilder } from "./SchemaBuilder";
 
@@ -28,7 +28,7 @@ export class PipelineSchemaBuilderModel<
      */
     public modelPath: string;
 
-    constructor(schemaObject: JSONSchema4, id?: string) {
+    constructor(schemaObject: JSONSchema, id?: string) {
         super(schemaObject, id)
     }
 
@@ -38,7 +38,7 @@ export class PipelineSchemaBuilderModel<
      * @param target 
      * @param schemaObject   
      */
-    addSchema(schemaObject: JSONSchema4, name: 'createValues' | 'readQuery' | 'updateValues' | 'patchQuery' | 'patchValues' | 'deleteQuery'): this {
+    addSchema(schemaObject: JSONSchema, name: 'createValues' | 'readQuery' | 'updateValues' | 'patchQuery' | 'patchValues' | 'deleteQuery'): this {
         return super.addSchema(schemaObject, name)
     }
 
@@ -81,7 +81,7 @@ export class PipelineSchemaBuilderModel<
     }
 
     private toDefinitionSchema(propertiesFilter: SCHEMA_FILTER, requiredFilter: SCHEMA_FILTER, toArray: boolean = false) {
-        let schema: JSONSchema4 = {
+        let schema: JSONSchema = {
             type: 'object',
             properties: _.clone(this.schemaObject.properties),
             additionalProperties: false

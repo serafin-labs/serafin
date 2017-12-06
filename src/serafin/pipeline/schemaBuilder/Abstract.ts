@@ -1,4 +1,4 @@
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../../openApi"
 import * as _ from "lodash"
 
 import { throughJsonSchema } from "../../util/throughJsonSchema"
@@ -17,7 +17,7 @@ export abstract class PipelineSchemaBuilderAbstract {
      */
     protected id: string
 
-    constructor(protected schemaObject: JSONSchema4, id?: string) {
+    constructor(protected schemaObject: JSONSchema, id?: string) {
         this.id = id || schemaObject.id;
         this.schemaObject = schemaObject;
         if (schemaObject.properties) {
@@ -53,7 +53,7 @@ export abstract class PipelineSchemaBuilderAbstract {
      * @param name A name representing this schema 
      * @param id An optional id that represents the URI of the schema 
      */
-    addRef(refSchemaObject: JSONSchema4, name: string, id?: string): this {
+    addRef(refSchemaObject: JSONSchema, name: string, id?: string): this {
         var refId = id || refSchemaObject.id
         if (!refId) {
             throw new Error(`Schema Error: Schemas added as "reference" must have an 'id' provided.`)

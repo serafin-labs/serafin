@@ -4,7 +4,6 @@ import * as _ from 'lodash';
 import * as VError from 'verror';
 import * as ExpressGraphQL from 'express-graphql'
 import * as graphql from "graphql"
-import { JSONSchema4 } from "json-schema"
 import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
