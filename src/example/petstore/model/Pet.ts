@@ -1,4 +1,4 @@
-import { PipelineSchemaBuilderModel } from "../../../serafin/pipeline/schema/Model";
+import { PipelineSchemaBuilderModel } from "../../../serafin/pipeline";
 
 /**
  * Schema of a Pet object.
