@@ -39,7 +39,11 @@ async function main() {
         paths: {}
     });
 
-    api.configure(new RestTransport());
+    api.configure(new RestTransport())
+        .configure(new GraphQLTransport({
+            graphiql: true,
+            schema: true
+        }));
 
     // Timeout to ease debugging
     setTimeout(async () => {
