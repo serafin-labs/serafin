@@ -1,7 +1,6 @@
 import * as util from 'util';
 import * as _ from 'lodash';
 import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
-import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
 import { PipelineSchemaBuilder } from './schemaBuilder/SchemaBuilder'
@@ -11,6 +10,7 @@ import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
+import { metaSchema } from "../openApi"
 
 /**
  * Abstract Class representing a pipeline.
@@ -250,9 +250,8 @@ export abstract class PipelineAbstract<
     }
 
     private compileValidationFunctions() {
-        let ajv = new Ajv();
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
         let currentSchemaBuilder = this.currentSchemaBuilder.schema;
-        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
         ajv.addSchema(currentSchemaBuilder, "schema");
 
         this.validationFunctions = {};

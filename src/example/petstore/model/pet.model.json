@@ -1,7 +1,6 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
-    "id": "/Pet",
+    "title": "Pet",
     "description": "Schema of a Pet object.",
     "properties": {
         "id": {

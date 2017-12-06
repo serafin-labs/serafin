@@ -1,12 +1,12 @@
-import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import * as Ajv from "ajv";
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../../../openApi"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
+import { metaSchema } from "../../../openApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { JsonHal } from './JsonHal';
@@ -77,8 +77,7 @@ export class RestTransport implements TransportInterface {
         this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.deleteQuery, pipelineSchemaBuilder.schema.definitions.deleteOptions);
 
         // prepare Ajv filters
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
-        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
         ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
 
         // create the routes for this endpoint
@@ -309,9 +308,9 @@ export class RestTransport implements TransportInterface {
         return { options: pipelineOptions, query: pipelineQuery };
     }
 
-    private testOptionsAndQueryConflict(optionsSchema: JSONSchema4, querySchema: JSONSchema4): void {
+    private testOptionsAndQueryConflict(optionsSchema: JSONSchema, querySchema: JSONSchema): void {
         if (optionsSchema && querySchema) {
-            let intersection = _.intersection(Object.keys(optionsSchema.properties), Object.keys(querySchema.properties));
+            let intersection = _.intersection(Object.keys(optionsSchema.properties || {}), Object.keys(querySchema.properties || {}));
             if (intersection.length > 0) {
                 throw serafinError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
                     { conflict: intersection, optionsSchema: optionsSchema, querySchema: querySchema });

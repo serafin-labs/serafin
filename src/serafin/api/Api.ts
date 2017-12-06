@@ -1,9 +1,7 @@
-import * as Ajv from "ajv";
-import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
-import { JSONSchema4 } from "json-schema"
+import { OpenAPIObject, ParameterObject } from "../openApi"
 import { PipelineAbstract } from "../pipeline/Abstract"
 import { throughJsonSchema } from "../util/throughJsonSchema"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
@@ -36,11 +34,12 @@ export class Api {
      * @param application the express app the Api will rely on to register endpoints
      * @param openApi Base open api document. To be used to provide general information about the api.
      */
-    constructor(public application: express.Application, public openApi: Swagger.Spec = <any>{}) {
+    constructor(public application: express.Application, public openApi: OpenAPIObject = <any>{}) {
         // init open Api specs
         this.openApi.paths = this.openApi.paths || {};
-        this.openApi.definitions = this.openApi.definitions || {};
-        this.openApi.definitions.Error = {
+        this.openApi.components = this.openApi.components || {};
+        this.openApi.components.schemas = this.openApi.components.schemas || {};
+        this.openApi.components.schemas.Error = {
             type: "object",
             properties: {
                 code: { type: "number" },
@@ -71,7 +70,7 @@ export class Api {
      * Filter used to remove options parameters that are not supposed to be exposed on the Open Api Spec.
      * By default all options starting with _ are reserved for internal use and cannot be set by the request
      */
-    filterInternalParameters(parameters: Swagger.Parameter[]) {
+    filterInternalParameters(parameters: ParameterObject[]) {
         return parameters.filter((parameter) => this.isNotAnInternalOption(parameter.name))
     }
 

@@ -1,22 +1,20 @@
 import * as _ from 'lodash';
-import * as Swagger from 'swagger-schema-official';
 import * as jsonpointer from 'jsonpointer';
-import { JSONSchema4 } from "json-schema";
+import { OpenAPIObject, ParameterObject } from "../../../openApi"
 import { Api } from "../../Api"
 
 import { throughJsonSchema } from "../../../util/throughJsonSchema";
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "../../openApiUtils";
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils";
 
 
 export class OpenApi {
     private resourcesPathWithId;
-    private ajv;
 
     constructor(private api: Api, private pipelineSchema, private resourcesPath, private name: string, private pluralName: string) {
         // import pipeline schemas to openApi definitions
-        this.api.openApi.definitions[name] = remapRefs(jsonSchemaToOpenApiSchema(
-            _.cloneDeep(this.pipelineSchema.schema)), `#/definitions/${name}`) as any;
-        flattenSchemas(this.api.openApi.definitions as any);
+        this.api.openApi.components.schemas[name] = remapRefs(jsonSchemaToOpenApiSchema(
+            _.cloneDeep(this.pipelineSchema.schema)), `#/components/schemas/${name}`) as any;
+        flattenSchemas(this.api.openApi.components.schemas);
 
         // prepare open API metadata for each endpoint
         this.resourcesPathWithId = `${resourcesPath}/{id}`;
@@ -25,8 +23,8 @@ export class OpenApi {
     }
 
     addReadDoc() {
-        let readQueryParameters = schemaToSwaggerParameter(this.pipelineSchema.schema.definitions.readQuery || null, this.api.openApi);
-        let readOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(
+        let readQueryParameters = schemaToOpenApiParameter(this.pipelineSchema.schema.definitions.readQuery || null, this.api.openApi);
+        let readOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(
             this.pipelineSchema.schema.definitions.readOptions || null, this.api.openApi));
 
         // general get
@@ -48,17 +46,25 @@ export class OpenApi {
                                     }
                                 }
                             },
-                            { $ref: `#/definitions/${this.name}ReadData` }
+                            { $ref: `#/definitions/${this.name}ReadResults` }
                         ]
                     }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }
@@ -70,152 +76,226 @@ export class OpenApi {
             parameters: [{
                 in: "path",
                 name: "id",
-                type: "string",
+                schema: { type: "string" },
                 required: true
             }],
             responses: {
                 200: {
                     description: `${_.upperFirst(this.name)} corresponding to the provided id`,
-                    schema: { $ref: `#/definitions/${this.name}` }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: `#/components/schemas/${this.name}` }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 404: {
                     description: "Not Found",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }
     }
 
     addCreateDoc() {
-        let createOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(
+        let createOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(
             this.pipelineSchema.schema.definitions.createOptions || null, this.api.openApi));
 
         // post a new resource
         this.api.openApi.paths[this.resourcesPath]["post"] = {
             description: `Create a new ${_.upperFirst(this.name)}`,
             operationId: `add${_.upperFirst(this.name)}`,
-            parameters: removeDuplicatedParameters(createOptionsParameters).concat([{
-                in: "body",
-                name: this.name,
+            parameters: removeDuplicatedParameters(createOptionsParameters),
+            requestBody: {
                 description: `The ${_.upperFirst(this.name)} to be created.`,
-                schema: { $ref: `#/definitions/${this.name}CreateValues` }
-            }]),
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: `#/components/schemas/${this.name}CreateValues` }
+                    }
+                }
+            },
             responses: {
                 201: {
                     description: `${_.upperFirst(this.name)} created`,
-                    schema: { $ref: `#/definitions/${this.name}` }
+                    content: {
+                        "application/json": {
+                            schema: {
+                                $ref: `#/components/schemas/${this.name}`
+                            }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 409: {
                     description: "Conflict",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }
     }
 
     addPatchDoc() {
-        let patchQueryParameters = schemaToSwaggerParameter(this.pipelineSchema.schema.definitions.patchQuery || null, this.api.openApi)
-        let patchOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(
+        let patchQueryParameters = schemaToOpenApiParameter(this.pipelineSchema.schema.definitions.patchQuery || null, this.api.openApi)
+        let patchOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(
             this.pipelineSchema.schema.definitions.patchOptions || null, this.api.openApi));
 
         // patch by id
         this.api.openApi.paths[this.resourcesPathWithId]["patch"] = {
             description: `Patch a ${_.upperFirst(this.name)} using its id`,
             operationId: `patch${_.upperFirst(this.name)}`,
-            parameters: removeDuplicatedParameters(patchOptionsParameters).concat([
-                {
-                    in: "body",
-                    name: this.name,
-                    description: `The patch of ${_.upperFirst(this.name)}.`,
-                    schema: { $ref: `#/definitions/${this.name}PatchValues` }
-                }, {
-                    in: "path",
-                    name: "id",
-                    type: "string",
-                    required: true
+            parameters: removeDuplicatedParameters(patchOptionsParameters).concat([{
+                in: "path",
+                name: "id",
+                schema: { type: "string" },
+                required: true
+            }]),
+            requestBody: {
+                description: `The patch of ${_.upperFirst(this.name)}.`,
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: `#/components/schemas/${this.name}PatchValues` }
+                    }
                 }
-            ]),
+            },
             responses: {
                 200: {
                     description: `Updated ${_.upperFirst(this.name)}`,
-                    schema: { $ref: `#/definitions/${this.name}` }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: `#/components/schemas/${this.name}` }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 404: {
                     description: "Not Found",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }
     }
 
     addUpdateDoc() {
-        let updateOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(
+        let updateOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(
             this.pipelineSchema.schema.definitions.updateOptions || null, this.api.openApi));
 
         // put by id
         this.api.openApi.paths[this.resourcesPathWithId]["put"] = {
             description: `Put a ${_.upperFirst(this.name)} using its id`,
             operationId: `put${_.upperFirst(this.name)}`,
-            parameters: removeDuplicatedParameters(updateOptionsParameters).concat([
-                {
-                    in: "body",
-                    name: this.name,
-                    description: `The ${_.upperFirst(this.name)} to be updated.`,
-                    schema: { $ref: `#/definitions/${this.name}UpdateValues` }
-                }, {
-                    in: "path",
-                    name: "id",
-                    type: "string",
-                    required: true
+            parameters: removeDuplicatedParameters(updateOptionsParameters).concat([{
+                in: "path",
+                name: "id",
+                schema: { type: "string" },
+                required: true
+            }]),
+            requestBody: {
+                description: `The ${_.upperFirst(this.name)} to be updated.`,
+                required: true,
+                content: {
+                    "application/json": {
+                        schema: { $ref: `#/components/schemas/${this.name}UpdateValues` }
+                    }
                 }
-            ]),
+            },
             responses: {
                 200: {
                     description: `Updated ${_.upperFirst(this.name)}`,
-                    schema: { $ref: `#/definitions/${this.name}` }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: `#/components/schemas/${this.name}` }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 404: {
                     description: "Not Found",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }
     }
 
     addDeleteDoc() {
-        let deleteOptionsParameters = this.api.filterInternalParameters(schemaToSwaggerParameter(
+        let deleteOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(
             this.pipelineSchema.schema.definitions.deleteOptions || null, this.api.openApi));
         // delete by id
         this.api.openApi.paths[this.resourcesPathWithId]["delete"] = {
@@ -225,26 +305,42 @@ export class OpenApi {
                 {
                     in: "path",
                     name: "id",
-                    type: "string",
+                    schema: { type: "string" },
                     required: true
                 }
             ]),
             responses: {
                 200: {
                     description: `Deleted ${_.upperFirst(this.name)}`,
-                    schema: { $ref: `#/definitions/${this.name}` }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: `#/components/schemas/${this.name}` }
+                        }
+                    }
                 },
                 400: {
                     description: "Bad request",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 404: {
                     description: "Not Found",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 },
                 default: {
                     description: "Unexpected error",
-                    schema: { $ref: '#/definitions/Error' }
+                    content: {
+                        "application/json": {
+                            schema: { $ref: '#/components/schemas/Error' }
+                        }
+                    }
                 }
             }
         }

@@ -1,17 +1,16 @@
 import * as Ajv from "ajv";
-import * as Swagger from 'swagger-schema-official';
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import * as ExpressGraphQL from 'express-graphql'
 import * as graphql from "graphql"
-import { JSONSchema4 } from "json-schema"
 import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToSwaggerParameter } from "../../openApiUtils"
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
+import { metaSchema } from "../../../openApi"
 
 export interface GraphQLOptions {
     /**
@@ -93,8 +92,7 @@ export class GraphQLTransport implements TransportInterface {
         let relations = pipeline.relations;
 
         // prepare Ajv filters
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
-        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
         ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
         let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
         let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
@@ -133,51 +131,53 @@ export class GraphQLTransport implements TransportInterface {
         });
 
         // add relations of this model as sub fields of the graphql schema
-        for (let relation of relations.list) {
-            let existingFieldsFunction = modelSchema.fields;
-            modelSchema.fields = ((relation, existingFieldsFunction) => () => {
-                // get the existing fields of the unerlying function
-                let existingFields = existingFieldsFunction();
-                // resolve the pipeline reference
-                let pipeline = typeof relation.pipeline === "function" ? relation.pipeline() : relation.pipeline
-                // find the model graphql type of this relation
-                let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
-                if (!relationType) {
-                    // if the relation type does not exist, this means the pipeline was never added to the api
-                    // we have to convert it on the fly
-                    let relationModelName = `${schemaName}${_.upperFirst(relation.name)}`;
-                    let relationGraphQLSchemas = jsonSchemaToGraphQL(pipeline.schemaBuilder.schema, relationModelName, this.api.isNotAnInternalOption);
-                    relationType = {
-                        schema: relationGraphQLSchemas[relationModelName].schema,
-                        pipeline: pipeline
-                    }
-                }
-                // add the field for this relation
-                if (relation.type === "one") {
-                    existingFields[relation.name] = {
-                        type: relationType.schema,
-                        resolve: async (entity) => {
-                            if (entity[relation.name]) {
-                                return entity[relation.name]
-                            }
-                            let data = await relations.fetchRelationForResource(relation, entity)
-                            return data[0];
+        if (relations) {
+            for (let relation of relations.list) {
+                let existingFieldsFunction = modelSchema.fields;
+                modelSchema.fields = ((relation, existingFieldsFunction) => () => {
+                    // get the existing fields of the unerlying function
+                    let existingFields = existingFieldsFunction();
+                    // resolve the pipeline reference
+                    let pipeline = typeof relation.pipeline === "function" ? relation.pipeline() : relation.pipeline
+                    // find the model graphql type of this relation
+                    let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
+                    if (!relationType) {
+                        // if the relation type does not exist, this means the pipeline was never added to the api
+                        // we have to convert it on the fly
+                        let relationModelName = `${schemaName}${_.upperFirst(relation.name)}`;
+                        let relationGraphQLSchemas = jsonSchemaToGraphQL(pipeline.schemaBuilder.schema, relationModelName, this.api.isNotAnInternalOption);
+                        relationType = {
+                            schema: relationGraphQLSchemas[relationModelName].schema,
+                            pipeline: pipeline
                         }
                     }
-                } else {
-                    existingFields[relation.name] = {
-                        type: new graphql.GraphQLList(relationType.schema),
-                        resolve: async (entity) => {
-                            if (entity[relation.name]) {
-                                return entity[relation.name]
+                    // add the field for this relation
+                    if (relation.type === "one") {
+                        existingFields[relation.name] = {
+                            type: relationType.schema,
+                            resolve: async (entity) => {
+                                if (entity[relation.name]) {
+                                    return entity[relation.name]
+                                }
+                                let data = await relations.fetchRelationForResource(relation, entity)
+                                return data[0];
                             }
-                            let data = await relations.fetchRelationForResource(relation, entity)
-                            return data;
+                        }
+                    } else {
+                        existingFields[relation.name] = {
+                            type: new graphql.GraphQLList(relationType.schema),
+                            resolve: async (entity) => {
+                                if (entity[relation.name]) {
+                                    return entity[relation.name]
+                                }
+                                let data = await relations.fetchRelationForResource(relation, entity)
+                                return data;
+                            }
                         }
                     }
-                }
-                return existingFields
-            })(relation, existingFieldsFunction)
+                    return existingFields
+                })(relation, existingFieldsFunction)
+            }
         }
 
         // extend the readData schemas as it only contains extra fields

@@ -18,7 +18,7 @@ app.use(function (req, res, next) {
 
 // Declare our Api with its general information
 let api = new Api(app, {
-    "swagger": "2.0",
+    "openapi": "3.0.0",
     "info": {
         "version": "1.0.0",
         "title": "An API"

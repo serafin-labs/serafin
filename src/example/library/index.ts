@@ -21,34 +21,29 @@ async function main() {
     });
 
     let api = new Api(app, {
-        "swagger": "2.0",
+        "openapi": "3.0.0",
         "info": {
             "version": "1.0.0",
             "title": "Sample library Api",
             "description": "Sample library Api",
             "termsOfService": "None",
-            "contact": {
-                "name": "no one"
-            },
             "license": {
                 "name": "MIT",
                 "url": "http://github.com/gruntjs/grunt/blob/master/LICENSE-MIT"
             }
         },
-        "host": "127.0.0.1",
-        "schemes": [
-            "http"
-        ],
-        "consumes": [
-            "application/json"
-        ],
-        "produces": [
-            "application/json"
-        ],
+        "servers": [{
+            "url": "http://127.0.0.1",
+            "description": "development server"
+        }],
         paths: {}
     });
 
-    api.configure(new RestTransport());
+    api.configure(new RestTransport())
+        .configure(new GraphQLTransport({
+            graphiql: true,
+            schema: true
+        }));
 
     // Timeout to ease debugging
     setTimeout(async () => {

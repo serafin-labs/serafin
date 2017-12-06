@@ -1,7 +1,6 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
     "type": "object",
-    "id": "/Book",
+    "title": "Book",
     "description": "Book object.",
     "properties": {
         "id": {

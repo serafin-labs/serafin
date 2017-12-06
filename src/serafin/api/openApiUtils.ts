@@ -1,5 +1,4 @@
-import { JSONSchema4 } from "json-schema";
-import * as Swagger from 'swagger-schema-official';
+import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "../openApi"
 import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 
@@ -10,7 +9,7 @@ import { throughJsonSchema } from "../util/throughJsonSchema"
  * 
  * @param schema 
  */
-export function jsonSchemaToOpenApiSchema(schema: JSONSchema4) {
+export function jsonSchemaToOpenApiSchema(schema) {
     throughJsonSchema(schema, (s) => {
         delete s.id;
         delete s.$id;
@@ -22,8 +21,8 @@ export function jsonSchemaToOpenApiSchema(schema: JSONSchema4) {
 /**
  * Go through the whole schema and modify refs that points to a local schema and prepend the basepath.
  */
-export function remapRefs(schema: JSONSchema4, basePath: string) {
-    throughJsonSchema(schema, (s) => {
+export function remapRefs(schema: SchemaObject, basePath: string) {
+    throughJsonSchema(schema as any, (s) => {
         if (s.$ref && s.$ref.startsWith("#")) {
             s.$ref = `${basePath}${s.$ref.substr(1)}`
         }
@@ -38,7 +37,7 @@ export function remapRefs(schema: JSONSchema4, basePath: string) {
  * 
  * @param schema 
  */
-export function flattenSchemas(definitions: { [name: string]: JSONSchema4 }) {
+export function flattenSchemas(definitions: { [name: string]: SchemaObject }) {
     // determine schemas that needs to be moved
     let definitionsToMove = []
     for (let name in definitions) {
@@ -50,8 +49,8 @@ export function flattenSchemas(definitions: { [name: string]: JSONSchema4 }) {
                 definitionsToMove.push([newSchemaName, schema.definitions[subSchemaName]])
 
                 // remap refs to work with the futur position of this schema
-                let originalPath = `#/definitions/${name}/definitions/${subSchemaName}`;
-                let newPath = `#/definitions/${newSchemaName}`
+                let originalPath = `#/components/schemas/${name}/definitions/${subSchemaName}`;
+                let newPath = `#/components/schemas/${newSchemaName}`
                 throughJsonSchema(_.values(definitions), s => {
                     if (s.$ref && s.$ref === originalPath) {
                         s.$ref = newPath
@@ -83,63 +82,48 @@ export function flattenSchemas(definitions: { [name: string]: JSONSchema4 }) {
  * @param schema 
  * @param definitions 
  */
-export function schemaToSwaggerParameter(schema: JSONSchema4, spec: Swagger.Spec): Swagger.Parameter[] {
+export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObject): ParameterObject[] {
     if (schema && schema.$ref && schema.$ref.startsWith("#")) {
         // the schema is a reference. Let's try to locate the schema
-        return schemaToSwaggerParameter(jsonpointer.get(spec, schema.$ref.substr(1)), spec)
+        return schemaToOpenApiParameter(jsonpointer.get(spec, schema.$ref.substr(1)), spec)
     }
     if (schema && schema.type === "object") {
         let data = []
         for (let property in schema.properties) {
+            let propertySchemaObject: SchemaObject
             let propertySchema = schema.properties[property]
-            if (["string", "number", "boolean", "integer"].indexOf(propertySchema.type as string) !== -1) {
-                // we have a primitive type
-                let parameter: Swagger.Parameter = {
+            if (propertySchema.hasOwnProperty("$ref") && (propertySchema as ReferenceObject).$ref.startsWith("#")) {
+                let propertySchemaReference = propertySchema as ReferenceObject
+                propertySchemaObject = jsonpointer.get(spec, propertySchemaReference.$ref.substr(1))
+            } else {
+                propertySchemaObject = propertySchema as SchemaObject
+            }
+            if (propertySchemaObject.type) {
+                let parameter: ParameterObject = {
                     in: "query",
                     name: property,
-                    type: propertySchema.type as any,
-                    description: propertySchema.description,
+                    schema: propertySchemaObject,
+                    description: propertySchemaObject.description,
                     required: schema.required && schema.required.indexOf(property) !== -1,
 
                 }
-                if (propertySchema.minimum) {
-                    parameter.minimum = propertySchema.minimum
+                if (propertySchemaObject.type === 'object') {
+                    parameter.style = "deepObject"
                 }
-                if (propertySchema.maximum) {
-                    parameter.maximum = propertySchema.maximum
-                }
-                if (propertySchema.default) {
-                    parameter.default = propertySchema.default
-                }
-                data.push(parameter)
-            }
-            if (propertySchema.type === "array" && ["string", "number", "boolean", "integer"].indexOf(propertySchema.items["type"] as string) !== -1) {
-                // if the array contains a primitive type
-                let parameter: Swagger.Parameter = {
-                    in: "query",
-                    name: property,
-                    type: "array",
-                    description: propertySchema.description,
-                    required: schema.required && schema.required.indexOf(property) !== -1,
-                    collectionFormat: "multi",
-                    items: {
-                        type: propertySchema.items["type"] as any
-                    }
-                }
-                if (propertySchema.default) {
-                    parameter.default = propertySchema.default
+                if (propertySchemaObject.type === 'array') {
+                    parameter.style = "form"
                 }
                 data.push(parameter)
             }
         }
         if (schema.oneOf) {
-            data = data.concat(schema.oneOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.oneOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.anyOf) {
-            data = data.concat(schema.anyOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.anyOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.allOf) {
-            data = data.concat(schema.allOf.map(subSchema => schemaToSwaggerParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.allOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         return data;
     }
@@ -151,9 +135,9 @@ export function schemaToSwaggerParameter(schema: JSONSchema4, spec: Swagger.Spec
  * 
  * @param parameters 
  */
-export function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swagger.Parameter[] {
+export function removeDuplicatedParameters(parameters: ParameterObject[]): ParameterObject[] {
     // filter duplicated params (in case allOf, oneOf or anyOf contains multiple schemas with the same property)
-    return parameters.filter((value: Swagger.Parameter, index, array) => {
+    return parameters.filter((value: ParameterObject, index, array) => {
         for (var i = 0; i < index; ++i) {
             if (array[i].name === value.name) {
                 return false
@@ -168,7 +152,7 @@ export function removeDuplicatedParameters(parameters: Swagger.Parameter[]): Swa
  * 
  * @param parameters 
  */
-export function pathParameters(parameters: Swagger.Parameter[], inPath: string[]): Swagger.Parameter[] {
+export function pathParameters(parameters: ParameterObject[], inPath: string[]): ParameterObject[] {
     parameters.forEach(parameter => {
         if (inPath.indexOf(parameter.name) !== -1) {
             parameter.in = "path"

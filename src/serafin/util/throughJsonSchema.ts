@@ -1,5 +1,5 @@
 import * as _ from "lodash"
-import { JSONSchema4 } from "json-schema"
+import { JSONSchema } from "../openApi"
 
 /**
  * Go through the given schema and apply the given action to all the schema element.
@@ -7,7 +7,7 @@ import { JSONSchema4 } from "json-schema"
  * @param schema 
  * @param action 
  */
-export function throughJsonSchema(schema: JSONSchema4 | JSONSchema4[], action: (schema: JSONSchema4) => void) {
+export function throughJsonSchema(schema: JSONSchema | JSONSchema[], action: (schema: JSONSchema) => void) {
     if (Array.isArray(schema)) {
         schema.forEach((s) => {
             throughJsonSchema(s, action)
@@ -39,19 +39,11 @@ export function throughJsonSchema(schema: JSONSchema4 | JSONSchema4[], action: (
         if (schema.items) {
             throughJsonSchema(schema.items, action)
         }
-        if (schema.patternProperties) {
-            for (let property in schema.patternProperties) {
-                throughJsonSchema(schema.patternProperties[property], action)
-            }
-        }
         if (schema.not) {
             throughJsonSchema(schema.not, action)
         }
         if ("additionalProperties" in schema && typeof schema.additionalProperties !== "boolean") {
             throughJsonSchema(schema.additionalProperties, action)
-        }
-        if ("additionalItems" in schema && typeof schema.additionalItems !== "boolean") {
-            throughJsonSchema(schema.additionalItems, action)
         }
     }
     return schema

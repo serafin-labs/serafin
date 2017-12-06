@@ -2,7 +2,6 @@ import * as _ from 'lodash'
 import { PipelineSchemaBuilderAbstract } from "./Abstract"
 import { PipelineSchemaBuilderProperties } from './Properties'
 import { PipelineAbstract } from '../Abstract'
-import { JSONSchema4 } from "json-schema"
 import { PipelineSchemaBuilderModel } from './Model';
 import { ResourceIdentityInterface } from './ResourceInterfaces';
 
