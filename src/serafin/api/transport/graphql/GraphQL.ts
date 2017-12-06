@@ -10,6 +10,7 @@ import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
+import { metaSchema } from "../../../openApi"
 
 export interface GraphQLOptions {
     /**
@@ -91,8 +92,7 @@ export class GraphQLTransport implements TransportInterface {
         let relations = pipeline.relations;
 
         // prepare Ajv filters
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
-        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
         ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
         let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
         let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });

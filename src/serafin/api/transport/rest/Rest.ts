@@ -6,6 +6,7 @@ import { JSONSchema } from "../../../openApi"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
+import { metaSchema } from "../../../openApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { JsonHal } from './JsonHal';
@@ -76,8 +77,7 @@ export class RestTransport implements TransportInterface {
         this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.deleteQuery, pipelineSchemaBuilder.schema.definitions.deleteOptions);
 
         // prepare Ajv filters
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true });
-        ajv.addMetaSchema(require('ajv/lib/refs/json-schema-draft-04.json'));
+        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
         ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
 
         // create the routes for this endpoint

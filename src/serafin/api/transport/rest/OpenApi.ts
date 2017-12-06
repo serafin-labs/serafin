@@ -9,7 +9,6 @@ import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, r
 
 export class OpenApi {
     private resourcesPathWithId;
-    private ajv;
 
     constructor(private api: Api, private pipelineSchema, private resourcesPath, private name: string, private pluralName: string) {
         // import pipeline schemas to openApi definitions
