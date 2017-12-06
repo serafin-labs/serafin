@@ -310,7 +310,7 @@ export class RestTransport implements TransportInterface {
 
     private testOptionsAndQueryConflict(optionsSchema: JSONSchema, querySchema: JSONSchema): void {
         if (optionsSchema && querySchema) {
-            let intersection = _.intersection(Object.keys(optionsSchema.properties), Object.keys(querySchema.properties));
+            let intersection = _.intersection(Object.keys(optionsSchema.properties || {}), Object.keys(querySchema.properties || {}));
             if (intersection.length > 0) {
                 throw serafinError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
                     { conflict: intersection, optionsSchema: optionsSchema, querySchema: querySchema });
