@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "id": "/Pet",
+    "title": "Pet",
     "description": "Schema of a Pet object.",
     "properties": {
         "id": {

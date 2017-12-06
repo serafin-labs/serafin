@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "id": "/Book",
+    "title": "Book",
     "description": "Book object.",
     "properties": {
         "id": {

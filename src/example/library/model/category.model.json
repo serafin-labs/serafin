@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "id": "/Category",
+    "title": "Category",
     "description": "Category object.",
     "properties": {
         "id": {

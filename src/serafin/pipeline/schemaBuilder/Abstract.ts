@@ -18,7 +18,7 @@ export abstract class PipelineSchemaBuilderAbstract {
     protected id: string
 
     constructor(protected schemaObject: JSONSchema, id?: string) {
-        this.id = id || schemaObject.id;
+        this.id = id || schemaObject.$id;
         this.schemaObject = schemaObject;
         if (schemaObject.properties) {
             for (var key in schemaObject.properties) {
@@ -54,7 +54,7 @@ export abstract class PipelineSchemaBuilderAbstract {
      * @param id An optional id that represents the URI of the schema 
      */
     addRef(refSchemaObject: JSONSchema, name: string, id?: string): this {
-        var refId = id || refSchemaObject.id
+        var refId = id || refSchemaObject.$id
         if (!refId) {
             throw new Error(`Schema Error: Schemas added as "reference" must have an 'id' provided.`)
         }
@@ -63,7 +63,7 @@ export abstract class PipelineSchemaBuilderAbstract {
         }
         this.schemaObject.definitions = this.schemaObject.definitions || {};
         this.schemaObject.definitions[name] = refSchemaObject;
-        delete refSchemaObject.id;
+        delete refSchemaObject.$id;
         this.refs.push({ id: refId, name: name })
         throughJsonSchema(this.schemaObject, (s) => {
             if (s.$ref) {

@@ -101,7 +101,7 @@ export const metaSchema = {
         "Schema": {
             "type": "object",
             "properties": {
-                "id": {
+                "$id": {
                     "type": "string",
                     "format": "uri"
                 },

@@ -1,6 +1,6 @@
 {
     "type": "object",
-    "id": "/Author",
+    "title": "Author",
     "description": "Author object.",
     "properties": {
         "id": {
