@@ -68,13 +68,13 @@ app.use(bodyParser.json());
 
 // Declare our Api with its general information
 let api = new Api(app, {
-        "swagger": "2.0",
-        "info": {
-            "version": "1.0.0",
-            "title": "An API"
-        },
-        paths: {}
-    });
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "An API"
+    },
+    paths: {}
+});
 api.configure(new RestTransport());
 
 // Declare a Schema for our "entity"
