@@ -1,6 +1,6 @@
 # Serafin
 
-**Serafin** is an *API framework* designed to quickly set up a robust **self-descriptive REST API**, based on a functional approach, and written in *nodeJS/Typescript*.
+**Serafin** is an *API framework* designed to quickly set up a robust **self-descriptive REST API** written in *nodeJS/Typescript*.
 
 It is based on **Open API 3**, **JSON Schema** and **GraphQL** standards.
 
@@ -18,7 +18,7 @@ If you want to know more about Serafin concepts and features, go to our [overvie
 
 ## Getting started
 
-If you just want to get started and crush some code, go to our [walkthrough document](./misc/doc/WALKTHROUGH.md)
+If you just want to get started and write some code, go to our [walkthrough document](./misc/doc/WALKTHROUGH.md)
 
 ## What does it look like ?
 

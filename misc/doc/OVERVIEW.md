@@ -67,7 +67,7 @@ let petPipeline = (new PipelineSourceInMemory(petSchema))
     .pipe(new DefaultPetName("Snowball", 1))
 ```
 
-## relations
+## Relations
 
 You can define relations on a pipeline. It's basicaly a way to declare how your model relates to other entities. This info is then used by pipelines or transports to provide additional capabilities.
 
@@ -77,7 +77,7 @@ bookPipeline.addRelation({ name: 'author', pipeline: authorPipeline, query: { id
 
 ## Transports
 
-**Pipelines** are a programmatic way to access your data and business logic. **Transports**, on the other side, make pipelines available to the rest of the world.
+**Pipelines** are a programmatic way to access your data and business logic. **Transports**, on the other side, make pipelines available externally.
 
 The REST transport will create RESTfull endpoints for each one of your pipelines.
 
@@ -118,14 +118,14 @@ let newEntities = await pipeline.create([...]);
 ## Advanced typings
 
 The pipeline does not only combine behaviors. It also combines types.
-This means that the schema modifications and the options you've added endup beeing part of the type signature of the pipeline.
+This means that the schema modifications and the options you add endup beeing part of the type signature of the pipeline.
 
 ![](https://media.giphy.com/media/l2QE7DJSSgkg0I812/giphy.gif)
 
 
 ## Model Interfaces generation
 
-The biggest part of the model relies on JSON Schema. But **Typescript** needs **Interfaces** to provide good type checking. To avoid you creating those **Interfaces** by hand, we created a gulp task based on **json-schema-to-typescript**.
+The biggest part of the model relies on JSON Schema. But **Typescript** needs **Interfaces** to provide good type checking. To avoid you creating those **Interfaces** manually, we created a gulp task based on **json-schema-to-typescript**.
 
 Check out [serafin-framework/gulp-serafin-json-schema-to-typescript](https://github.com/serafin-framework/gulp-serafin-json-schema-to-typescript)
 
