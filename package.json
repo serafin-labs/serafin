@@ -37,7 +37,7 @@
     "verror": "^1.10.0"
   },
   "devDependencies": {
-    "@serafin/gulp-serafin-json-schema-to-typescript": "git+ssh://git@github.com/serafin-framework/gulp-serafin-json-schema-to-typescript.git",
+    "@serafin/gulp-serafin-json-schema-to-typescript": "^0.1.0",
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
     "@types/chai-spies": "0.0.0",
