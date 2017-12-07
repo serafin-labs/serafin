@@ -30,8 +30,7 @@ async function main() {
             "description": "Sample Petstore Api",
             "termsOfService": "None",
             "license": {
-                "name": "MIT",
-                "url": "http://github.com/gruntjs/grunt/blob/master/LICENSE-MIT"
+                "name": "MIT"
             }
         },
         "servers": [{
