@@ -3,7 +3,7 @@
 For this walkthrough we will develop a simple Pet Store API. 
 
 
-## prerequisites
+## Prerequisites
 
 The code is already available under `src/example/petstore` folder. If you clone this repo, you will be able to run it as a docker container directly.
 
@@ -110,7 +110,7 @@ So let's create a `pet.model.json`.
     "additionalProperties": false
 }
 ```
-You can include in your schema additional `definitions`. Specifficaly `createValues`, `updateValues`, `patchValues`, `patchQuery`, `deleteQuery`, `readQuery` are special. If provided, they are automatically taken in account for validating the appropriate pipeline action. If not provided default values are used.
+You can include in your schema additional `definitions`. Specificaly `createValues`, `updateValues`, `patchValues`, `patchQuery`, `deleteQuery`, `readQuery` are special. If provided, they are automatically taken in account for validating the appropriate pipeline action. If not provided default values are used.
 
 Here we have two options:
 - use the `gulp-serafin-json-schema-to-typescript` gulp task to generate typescript interfaces for this schema.
@@ -197,7 +197,7 @@ let petPipeline = (new PipelineSourceInMemory(petSchema))
     .pipe(new DefaultPetName("Snowball", 1))
 ```
 
-Also, as you guessed it, a pipeline can be piped multiple times. It allows you to create tree like structures.
+Also a pipeline can be piped multiple times. It allows you to create tree like structures.
 
 ## Exposing the pipeline
 
