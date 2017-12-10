@@ -4,8 +4,8 @@ var gulpTasksModel = require('@serafin/gulp-serafin-json-schema-to-typescript').
 
 gulp.task('default', ['start']);
 gulp.task('dev', ['watch', 'watch-build-done', 'start']);
-gulp.task('watch', ['watch-typescript', 'watch-model-petstore', 'watch-model-library', 'watch-assets']);
-gulp.task('build', ['build-model-petstore', 'build-model-library', 'build-typescript', 'copy-assets']);
+gulp.task('watch', ['watch-typescript', 'watch-model-petstore', 'watch-model-library', 'watch-model-warehouse', 'watch-assets']);
+gulp.task('build', ['build-model-petstore', 'build-model-library', 'build-model-warehouse', 'build-typescript', 'copy-assets']);
 gulp.task('build-done', ['restart', 'test']);
 
 var main = process.env.MAIN || 'lib/example/petstore/index.js';
@@ -21,5 +21,8 @@ gulpTasksModel(gulp, __dirname + '/src/example/petstore/**/*.model.json', __dirn
     modelSchemaPath: "../../../serafin/pipeline"
 });
 gulpTasksModel(gulp, __dirname + '/src/example/library/**/*.model.json', __dirname + '/src/example/library/model', 'library', {
+    modelSchemaPath: "../../../serafin/pipeline"
+});
+gulpTasksModel(gulp, __dirname + '/src/example/warehouse/**/*.model.json', __dirname + '/src/example/warehouse/model', 'warehouse', {
     modelSchemaPath: "../../../serafin/pipeline"
 });
