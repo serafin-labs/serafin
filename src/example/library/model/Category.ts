@@ -11,39 +11,57 @@ export interface Category {
   id: string;
   name: string;
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "createValues".
+ */
 export interface CreateValues {
   id?: string;
   name: string;
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "updateValues".
+ */
 export interface UpdateValues {
   id?: string;
   name: string;
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "readQuery".
+ */
 export interface ReadQuery {
   /**
    * Category identifier
    */
-  id?: (string | string[]);
+  id?: string | string[];
   /**
    * Category name
    */
-  name?: (string | string[]);
+  name?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "patchQuery".
+ */
 export interface PatchQuery {
-  id: (string | string[]);
-  name?: (string | string[]);
+  id: string | string[];
+  name?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "patchValues".
+ */
 export interface PatchValues {
   name?: string;
 }
-
+/**
+ * This interface was referenced by `Category`'s JSON-Schema
+ * via the `definition` "deleteQuery".
+ */
 export interface DeleteQuery {
-  id: (string | string[]);
+  id: string | string[];
 }
 
 

@@ -12,47 +12,65 @@ export interface Author {
   firstName: string;
   lastName?: string;
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "createValues".
+ */
 export interface CreateValues {
   id?: string;
   firstName: string;
   lastName?: string;
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "updateValues".
+ */
 export interface UpdateValues {
   id?: string;
   firstName: string;
   lastName?: string;
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "readQuery".
+ */
 export interface ReadQuery {
   /**
    * Author identifier
    */
-  id?: (string | string[]);
+  id?: string | string[];
   /**
    * Author first name
    */
-  firstName?: (string | string[]);
+  firstName?: string | string[];
   /**
    * Author last name
    */
-  lastName?: (string | string[]);
+  lastName?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "patchQuery".
+ */
 export interface PatchQuery {
-  id: (string | string[]);
-  firstName?: (string | string[]);
-  lastName?: (string | string[]);
+  id: string | string[];
+  firstName?: string | string[];
+  lastName?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "patchValues".
+ */
 export interface PatchValues {
   firstName?: string;
   lastName?: string;
 }
-
+/**
+ * This interface was referenced by `Author`'s JSON-Schema
+ * via the `definition` "deleteQuery".
+ */
 export interface DeleteQuery {
-  id: (string | string[]);
+  id: string | string[];
 }
 
 

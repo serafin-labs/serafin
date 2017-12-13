@@ -35,10 +35,18 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchemaBuilder: PipelineSchemaBuilderModel<ResourceIdentityInterface> = null;
-    protected relationsSchema: PipelineRelations = null;
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
+
+    protected _relationsSchema: PipelineRelations = null;
+    protected get relationsSchema(): PipelineRelations {
+        if (!this._relationsSchema) {
+            let existingRelations = this.parent ? this.parent.relations : null;
+            this._relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations()
+        }
+        return this._relationsSchema
+    }
 
     constructor() {
         this.optionsSchema = _.cloneDeep(getOptionsSchemas(this));
@@ -53,9 +61,6 @@ export abstract class PipelineAbstract<
         } else {
             this.parent = pipeline
         }
-
-        let existingRelations = pipeline.relations;
-        this.relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations();
     }
 
     /**
