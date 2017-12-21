@@ -11,6 +11,7 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
 import { metaSchema } from "../openApi"
+import { QueryTemplate } from './QueryTemplate';
 
 /**
  * Abstract Class representing a pipeline.
@@ -35,7 +36,7 @@ export abstract class PipelineAbstract<
     DeleteOptions = {}> {
 
     protected modelSchemaBuilder: PipelineSchemaBuilderModel<ResourceIdentityInterface> = null;
-    protected relationsSchema: PipelineRelations = null;
+    protected pipelineRelations: PipelineRelations = null;
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
@@ -55,7 +56,7 @@ export abstract class PipelineAbstract<
         }
 
         let existingRelations = pipeline.relations;
-        this.relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations();
+        this.pipelineRelations = existingRelations ? existingRelations.clone(this) : new PipelineRelations(this);
     }
 
     /**
@@ -68,8 +69,8 @@ export abstract class PipelineAbstract<
     /**
      * Find the nearest relationsSchema definition
      */
-    protected findRelationsSchema() {
-        return this.relationsSchema || (this.parent ? this.parent.findRelationsSchema() : null)
+    protected findPipelineRelations() {
+        return this.pipelineRelations || (this.parent ? this.parent.findPipelineRelations() : null)
     }
 
     /**
@@ -103,11 +104,11 @@ export abstract class PipelineAbstract<
      * Get a list of relations for this pipeline
      */
     get relations(): PipelineRelations {
-        return this.findRelationsSchema();
+        return this.findPipelineRelations();
     }
 
-    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
-        this.relationsSchema.addRelation(relation, this);
+    public addRelation(name: string, pipeline: PipelineAbstract | (() => PipelineAbstract), query: object | QueryTemplate): this {
+        this.relations.add(name, pipeline, query);
         return this;
     }
 
@@ -235,6 +236,10 @@ export abstract class PipelineAbstract<
         // cast the pipeline and combine all interfaces
         var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
         return chainedPipeline;
+    }
+
+    do(resources: T[] = null): PipelineDo<T, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions> {
+        return new PipelineDo(this, resources);
     }
 
     /**

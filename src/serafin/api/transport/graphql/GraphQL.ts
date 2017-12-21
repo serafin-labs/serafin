@@ -159,7 +159,7 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchRelationForResource(relation, entity)
+                                let data = await relations.fetchForResource(relation, entity)
                                 return data[0];
                             }
                         }
@@ -170,7 +170,7 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchRelationForResource(relation, entity)
+                                let data = await relations.fetchForResource(relation, entity)
                                 return data;
                             }
                         }

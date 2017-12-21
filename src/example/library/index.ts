@@ -47,16 +47,25 @@ async function main() {
 
     // Timeout to ease debugging
     setTimeout(async () => {
+        let bookPipelineRef = null;
+
         let authorPipeline = (new PipelineSourceInMemory(authorSchema))
             .pipe(new Paginate())
-            .pipe(new Links());
+            .pipe(new Links())
+            .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
+            .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: '1' });
 
         let categoryPipeline = (new PipelineSourceInMemory(categorySchema))
             .pipe(new Links());
 
         let bookPipeline = (new PipelineSourceInMemory(bookSchema))
             .pipe(new Paginate())
-            .pipe(new Links());
+            .pipe(new Links())
+            .addRelation('author', authorPipeline, { id: ':authorId' })
+            .addRelation('category', categoryPipeline, { id: ':categoryIds' });
+
+        // Ref to preserve typings on bookPipeline...
+        bookPipelineRef = bookPipeline;
 
         await authorPipeline.create([
             { id: '1', firstName: 'Jules', lastName: 'Vernes' },
@@ -83,13 +92,7 @@ async function main() {
             { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categoryIds: ['5', '4', '2'] },
         ]);
 
-        bookPipeline = bookPipeline.addRelation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } })
-            .addRelation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } })
-        authorPipeline = authorPipeline.addRelation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } })
-            .addRelation({ name: 'adventureBooks', pipeline: bookPipeline, query: { authorId: ':id', categoryIds: '1' } });;
-
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
-
         console.log(await bookPipeline.read({}, { count: 5 }));
 
         api.use(bookPipeline, "book");
