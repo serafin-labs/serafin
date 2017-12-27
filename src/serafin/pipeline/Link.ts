@@ -18,8 +18,8 @@ export class Link {
         target['links'][name] = new Link(pipeline, query, options, type);
     }
 
-    public async read(): Promise<{ data: {}[] }> {
-        return await this.pipeline.read(this.query, this.options);
+    public read(): Promise<{ data: {}[] }> {
+        return this.pipeline.read(this.query, this.options);
     }
 
     toJSON(): object {

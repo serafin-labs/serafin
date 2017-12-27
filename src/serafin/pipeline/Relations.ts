@@ -73,30 +73,6 @@ export class PipelineRelations {
     }
 
     /**
-     * Fetch relation data on the given entities.
-     * /!\ this function modify 'resources'
-     * 
-     * @param relationName 
-     * @param resources 
-     */
-    async fetch(relationName: string, resources: any[]) {
-        let relation = _.find(this.list, r => r.name === relationName);
-        if (typeof relation.pipeline === "function") {
-            relation.pipeline = relation.pipeline()
-        }
-
-        if (!relation) {
-            throw validationError(`Relation ${relationName} does not exist.`)
-        }
-
-        if (relation.query instanceof QueryTemplate) {
-            for (let r of resources) {
-                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read((relation.query instanceof QueryTemplate) ? relation.query.hydrate(r) : relation.query)).data;
-            }
-        }
-    }
-
-    /**
      * Fetch the relation of the given resource and return the result directly
      * @param relation
      * @param resource
