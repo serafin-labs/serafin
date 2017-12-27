@@ -11,13 +11,6 @@
             "description": "Category name",
             "type": "string"
         },
-        "itemIds": {
-            "type": "array",
-            "description": "Category items",
-            "items": {
-                "type": "string"
-            }
-        },
         "parentCategory": {
             "type": "string"
         }

@@ -10,11 +10,20 @@
         "name": {
             "description": "Item name",
             "type": "string"
+        },
+        "price": {
+            "description": "Item price",
+            "type": "number"
+        },
+        "categoryId": {
+            "description": "Category id",
+            "type": "string"
         }
     },
     "required": [
         "id",
-        "name"
+        "name",
+        "price"
     ],
     "additionalProperties": false
 }

@@ -1,10 +1,12 @@
 import { fail } from 'assert';
+import * as _ from 'lodash';
 import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { categorySchema } from './model/Category';
 import { itemSchema } from './model/Item';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
+import { setTimeout } from 'timers';
 
 async function main() {
     // create an express app and add some basic middlewares
@@ -53,26 +55,58 @@ async function main() {
     api.use(categoryPipeline, "category", "categories");
     api.use(itemPipeline, "item");
 
-    await itemPipeline.create([
-        { id: "1", name: "Drywall screw" },
-        { id: "2", name: "Wood screw" },
-        { id: "3", name: "Desk screw" },
-        { id: "4", name: "Latch" },
-        { id: "5", name: "Shelf support" },
-        { id: "6", name: "Drywall anchor" },
-        { id: "7", name: "Wood anchor" },
-        { id: "8", name: "Saw" },
-        { id: "9", name: "Drill" }
-    ]);
-
     await categoryPipeline.create([
         { id: "1", name: "Hardware" },
         { id: "2", name: "Tools" },
-        { id: "3", name: "Screws", parentCategory: "2" },
-        { id: "4", name: "Furniture and cabinets", parentCategory: "2" },
-        { id: "5", name: "Anchors", parentCategory: "2" }
+        { id: "3", name: "Screws", parentCategory: "1" },
+        { id: "4", name: "Furniture and cabinets", parentCategory: "1" },
+        { id: "5", name: "Anchors", parentCategory: "1" }
     ]);
 
+    await itemPipeline.create([
+        { id: "1", name: "Drywall screw", price: 0.1, "categoryId": "3" },
+        { id: "2", name: "Wood screw", price: 0.1, "categoryId": "3" },
+        { id: "3", name: "Desk screw", price: 0.2, "categoryId": "3" },
+        { id: "4", name: "Latch", price: 3, "categoryId": "4" },
+        { id: "5", name: "Shelf support", price: 5, "categoryId": "4" },
+        { id: "6", name: "Drywall anchor", price: 0.2, "categoryId": "5" },
+        { id: "7", name: "Wood anchor", price: 0.1, "categoryId": "5" },
+        { id: "8", name: "Saw", price: 20, "categoryId": "2" },
+        { id: "9", name: "Drill", price: 50, "categoryId": "2" }
+    ]);
+
+    itemPipeline.addRelation('category', categoryPipeline, { id: ':categoryId' });
+    categoryPipeline.addRelation('subCategories', categoryPipeline, { parentId: ':id' });
+
+
+    setTimeout(async () => {
+
+        // 10% items price increase
+        await Promise.all(
+            _.map((await itemPipeline.read()).data, (item) =>
+                itemPipeline.patch({ id: item.id }, { price: (item.price * 110 / 100) }))
+        );
+        console.log(await itemPipeline.read());
+
+        let browseCategories = async (parentCategory: string = undefined, prefix: string = "") => {
+            return _.map((await categoryPipeline.read({ parentCategory: parentCategory })).data, async (category) => {
+                await Promise.all(_.map((await itemPipeline.read({ categoryId: category.id })).data, (item) => {
+                    console.log(`${prefix}${category.name}: ${item.name} ($${item.price})`);
+                }));
+                return await browseCategories(category.id, category.name + ">");
+            });
+        };
+        /*
+        let updatedItems = itemPipeline.do().read().patch((item) => item.price = (item.price * 110 / 100)).getData();
+        
+        let browseCategories2 =  async (parentCategory: string = undefined, prefix: string = "") => { 
+            let categoryResult = categoryPipeline.do().read({ parentCategory: undefined });
+            _.forEach(categoryResult.fetchLinks('item').getData(), (item) => {
+                console.log(`${prefix}${categoryResult.one().name}: ${item.one().name} ($${item.one().price})`);
+            });
+            return await browseCategories2(categoryResult.one().id, categoryResult.one().name + ">");
+        }*/
+    }, 1000);
 
     // start the server
     let server = app.listen(process.env.PORT || 80, (error: any) => {
