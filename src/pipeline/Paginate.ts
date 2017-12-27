@@ -1,4 +1,4 @@
-import { PipelineAbstract, option, description, result } from '../serafin/pipeline'
+import { PipelineAbstract, option, description, result, Link } from '../serafin/pipeline'
 import * as _ from 'lodash'
 
 @description("Provides pagination over the read results")
@@ -17,10 +17,18 @@ export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?
             if (options.offset) {
                 offset = options.offset;
             } else if ("page" in options && options.count) {
-                offset = (resources.data.length / options.count) * options.page;
+                offset = options.count * options.page;
             }
 
             if (options.count) {
+                if (offset + options.count < resources.data.length) {
+                    Link.assign(resources, 'next', this, query, { ...options, ...{ offset: offset + options.count } }, 'many');
+                }
+
+                if (offset - options.count >= 0) {
+                    Link.assign(resources, 'prev', this, query, { ...options, ...{ offset: Math.max(offset - options.count, 0) } }, 'many');
+                }
+
                 resources.data = resources.data.slice(offset, offset + options.count);
             }
         }

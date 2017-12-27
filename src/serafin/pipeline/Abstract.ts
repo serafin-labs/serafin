@@ -1,5 +1,6 @@
 import * as util from 'util';
 import * as _ from 'lodash';
+import * as uuid from 'uuid/v1';
 import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
 import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
@@ -11,6 +12,7 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
 import { metaSchema } from "../openApi"
+import { PipelineDo } from './Do';
 import { QueryTemplate } from './QueryTemplate';
 
 /**
@@ -40,9 +42,15 @@ export abstract class PipelineAbstract<
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
+    private pipelineUuid = null;
 
     constructor() {
         this.optionsSchema = _.cloneDeep(getOptionsSchemas(this));
+        this.pipelineUuid = uuid();
+    }
+
+    get uuid() {
+        return this.pipelineUuid;
     }
 
     /**
@@ -57,6 +65,7 @@ export abstract class PipelineAbstract<
 
         let existingRelations = pipeline.relations;
         this.pipelineRelations = existingRelations ? existingRelations.clone(this) : new PipelineRelations(this);
+        this.pipelineUuid = pipeline.uuid;
     }
 
     /**

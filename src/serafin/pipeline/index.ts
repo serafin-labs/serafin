@@ -10,3 +10,4 @@ export { PipelineRelationInterface, PipelineRelations } from "./Relations"
 // pipeline
 export { PipelineAbstract } from "./Abstract"
 export { PipelineSourceAbstract, Patch } from "./SourceAbstract"
+export { Link } from "./Link"

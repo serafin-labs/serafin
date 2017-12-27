@@ -11,6 +11,7 @@ import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
 import { metaSchema } from "../../../openApi"
+import { PipelineRelations } from "../../../pipeline/Relations";
 
 export interface GraphQLOptions {
     /**
@@ -159,7 +160,7 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchForResource(relation, entity)
+                                let data = await PipelineRelations.fetchForResource(relation, entity)
                                 return data[0];
                             }
                         }
@@ -170,7 +171,7 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchForResource(relation, entity)
+                                let data = await PipelineRelations.fetchForResource(relation, entity)
                                 return data;
                             }
                         }

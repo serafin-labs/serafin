@@ -9,7 +9,9 @@ import { OpenApi } from "./OpenApi"
 import { metaSchema } from "../../../openApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
-import { JsonHal } from './JsonHal';
+import { JsonHalLink } from './JsonHal';
+import { Link } from '../../../pipeline/Link';
+import { PipelineRelations } from '../../../pipeline/Relations';
 
 export interface RestOptions {
     /**
@@ -85,64 +87,47 @@ export class RestTransport implements TransportInterface {
             let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
             let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
 
-            // get many resources
-            router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter, readQueryFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
-                }
+            const handlerGet = (byId: boolean = false) => {
+                return ((req: express.Request, res: express.Response, next: (err?: any) => void) => {
 
-                // run the query
-                pipeline.read(pipelineParams.query, pipelineParams.options).then(wrapper => {
-                    if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
-                        let links = (new JsonHal(endpointPath, this.api, pipeline.relations)).links();
-                        wrapper["_links"] = links;
-                        if (wrapper.data) {
-                            wrapper.data = wrapper.data.map((result) => {
-                                if (result['id']) {
-                                    result['_links'] = (new JsonHal(endpointPath + `/${result['id']}`, this.api, pipeline.relations)).links(result);
-                                }
-                                return result;
-                            });
+                    let pipelineParams = null;
+                    try {
+                        if (byId === true) {
+                            pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter);
+                            pipelineParams.query = { id: req.params.id }
+                        } else {
+                            pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter, readQueryFilter);
                         }
+                    } catch (e) {
+                        return handleError(e, res, next);
                     }
 
-                    res.status(200).json(wrapper);
-                    res.end();
-                }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
-                });
-            })
+                    // run the query
+                    pipeline.read(pipelineParams.query, pipelineParams.options).then(wrapper => {
+                        if (byId === true && wrapper.data.length === 0) {
+                            throw notFoundError(`${name}:${req.params.id}`)
+                        }
+
+                        if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
+                            Link.setRendering(JsonHalLink(this.api));
+                            pipeline.relations.add('self', pipeline, { id: ':id' });
+                            pipeline.relations.fetchLinks(wrapper.data);
+                        } else {
+                            delete (wrapper['links']);
+                        }
+                        res.status(200).json(wrapper);
+                        res.end();
+                    }).catch(error => {
+                        handleError(Api.apiError(error, req), res, next)
+                    });
+                }).bind(this);
+            };
+
+            // get many resources
+            router.get("", handlerGet.call(this));
 
             // get a resource by its id
-            router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let id = req.params.id
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
-                }
-
-                // run the query
-                pipeline.read({
-                    id: id
-                }, pipelineParams.options).then(wrapper => {
-                    if (wrapper.data.length > 0) {
-                        if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
-                            wrapper.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.data[0]);
-                        }
-                        res.status(200).json(wrapper.data[0])
-                    } else {
-                        throw notFoundError(`${name}:${id}`)
-                    }
-                    res.end();
-                }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
-                });
-            })
+            router.get("/:id", handlerGet.call(this, true));
 
             openApi.addReadDoc();
         }

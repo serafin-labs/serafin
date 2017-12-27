@@ -2,6 +2,7 @@ import * as _ from 'lodash'
 import { PipelineAbstract } from "./Abstract"
 import { validationError } from "../error/Error"
 import { QueryTemplate } from './QueryTemplate';
+import { Link } from './Link';
 
 export interface PipelineRelationInterface {
     name: string
@@ -56,6 +57,21 @@ export class PipelineRelations {
         return this;
     }
 
+    fetchLinks(resources: any[] = []): this {
+        for (var relation of this.list) {
+            let pipeline = relation.pipeline;
+            if (typeof pipeline === "function") {
+                pipeline = pipeline();
+            }
+
+            for (let r of resources) {
+                Link.assign(r, relation.name, pipeline, (relation.query instanceof QueryTemplate) ? relation.query.hydrate(r) : relation.query, {}, relation.type);
+            }
+        }
+
+        return this;
+    }
+
     /**
      * Fetch relation data on the given entities.
      * /!\ this function modify 'resources'
@@ -75,11 +91,7 @@ export class PipelineRelations {
 
         if (relation.query instanceof QueryTemplate) {
             for (let r of resources) {
-                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(r))).data;
-            }
-        } else {
-            for (let r of resources) {
-                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query)).data;
+                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read((relation.query instanceof QueryTemplate) ? relation.query.hydrate(r) : relation.query)).data;
             }
         }
     }
@@ -89,7 +101,7 @@ export class PipelineRelations {
      * @param relation
      * @param resource
      */
-    async fetchForResource(relation: PipelineRelationInterface, resource: any): Promise<any> {
+    static async fetchForResource(relation: PipelineRelationInterface, resource: any): Promise<any> {
         if (typeof relation.pipeline === "function") {
             relation.pipeline = relation.pipeline()
         }
