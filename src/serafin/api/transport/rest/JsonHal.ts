@@ -5,7 +5,7 @@ import { Api } from '../../../../index';
 import { QueryTemplate } from '../../../pipeline/QueryTemplate';
 import { PipelineAbstract } from '../../../pipeline/Abstract';
 
-export function JsonHalLink(api): (pipeline, query, options, type) => object {
+export function jsonHalLink(api): (pipeline, query, options, type) => object {
     return (pipeline, query, options, type) => {
         let relationPath = _.findKey(api.pipelineByName, (apiPipeline) => apiPipeline.uuid === pipeline.uuid);
         if (relationPath === undefined) {
@@ -13,6 +13,21 @@ export function JsonHalLink(api): (pipeline, query, options, type) => object {
         }
 
         return { href: url(relationPath, query, options, type) };
+    }
+}
+
+export function jsonHalRenameLinks(obj) {
+    for (var p in obj) {
+        if (typeof obj[p] == 'object') {
+            if (p === 'links') {
+                if (Object.keys(obj[p]).length > 0) {
+                    obj['_links'] = obj['links'];
+                }
+                delete obj['links'];
+            } else {
+                jsonHalRenameLinks(obj[p]);
+            }
+        }
     }
 }
 

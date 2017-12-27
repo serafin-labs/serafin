@@ -9,7 +9,7 @@ import { OpenApi } from "./OpenApi"
 import { metaSchema } from "../../../openApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
-import { JsonHalLink } from './JsonHal';
+import { jsonHalLink, jsonHalRenameLinks } from './JsonHal';
 import { Link } from '../../../pipeline/Link';
 import { PipelineRelations } from '../../../pipeline/Relations';
 
@@ -109,9 +109,10 @@ export class RestTransport implements TransportInterface {
                         }
 
                         if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
-                            Link.setRendering(JsonHalLink(this.api));
+                            Link.setRendering(jsonHalLink(this.api));
                             pipeline.relations.add('self', pipeline, { id: ':id' });
                             pipeline.relations.fetchLinks(wrapper.data);
+                            jsonHalRenameLinks(wrapper);
                         } else {
                             delete (wrapper['links']);
                         }
