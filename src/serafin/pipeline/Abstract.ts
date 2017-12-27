@@ -41,7 +41,7 @@ export abstract class PipelineAbstract<
     protected optionsSchema: {} = null;
     private validationFunctions = null;
     private optionsMapping = {};
-    private pipelineUuid = null;
+    private pipelineUuid = uuid();
 
     protected _pipelineRelations: PipelineRelations = null;
     protected get pipelineRelations(): PipelineRelations {
@@ -54,11 +54,10 @@ export abstract class PipelineAbstract<
 
     constructor() {
         this.optionsSchema = _.cloneDeep(getOptionsSchemas(this));
-        this.pipelineUuid = uuid();
     }
 
     get uuid() {
-        return this.pipelineUuid;
+        return (this.parent) ? this.parent.uuid : this.pipelineUuid;
     }
 
     /**
