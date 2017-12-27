@@ -38,15 +38,17 @@
     "verror": "^1.10.0"
   },
   "devDependencies": {
-    "@serafin/gulp-serafin-json-schema-to-typescript": "^0.1.0",
+    "@serafin/gulp-serafin-json-schema-to-typescript": "^0.2.0",
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
+    "@types/chai-http": "^3.0.3",
     "@types/chai-spies": "0.0.0",
     "@types/lodash": "^4.14.44",
     "@types/mocha": "^2.2.33",
     "@types/uuid": "^3.4.3",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
+    "chai-http": "^3.0.0",
     "chai-spies": "^0.7.1",
     "del": "^2.2.0",
     "gulp": "^3.9.1",

@@ -37,7 +37,7 @@ export class PipelineSchemaBuilder<T extends ResourceIdentityInterface> extends 
         for (let method in optionsSchemas) {
             // clone the options schema to avoid side effects
             let optionsSchema = _.cloneDeep(optionsSchemas[method].schema);
-            // seal additional properties on this options schema
+            // change additional properties on this options schema
             optionsSchema.additionalProperties = true;
             // add it to the pipeline schema
             schema.definitions[`${method}Options`] = optionsSchema

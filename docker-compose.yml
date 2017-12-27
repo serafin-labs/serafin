@@ -1,11 +1,10 @@
 version: "2"
 services:
   app:
-    image: serafinframework/nodejs:dev
+    image: serafinlabs/nodejs:8-dev
     command: "npm run-script dev"
     ports:
       - "80:80"
-      - "5858:5858"
       - "9229:9229"
     volumes:
       - .:/srv

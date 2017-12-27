@@ -14,7 +14,10 @@ export interface Book {
   authorId?: string;
   categoryIds?: string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "createValues".
+ */
 export interface CreateValues {
   id?: string;
   title: string;
@@ -22,7 +25,10 @@ export interface CreateValues {
   authorId?: string;
   categoryIds?: string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "updateValues".
+ */
 export interface UpdateValues {
   id?: string;
   title: string;
@@ -30,47 +36,59 @@ export interface UpdateValues {
   authorId?: string;
   categoryIds?: string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "readQuery".
+ */
 export interface ReadQuery {
   /**
    * Book identifier
    */
-  id?: (string | string[]);
+  id?: string | string[];
   /**
    * Book title
    */
-  title?: (string | string[]);
+  title?: string | string[];
   /**
    * Book summary
    */
-  summary?: (string | string[]);
+  summary?: string | string[];
   /**
    * Let's consider there's only one author
    */
-  authorId?: (string | string[]);
+  authorId?: string | string[];
   /**
    * Book categories
    */
-  categoryIds?: (string | string[]);
+  categoryIds?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "patchQuery".
+ */
 export interface PatchQuery {
-  id: (string | string[]);
-  title?: (string | string[]);
-  summary?: (string | string[]);
-  authorId?: (string | string[]);
-  categoryIds?: (string | string[]);
+  id: string | string[];
+  title?: string | string[];
+  summary?: string | string[];
+  authorId?: string | string[];
+  categoryIds?: string | string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "patchValues".
+ */
 export interface PatchValues {
   title?: string;
   summary?: string;
   authorId?: string;
   categoryIds?: string[];
 }
-
+/**
+ * This interface was referenced by `Book`'s JSON-Schema
+ * via the `definition` "deleteQuery".
+ */
 export interface DeleteQuery {
-  id: (string | string[]);
+  id: string | string[];
 }
 
 

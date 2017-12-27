@@ -5,6 +5,14 @@
 import { PipelineSchemaBuilderModel } from "../../../serafin/pipeline";
 
 /**
+ * Represents fields that can be used to update an existing Pet.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "updateValues".
+ */
+export type UpdateValues = CreateValues;
+
+/**
  * Schema of a Pet object.
  */
 export interface Pet {
@@ -19,7 +27,7 @@ export interface Pet {
   /**
    * The category of the pet.
    */
-  category: ("cat" | "dog" | "tiger");
+  category: "cat" | "dog" | "tiger";
   /**
    * A list of tags to ease classification.
    */
@@ -29,9 +37,11 @@ export interface Pet {
    */
   photoUrls?: string[];
 }
-
 /**
  * Represents fields that can be used to create a new Pet.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "createValues".
  */
 export interface CreateValues {
   /**
@@ -41,7 +51,7 @@ export interface CreateValues {
   /**
    * The category of the pet.
    */
-  category: ("cat" | "dog" | "tiger");
+  category: "cat" | "dog" | "tiger";
   /**
    * A list of tags to ease classification.
    */
@@ -51,36 +61,11 @@ export interface CreateValues {
    */
   photoUrls?: string[];
 }
-
-/**
- * Represents fields that can be used to update an existing Pet.
- */
-export type UpdateValues = CreateValues;
-
-/**
- * Represents fields that can be used to create a new Pet.
- */
-export interface CreateValues {
-  /**
-   * The name of the Pet. If not provided the API generate one automatically.
-   */
-  name: string;
-  /**
-   * The category of the pet.
-   */
-  category: ("cat" | "dog" | "tiger");
-  /**
-   * A list of tags to ease classification.
-   */
-  tags?: string[];
-  /**
-   * Urls to photos of this Pet.
-   */
-  photoUrls?: string[];
-}
-
 /**
  * Represents fields that can be used to patch an existing Pet.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "patchValues".
  */
 export interface PatchValues {
   /**
@@ -90,7 +75,7 @@ export interface PatchValues {
   /**
    * The category of the pet.
    */
-  category?: ("cat" | "dog" | "tiger");
+  category?: "cat" | "dog" | "tiger";
   /**
    * A list of tags to ease classification.
    */
@@ -100,9 +85,11 @@ export interface PatchValues {
    */
   photoUrls?: string[];
 }
-
 /**
  * Represents fields that can be used to select Pets to patch.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "patchQuery".
  */
 export interface PatchQuery {
   /**
@@ -114,9 +101,11 @@ export interface PatchQuery {
    */
   name?: string;
 }
-
 /**
  * Represents fields that can be used to select Pets to delete.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "deleteQuery".
  */
 export interface DeleteQuery {
   /**
@@ -124,9 +113,11 @@ export interface DeleteQuery {
    */
   id: string;
 }
-
 /**
  * Represents fields that can be used to find Pets.
+ *
+ * This interface was referenced by `Pet`'s JSON-Schema
+ * via the `definition` "readQuery".
  */
 export interface ReadQuery {
   /**
@@ -140,7 +131,7 @@ export interface ReadQuery {
   /**
    * The category of the pet.
    */
-  category?: ("cat" | "dog" | "tiger");
+  category?: "cat" | "dog" | "tiger";
   /**
    * A list of tags to ease classification.
    */

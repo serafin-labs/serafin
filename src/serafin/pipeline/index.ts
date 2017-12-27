@@ -6,6 +6,7 @@ export { result } from "./decorator/Result"
 // schema
 export { PipelineSchemaBuilderModel } from "./schemaBuilder/Model"
 export { PipelineRelationInterface, PipelineRelations } from "./Relations"
+export { PipelineSchemaBuilder } from "./schemaBuilder/schemabuilder"
 
 // pipeline
 export { PipelineAbstract } from "./Abstract"
