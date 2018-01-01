@@ -1,0 +1,21 @@
+{
+    "name": "@serafin/open-api",
+    "version": "3.0.0",
+    "description": "Open Api 3 typescript types definition and metaschema for the json schema part",
+    "contributors": [
+        {
+            "name": "Sébastien de Saint Florent"
+        },
+        {
+            "name": "Nicolas Degardin"
+        }
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/serafin-framework/open-api"
+    },
+    "dependencies": {},
+    "devDependencies": {},
+    "scripts": {}
+}
