@@ -13,7 +13,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/serafin-framework/open-api"
+        "url": "https://github.com/serafin-labs/open-api"
     },
     "dependencies": {},
     "devDependencies": {},
