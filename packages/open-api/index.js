@@ -1,4 +1,4 @@
-exports.metaSchemaUri = "http://serafin-framework.com/schema";
+exports.metaSchemaUri = "http://serafin-labs.com/schema";
 
 exports.metaSchema = {
     "$id": exports.metaSchemaUri,
