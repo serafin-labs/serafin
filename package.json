@@ -16,6 +16,8 @@
     "url": "https://github.com/serafin-framework/serafin"
   },
   "dependencies": {
+    "@serafin/open-api": "git+ssh://git@github.com/serafin-labs/open-api.git",
+    "@serafin/schema-builder": "git+ssh://git@github.com/serafin-labs/schema-builder.git",
     "@types/ajv": "^1.0.0",
     "@types/body-parser": "^1.16.7",
     "@types/compression": "0.0.34",
@@ -31,6 +33,7 @@
     "graphql": "^0.11.7",
     "graphql-type-json": "^0.1.4",
     "json-schema-merge-allof": "^0.6.0",
+    "json-schema-ref-parser": "^4.0.4",
     "jsonpointer": "^4.0.1",
     "node-uuid": "^1.4.8",
     "util": "^0.10.3",

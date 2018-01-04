@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import * as chai from "chai";
-import { PipelineAbstract, PipelineSourceAbstract, PipelineSchemaBuilder, PipelineRelations, PipelineSchemaBuilderModel } from "../"
+import { PipelineAbstract, PipelineSourceAbstract, PipelineRelations } from "../"
+import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-as-promised"))
 
@@ -22,8 +23,6 @@ describe('Pipelines', function () {
 
         it('should define a schema', function () {
             let p = new TestPipeline()
-            expect(p.schemaBuilder).to.exist
-            expect(p.currentSchemaBuilder).to.exist
             expect(p.toString().length).to.be.above(10)
         });
 
@@ -63,22 +62,22 @@ describe('Pipelines', function () {
 
     describe("SourceAbstract", function () {
         it('should be implemented by a concrete class', function () {
-            let s = new TestSourcePipeline(new PipelineSchemaBuilderModel({ type: "object" }, "test"))
+            let s = new TestSourcePipeline(SchemaBuilder.emptySchema().addString("id"), {})
             expect(s).to.be.an.instanceOf(PipelineAbstract)
             expect(s).to.be.an.instanceOf(PipelineSourceAbstract)
         });
         it('should not be piped', function () {
-            let s = new TestSourcePipeline(new PipelineSchemaBuilderModel({ type: "object" }, "test"))
+            let s = new TestSourcePipeline(SchemaBuilder.emptySchema().addString("id"), {})
             let p = new TestPipeline();
             expect(p.pipe.bind(p, s)).to.throw()
         });
         it('should fail on unimplemented operations', async function () {
-            let s = new TestSourcePipeline(new PipelineSchemaBuilderModel({ type: "object" }, "test"))
+            let s = new TestSourcePipeline(SchemaBuilder.emptySchema().addString("id"), {})
             await expect(s.read()).to.eventually.be.rejected
             await expect(s.create([{}])).to.eventually.be.rejected
             await expect(s.update("", {})).to.eventually.be.rejected
-            await expect(s.patch({}, {})).to.eventually.be.rejected
-            await expect(s.delete({})).to.eventually.be.rejected
+            await expect(s.patch({ id: "" }, {})).to.eventually.be.rejected
+            await expect(s.delete({ id: "" })).to.eventually.be.rejected
         });
     })
 });

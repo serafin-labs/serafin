@@ -1,5 +1,4 @@
-import { OPTIONS_SCHEMAS } from './decoratorSymbols'
-import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 /**
  * Class and method decorator associating a description to it
@@ -16,12 +15,13 @@ export function description(text: string) {
             if (propertyKey.startsWith('_')) {
                 propertyKey = propertyKey.slice(1);
             }
-            let optionsSchema: PipelineSchemaBuilderProperties;
-            if (!targetOrCtor.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
-                targetOrCtor[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaBuilderProperties()
+            let optionsSchemaBuilder: SchemaBuilder<{}>;
+            let schemaBuilderName = `_${propertyKey}OptionsSchemaBuilder`;
+            if (!targetOrCtor.hasOwnProperty(schemaBuilderName)) {
+                targetOrCtor[schemaBuilderName] = SchemaBuilder.emptySchema()
             }
-            optionsSchema = targetOrCtor[OPTIONS_SCHEMAS[propertyKey]]
-            optionsSchema.setDescription(text);
+            optionsSchemaBuilder = targetOrCtor[schemaBuilderName];
+            optionsSchemaBuilder.schema.description = text;
         }
     };
 }

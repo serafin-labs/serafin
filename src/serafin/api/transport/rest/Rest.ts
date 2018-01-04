@@ -1,15 +1,14 @@
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
-import * as Ajv from "ajv";
-import { JSONSchema } from "../../../openApi"
+import { JSONSchema, metaSchema } from "@serafin/open-api"
 import { TransportInterface } from "../TransportInterface"
 import { PipelineAbstract } from "../../../pipeline/Abstract"
 import { OpenApi } from "./OpenApi"
-import { metaSchema } from "../../../openApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { JsonHal } from './JsonHal';
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 export interface RestOptions {
     /**
@@ -40,58 +39,26 @@ export class RestTransport implements TransportInterface {
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
         let router = express.Router();
-        let openApi = new OpenApi(this.api, pipeline.schemaBuilder, resourcesPath, name, pluralName);
-
-        // error handling closure for this endpoint
-        let handleError = (error, res: express.Response, next: (err?: any) => void) => {
-            // handle known errors
-            if (![[ValidationErrorName, 400], [NotFoundErrorName, 404], [ConflictErrorName, 409], [NotImplementedErrorName, 405], [UnauthorizedErrorName, 401]].some((p: [string, number]) => {
-                let [errorName, code] = p;
-                if (VError.findCauseByName(error, errorName)) {
-                    res.status(code).json({
-                        code: code,
-                        message: error.message
-                    })
-                    return true
-                }
-                return false
-            })) {
-                // or pass the error down the chain
-                console.error(VError.fullStack(error));
-                next(error)
-            }
-        };
-
-        // import pipeline schemas to openApi definitions
-        var pipelineSchemaBuilder = pipeline.schemaBuilder;
+        let openApi = new OpenApi(this.api, pipeline, resourcesPath, name, pluralName);
 
         // determine what are the available actions
-        let canRead = !!pipelineSchemaBuilder.schema.definitions.readQuery
-        let canCreate = !!pipelineSchemaBuilder.schema.definitions.createValues
-        let canUpdate = !!pipelineSchemaBuilder.schema.definitions.updateValues
-        let canPatch = !!pipelineSchemaBuilder.schema.definitions.patchValues
-        let canDelete = !!pipelineSchemaBuilder.schema.definitions.deleteQuery
+        let canRead = !!pipeline.readQuerySchemaBuilder
+        let canCreate = !!pipeline.createValuesSchemaBuilder
+        let canUpdate = !!pipeline.updateValuesSchemaBuilder
+        let canPatch = !!pipeline.patchValuesSchemaBuilder
+        let canDelete = !!pipeline.deleteQuerySchemaBuilder
 
-        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.readQuery, pipelineSchemaBuilder.schema.definitions.readOptions);
-        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.patchQuery, pipelineSchemaBuilder.schema.definitions.patchOptions);
-        this.testOptionsAndQueryConflict(pipelineSchemaBuilder.schema.definitions.deleteQuery, pipelineSchemaBuilder.schema.definitions.deleteOptions);
-
-        // prepare Ajv filters
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
-        ajv.addSchema(pipelineSchemaBuilder.schema, "pipelineSchema");
+        this.testOptionsAndQueryConflict(pipeline.readQuerySchemaBuilder.schema, pipeline.readOptionsSchemaBuilder.schema);
+        this.testOptionsAndQueryConflict(pipeline.patchQuerySchemaBuilder.schema, pipeline.patchOptionsSchemaBuilder.schema);
+        this.testOptionsAndQueryConflict(pipeline.deleteQuerySchemaBuilder.schema, pipeline.deleteOptionsSchemaBuilder.schema);
 
         // create the routes for this endpoint
         if (canRead) {
-            let readQueryFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readQuery' });
-            let readOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/readOptions' });
-
             // get many resources
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter, readQueryFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.readOptionsSchemaBuilder, pipeline.readQuerySchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
 
                 // run the query
@@ -112,18 +79,16 @@ export class RestTransport implements TransportInterface {
                     res.status(200).json(wrapper);
                     res.end();
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             })
 
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 let id = req.params.id
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, readOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.readOptionsSchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
 
                 // run the query
@@ -140,7 +105,7 @@ export class RestTransport implements TransportInterface {
                     }
                     res.end();
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             })
 
@@ -148,27 +113,22 @@ export class RestTransport implements TransportInterface {
         }
 
         if (canCreate) {
-            let createOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/createOptions' });
-
             // create a new resource
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, createOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.createOptionsSchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
-
                 var data = req.body
 
                 // run the query
                 pipeline.create([data], pipelineParams.options).then(createdResources => {
-                    if (createdResources.length !== 1) {
+                    if (createdResources.data.length !== 1) {
                         throw new Error(`Api Error: unexpected create result for endpoint ${resourcesPath}`)
                     }
-                    res.status(201).json(createdResources[0])
+                    res.status(201).json(createdResources.data[0])
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             });
 
@@ -176,15 +136,11 @@ export class RestTransport implements TransportInterface {
         }
 
         if (canPatch) {
-            let patchOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/patchOptions' });
-
             // patch an existing resource
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, patchOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.patchOptionsSchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
 
                 var patch = req.body
@@ -194,14 +150,14 @@ export class RestTransport implements TransportInterface {
                 pipeline.patch({
                     id: id
                 }, patch, pipelineParams.options).then(updatedResources => {
-                    if (updatedResources.length === 0) {
+                    if (updatedResources.data.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
-                        res.status(200).json(updatedResources[0])
+                        res.status(200).json(updatedResources.data[0])
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             })
 
@@ -209,15 +165,12 @@ export class RestTransport implements TransportInterface {
         }
 
         if (canUpdate) {
-            let updateOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/updateOptions' });
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, updateOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.updateOptionsSchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
 
                 var data = req.body
@@ -232,7 +185,7 @@ export class RestTransport implements TransportInterface {
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             });
 
@@ -240,15 +193,12 @@ export class RestTransport implements TransportInterface {
         }
 
         if (canDelete) {
-            let deleteOptionsFilter = ajv.compile({ "$ref": 'pipelineSchema#/definitions/deleteOptions' });
 
             // delete an existing resource
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = null;
-                try {
-                    pipelineParams = this.extractOptionsAndQuery(req, ajv, deleteOptionsFilter);
-                } catch (e) {
-                    return handleError(e, res, next);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.deleteOptionsSchemaBuilder);
+                if (!pipelineParams) {
+                    return
                 }
 
                 let id = req.params.id;
@@ -257,14 +207,14 @@ export class RestTransport implements TransportInterface {
                 pipeline.delete({
                     id: id
                 }, pipelineParams.options).then(deletedResources => {
-                    if (deletedResources.length === 0) {
+                    if (deletedResources.data.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
-                        res.status(200).json(deletedResources[0])
+                        res.status(200).json(deletedResources.data[0])
                     }
                     res.end()
                 }).catch(error => {
-                    handleError(Api.apiError(error, req), res, next)
+                    this.handleError(Api.apiError(error, req), res, next)
                 });
             });
 
@@ -287,25 +237,44 @@ export class RestTransport implements TransportInterface {
         });
     }
 
-    private extractOptionsAndQuery(req: express.Request, ajv: Ajv.Ajv, optionsFilter: Ajv.ValidateFunction, queryFilter: Ajv.ValidateFunction = null): { options: object, query: object } {
-        let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query));
-        if (this.options.internalOptions) {
-            _.merge(pipelineOptions, this.options.internalOptions(req));
+    // error handling closure for this endpoint
+    private handleError(error, res: express.Response, next: (err?: any) => void) {
+        // handle known errors
+        if (![[ValidationErrorName, 400], [NotFoundErrorName, 404], [ConflictErrorName, 409], [NotImplementedErrorName, 405], [UnauthorizedErrorName, 401]].some((p: [string, number]) => {
+            let [errorName, code] = p;
+            if (VError.findCauseByName(error, errorName)) {
+                res.status(code).json({
+                    code: code,
+                    message: error.message
+                })
+                return true
+            }
+            return false
+        })) {
+            // or pass the error down the chain
+            console.error(VError.fullStack(error));
+            next(error)
         }
-        let optionsValid = optionsFilter(pipelineOptions);
+    }
 
-        let pipelineQuery = {};
-        let queryValid = true;
-        if (queryFilter !== null) {
-            pipelineQuery = _.cloneDeep(req.query)
-            let queryValid = queryFilter(pipelineQuery) as boolean;
+    private handleOptionsAndQuery(req: express.Request, res: express.Response, next: () => any, optionsSchemaBuilder: SchemaBuilder<any>, querySchemaBuilder: SchemaBuilder<any> = null): { options: object, query: object } {
+        try {
+            let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query));
+            if (this.options.internalOptions) {
+                _.merge(pipelineOptions, this.options.internalOptions(req));
+            }
+            optionsSchemaBuilder.validate(pipelineOptions);
+
+            let pipelineQuery = {};
+            if (querySchemaBuilder !== null) {
+                pipelineQuery = _.cloneDeep(req.query)
+                querySchemaBuilder.validate(pipelineQuery);
+            }
+            return { options: pipelineOptions, query: pipelineQuery }
+        } catch (e) {
+            this.handleError(Api.apiError(e, req), res, next)
         }
-
-        if (!optionsValid || !queryValid) {
-            throw Api.apiError(validationError(ajv.errorsText(optionsValid ? queryFilter.errors : optionsFilter.errors)), req)
-        }
-
-        return { options: pipelineOptions, query: pipelineQuery };
+        return null
     }
 
     private testOptionsAndQueryConflict(optionsSchema: JSONSchema, querySchema: JSONSchema): void {

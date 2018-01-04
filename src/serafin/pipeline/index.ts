@@ -4,10 +4,8 @@ export { option } from "./decorator/Option"
 export { result } from "./decorator/Result"
 
 // schema
-export { PipelineSchemaBuilderModel } from "./schemaBuilder/Model"
 export { PipelineRelationInterface, PipelineRelations } from "./Relations"
-export { PipelineSchemaBuilder } from "./schemaBuilder/schemabuilder"
 
 // pipeline
 export { PipelineAbstract } from "./Abstract"
-export { PipelineSourceAbstract, Patch } from "./SourceAbstract"
+export { PipelineSourceAbstract, Query, IdentityInterface } from "./SourceAbstract"

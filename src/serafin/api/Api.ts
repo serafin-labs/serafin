@@ -1,7 +1,7 @@
 import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
-import { OpenAPIObject, ParameterObject } from "../openApi"
+import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "../pipeline/Abstract"
 import { throughJsonSchema } from "../util/throughJsonSchema"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"

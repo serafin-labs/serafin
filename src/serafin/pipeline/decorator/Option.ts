@@ -1,26 +1,28 @@
-import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
-import { OPTIONS_SCHEMAS } from './decoratorSymbols'
+import { SchemaBuilder } from '@serafin/schema-builder';
+import { JSONSchema } from '@serafin/open-api';
 
 /**
- * Class or method decorator used to declare an action option, along with its JSONSchema definition.
+ * Method decorator used to declare an action option, along with its JSONSchema definition.
  * 
  * @param option Name of the option
- * @param schema JSONSchema definition. Can be an object or a function returning an object
+ * @param schema JSONSchema definition for the property
  * @param required true or false
- * @param description Description of the option
- * @param validation Flag indicating if this option should be validated automatically. Default value : 'true'
  */
-export function option(option: string, schema: Object | (() => Object), required: boolean = true, description: string = null, validation = true) {
+export function option(option: string, schema: JSONSchema, required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // add option metadata to the pipeline
         if (propertyKey.startsWith('_')) {
             propertyKey = propertyKey.slice(1);
         }
-        let optionsSchemaBuilder: PipelineSchemaBuilderProperties;
-        if (!target.hasOwnProperty(OPTIONS_SCHEMAS[propertyKey])) {
-            target[OPTIONS_SCHEMAS[propertyKey]] = new PipelineSchemaBuilderProperties()
+        let optionsSchemaBuilder: SchemaBuilder<{}>;
+        let schemaBuilderName = `_${propertyKey}OptionsSchemaBuilder`;
+        if (!target.hasOwnProperty(schemaBuilderName)) {
+            target[schemaBuilderName] = SchemaBuilder.emptySchema()
         }
-        optionsSchemaBuilder = target[OPTIONS_SCHEMAS[propertyKey]];
-        optionsSchemaBuilder.addProperty(option, (typeof schema === "function") ? schema() : schema, description, required);
+        optionsSchemaBuilder = target[schemaBuilderName];
+        if (required) {
+            optionsSchemaBuilder.addProperty(option, new SchemaBuilder<any>(schema));
+        } else {
+            optionsSchemaBuilder.addOptionalProperty(option, new SchemaBuilder<any>(schema));
+        }
     }
 }

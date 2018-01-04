@@ -1,4 +1,4 @@
-import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "../openApi"
+import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "@serafin/open-api"
 import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 

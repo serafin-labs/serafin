@@ -1,5 +1,5 @@
 import * as _ from "lodash"
-import { JSONSchema } from "../openApi"
+import { JSONSchema } from "@serafin/open-api"
 
 /**
  * Go through the given schema and apply the given action to all the schema element.

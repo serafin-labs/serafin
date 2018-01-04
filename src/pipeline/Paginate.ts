@@ -1,15 +1,16 @@
 import { PipelineAbstract, option, description, result } from '../serafin/pipeline'
 import * as _ from 'lodash'
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 @description("Provides pagination over the read results")
 export class Paginate extends PipelineAbstract<{}, {}, { offset?: number, count?: number, page?: number }, { count: number }> {
 
     @description("Reads a limited count of results")
-    @option('offset', { type: "integer" }, false, 'Offset of the first resource to return')
-    @option('page', { type: "integer" }, false, "Offset of the first page to read (one page represents 'count' resources)")
-    @option('count', { type: "integer" }, false, "Number of resources to return")
-    @result('count', { type: "integer" }, false, "Number of resources available")
-    protected async _read(query?: {}, options?: { offset?: number, count?: number, page?: number }): Promise<{ count: number, data: {}[] }> {
+    @option('offset', { type: "integer", description: 'Offset of the first resource to return' }, false)
+    @option('page', { type: "integer", description: "Offset of the first page to read (one page represents 'count' resources)" }, false)
+    @option('count', { type: "integer", description: "Number of resources to return" }, false)
+    @result('count', { type: "integer", description: "Number of resources available" }, false)
+    protected async _read(query?: {}, options?: { offset?: number, count?: number, page?: number }) {
         let resources = await this.parent.read(query, options);
         let offset = 0;
 

@@ -1,5 +1,5 @@
-import { PipelineSchemaBuilderProperties } from '../schemaBuilder/Properties'
-import { READ_DATA_SCHEMA } from './decoratorSymbols'
+import { SchemaBuilder } from '@serafin/schema-builder';
+import { JSONSchema } from '@serafin/open-api';
 
 
 /**
@@ -8,16 +8,22 @@ import { READ_DATA_SCHEMA } from './decoratorSymbols'
  * @param name Name of the property
  * @param schema JSONSchema definition. Can be an object or a function returning an object
  * @param required true or false
- * @param description Description of the property
  */
-export function result(name: string, schema: Object, required: boolean = true, description: string = null) {
+export function result(name: string, schema: JSONSchema, required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        // add option metadata to the pipeline
-        let dataSchemaBuilder: PipelineSchemaBuilderProperties
-        if (!target.hasOwnProperty(READ_DATA_SCHEMA)) {
-            target[READ_DATA_SCHEMA] = new PipelineSchemaBuilderProperties()
+        if (propertyKey.startsWith('_')) {
+            propertyKey = propertyKey.slice(1);
         }
-        dataSchemaBuilder = target[READ_DATA_SCHEMA]
-        dataSchemaBuilder.addProperty(name, schema, description, required);
+        let schemaBuilder: SchemaBuilder<{}>;
+        let schemaBuilderName = `_${propertyKey}WrapperSchemaBuilder`;
+        if (!target.hasOwnProperty(schemaBuilderName)) {
+            target[schemaBuilderName] = SchemaBuilder.emptySchema()
+        }
+        schemaBuilder = target[schemaBuilderName]
+        if (required) {
+            schemaBuilder.addProperty(name, new SchemaBuilder<any>(schema));
+        } else {
+            schemaBuilder.addOptionalProperty(name, new SchemaBuilder<any>(schema));
+        }
     }
 }

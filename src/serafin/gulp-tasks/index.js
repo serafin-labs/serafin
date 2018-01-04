@@ -134,7 +134,7 @@ module.exports = {
         gulp.task('start', function () {
             options = [];
             if (!!debug) {
-                options.push('--inspect');
+                options.push('--inspect=[::]:9229');
             }
             options.push(command);
 

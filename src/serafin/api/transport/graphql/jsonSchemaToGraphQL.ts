@@ -2,7 +2,7 @@ import * as graphql from "graphql"
 import * as _ from "lodash"
 import * as jsonpointer from 'jsonpointer';
 import * as GraphQLJSON from 'graphql-type-json';
-import { JSONSchema } from "../../../openApi"
+import { JSONSchema } from "@serafin/open-api"
 
 /**
  * Basic types that can be converted to JSON Schema directly
@@ -30,11 +30,9 @@ function pathToSchemaName(path: string) {
  * @param rootSchema the JSON schema to convert
  * @param rootName name of the main schema object
  * @param optionsFilter filter function applied to 'options' objects. 'true' means that the property is kept.
+ * @param schemaByNames the result schema objects for the given JSON schema
  */
-export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, optionsFilter: (name: string) => boolean): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
-    // the result schema objects for the given JSON schema
-    let schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: any } } = {};
-
+export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, optionsFilter: (name: string) => boolean, schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } = {}): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
     // let's define the recursive method to convert JSON schemas
     let _jsonSchemaToGraphQL = (schema: JSONSchema, name: string) => {
         // if this schema was already converted, let's use the existing reference

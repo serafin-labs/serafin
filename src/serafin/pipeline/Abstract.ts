@@ -1,16 +1,17 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { ResourceIdentityInterface } from './schemaBuilder/ResourceInterfaces';
-import { PipelineSchemaBuilderModel } from './schemaBuilder/Model'
 import { PipelineRelations, PipelineRelationInterface } from './Relations'
-import { PipelineSchemaBuilder } from './schemaBuilder/SchemaBuilder'
-import { PipelineSchemaBuilderProperties } from './schemaBuilder/Properties'
-import { getOptionsSchemas, getDataSchema } from './decorator/decoratorSymbols'
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
-import { metaSchema } from "../openApi"
+import { SchemaBuilder, Omit } from "@serafin/schema-builder"
+
+const schemaBuilderCache = Symbol("SchemaBuilderCache");
+
+export type PipelineMethods = "create" | "read" | "update" | "patch" | "delete";
+export type SchemaBuilderNames = "modelSchemaBuilder" | "readQuerySchemaBuilder" | "readOptionsSchemaBuilder" | "readWrapperSchemaBuilder" | "createValuesSchemaBuilder" | "createOptionsSchemaBuilder" | "createWrapperSchemaBuilder" | "updateValuesSchemaBuilder" | "updateOptionsSchemaBuilder" | "updateWrapperSchemaBuilder" | "patchQuerySchemaBuilder" | "patchValuesSchemaBuilder" | "patchOptionsSchemaBuilder" | "patchWrapperSchemaBuilder" | "deleteQuerySchemaBuilder" | "deleteOptionsSchemaBuilder" | "deleteWrapperSchemaBuilder";
+export type InternalSchemaBuilderNames = "_modelSchemaBuilder" | "_readQuerySchemaBuilder" | "_readOptionsSchemaBuilder" | "_readWrapperSchemaBuilder" | "_createValuesSchemaBuilder" | "_createOptionsSchemaBuilder" | "_createWrapperSchemaBuilder" | "_updateValuesSchemaBuilder" | "_updateOptionsSchemaBuilder" | "_updateWrapperSchemaBuilder" | "_patchQuerySchemaBuilder" | "_patchValuesSchemaBuilder" | "_patchOptionsSchemaBuilder" | "_patchWrapperSchemaBuilder" | "_deleteQuerySchemaBuilder" | "_deleteOptionsSchemaBuilder" | "_deleteWrapperSchemaBuilder";
 
 /**
  * Abstract Class representing a pipeline.
@@ -24,33 +25,101 @@ export abstract class PipelineAbstract<
     ReadQuery = {},
     ReadOptions = {},
     ReadWrapper = {},
-    CreateResources = {},
+    CreateValues = {},
     CreateOptions = {},
+    CreateWrapper = {},
     UpdateValues = {},
     UpdateOptions = {},
+    UpdateWrapper = {},
     PatchQuery = {},
     PatchValues = {},
     PatchOptions = {},
+    PatchWrapper = {},
     DeleteQuery = {},
-    DeleteOptions = {}> {
+    DeleteOptions = {},
+    DeleteWrapper = {}
+    > {
+    /**
+     * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
+     * Types are all 'any' because pipelines are reusable and they can't make assumption on what is the next element of the pipeline.
+     */
+    protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
 
-    protected modelSchemaBuilder: PipelineSchemaBuilderModel<ResourceIdentityInterface> = null;
-    protected optionsSchema: {} = null;
-    private validationFunctions = null;
-    private optionsMapping = {};
+    public get modelSchemaBuilder(): SchemaBuilder<T> { return this.nearestSchemaBuilder("_modelSchemaBuilder") }
+    protected _modelSchemaBuilder?: SchemaBuilder<T>
 
-    protected _relationsSchema: PipelineRelations = null;
-    protected get relationsSchema(): PipelineRelations {
+    public get readQuerySchemaBuilder(): SchemaBuilder<ReadQuery> { return this.nearestSchemaBuilder("_readQuerySchemaBuilder") }
+    protected _readQuerySchemaBuilder?: SchemaBuilder<ReadQuery>
+    public get readOptionsSchemaBuilder(): SchemaBuilder<ReadOptions> { return this.mergeSchemaBuilders("_readOptionsSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _readOptionsSchemaBuilder?: SchemaBuilder<ReadOptions>
+    public get readWrapperSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_readWrapperSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _readWrapperSchemaBuilder?: SchemaBuilder<ReadWrapper>
+
+    public get createValuesSchemaBuilder(): SchemaBuilder<CreateValues> { return this.nearestSchemaBuilder("_createValuesSchemaBuilder") }
+    protected _createValuesSchemaBuilder?: SchemaBuilder<CreateValues>
+    public get createOptionsSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_createOptionsSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _createOptionsSchemaBuilder?: SchemaBuilder<CreateOptions>
+    public get createWrapperSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_createWrapperSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _createWrapperSchemaBuilder?: SchemaBuilder<CreateWrapper>
+
+    public get updateValuesSchemaBuilder(): SchemaBuilder<CreateValues> { return this.nearestSchemaBuilder("_updateValuesSchemaBuilder") }
+    protected _updateValuesSchemaBuilder?: SchemaBuilder<UpdateValues>
+    public get updateOptionsSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_updateOptionsSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _updateOptionsSchemaBuilder?: SchemaBuilder<UpdateOptions>
+    public get updateWrapperSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_updateWrapperSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _updateWrapperSchemaBuilder?: SchemaBuilder<UpdateWrapper>
+
+    public get patchQuerySchemaBuilder(): SchemaBuilder<CreateValues> { return this.nearestSchemaBuilder("_patchQuerySchemaBuilder") }
+    protected _patchQuerySchemaBuilder?: SchemaBuilder<PatchQuery>
+    public get patchValuesSchemaBuilder(): SchemaBuilder<CreateValues> { return this.nearestSchemaBuilder("_patchValuesSchemaBuilder") }
+    protected _patchValuesSchemaBuilder?: SchemaBuilder<PatchValues>
+    public get patchOptionsSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_patchOptionsSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _patchOptionsSchemaBuilder?: SchemaBuilder<PatchOptions>
+    public get patchWrapperSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_patchWrapperSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _patchWrapperSchemaBuilder?: SchemaBuilder<PatchWrapper>
+
+    public get deleteQuerySchemaBuilder(): SchemaBuilder<CreateValues> { return this.nearestSchemaBuilder("_deleteQuerySchemaBuilder") }
+    protected _deleteQuerySchemaBuilder?: SchemaBuilder<DeleteQuery>
+    public get deleteOptionsSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_deleteOptionsSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _deleteOptionsSchemaBuilder?: SchemaBuilder<DeleteOptions>
+    public get deleteWrapperSchemaBuilder(): SchemaBuilder<ReadWrapper> { return this.mergeSchemaBuilders("_deleteWrapperSchemaBuilder") || this.defaultSchemaBuilder() }
+    protected _deleteWrapperSchemaBuilder?: SchemaBuilder<DeleteWrapper>
+
+    private optionsMapping: Partial<Record<PipelineMethods, { [k: string]: string }>> = {};
+
+    /**
+     * list of relations for this pipeline
+     */
+    public get relations(): PipelineRelations {
         if (!this._relationsSchema) {
             let existingRelations = this.parent ? this.parent.relations : null;
             this._relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations()
         }
         return this._relationsSchema
     }
+    protected _relationsSchema: PipelineRelations = null;
 
-    constructor() {
-        this.optionsSchema = _.cloneDeep(getOptionsSchemas(this));
+    /**
+     * Shortcut to relations.addRelation
+     * 
+     * @param relation 
+     */
+    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
+        this.relations.addRelation(relation, this);
+        return this;
     }
+
+    /**
+     * Flag indicating if this pipeline has been attached to a source
+     */
+    protected get isAttachedToSource() {
+        if (!this._isAttachedToSource) {
+            this._isAttachedToSource = this.parent ? this.parent.isAttachedToSource : false
+        }
+        return this._isAttachedToSource
+    }
+    private _isAttachedToSource: boolean
+
 
     /**
      * Attach this pipeline to the given parent.
@@ -64,75 +133,51 @@ export abstract class PipelineAbstract<
     }
 
     /**
-     * Find the nearest modelSchema definition
+     * Get the nearest schema builder for the given property name
+     * 
+     * @param propertyName 
      */
-    protected findModelSchema() {
-        return this.modelSchemaBuilder || (this.parent ? this.parent.findModelSchema() : null)
-    }
-
-    /**
-     * Find the nearest relationsSchema definition
-     */
-    protected findRelationsSchema() {
-        return this.relationsSchema || (this.parent ? this.parent.findRelationsSchema() : null)
-    }
-
-    /**
-     * gather all options used by this pipeline and its parents
-     */
-    protected findAllOptions() {
-        return [this.optionsSchema, ...((this.parent) ? this.parent.findAllOptions() : [])];
-    }
-
-
-    /**
-     * The schema that represents the capabilities of this pipeline
-     */
-    get schemaBuilder() {
-        // gather all results used by this pipeline and its parents
-        let findAllData = (target: PipelineAbstract) => target ? [getDataSchema(target), ...findAllData(target.parent)] : []
-
-        // create and return the global schema representing the capabilities of this pipeline
-        return new PipelineSchemaBuilder(this.findModelSchema(), PipelineSchemaBuilder.mergeOptions(this.findAllOptions()), PipelineSchemaBuilder.mergeProperties(findAllData(this)))
-    }
-
-    /**
-     * The schema that represents the capabilities of the current pipeline
-     */
-    get currentSchemaBuilder() {
-        // create and return the schema representing the current pipeline
-        return new PipelineSchemaBuilder(this.modelSchemaBuilder, this.optionsSchema, getDataSchema(this));
-    }
-
-    /**
-     * Get a list of relations for this pipeline
-     */
-    get relations(): PipelineRelations {
-        return this.findRelationsSchema();
-    }
-
-    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
-        this.relationsSchema.addRelation(relation, this);
-        return this;
-    }
-
-    /**
-     * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
-     * Types are all 'any' because pipelines are general reusable blocks and they can't make assumption on what is the next element of the pipeline.
-     */
-    protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any>;
-
-    private prepareOptionsMapping(options) {
-        if (typeof options == 'object') {
-            for (let key in this.optionsMapping) {
-                if (options[key]) {
-                    options[this.optionsMapping[key]] = options[key];
-                    delete (options[key]);
-                }
+    protected nearestSchemaBuilder(propertyName: InternalSchemaBuilderNames): SchemaBuilder<any> {
+        if (this[schemaBuilderCache]) {
+            if (propertyName in this[schemaBuilderCache]) {
+                return this[schemaBuilderCache][propertyName]
             }
+        } else {
+            this[schemaBuilderCache] = {}
         }
+        if (!this.isAttachedToSource) {
+            return null
+        }
+        let schemaBuilder = this[propertyName] as SchemaBuilder<any>
+        return schemaBuilder ? schemaBuilder : (this.parent ? this.parent.nearestSchemaBuilder(propertyName) : null)
+    }
 
-        return options;
+    /**
+     * Merge schema builders recurcively for the given property name
+     * 
+     * @param propertyName 
+     */
+    protected mergeSchemaBuilders(propertyName: InternalSchemaBuilderNames): SchemaBuilder<any> {
+        if (this[schemaBuilderCache]) {
+            if (propertyName in this[schemaBuilderCache]) {
+                return this[schemaBuilderCache][propertyName]
+            }
+        } else {
+            this[schemaBuilderCache] = {}
+        }
+        if (!this.isAttachedToSource) {
+            return null
+        }
+        let parentSchemaBuilder = this.parent ? this.parent.mergeSchemaBuilders(propertyName) : null
+        let schemaBuilder = this[propertyName] as SchemaBuilder<any>
+        return schemaBuilder ? (parentSchemaBuilder ? schemaBuilder.mergeProperties<any>(parentSchemaBuilder) : schemaBuilder) : parentSchemaBuilder
+    }
+
+    /**
+     * Create the default schema builder in case nothing is defined
+     */
+    protected defaultSchemaBuilder(): SchemaBuilder<any> {
+        return SchemaBuilder.emptySchema()
     }
 
     /**
@@ -141,12 +186,15 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    @final async create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
-        this.validate('create', resources, options);
-        return this._create(resources, this.prepareOptionsMapping(options));
+    @final async create(resources: CreateValues[], options?: CreateOptions) {
+        this.handleValidate('create', () => {
+            if (this._createValuesSchemaBuilder) { this._createValuesSchemaBuilder.validateList(resources) }
+            if (this._createOptionsSchemaBuilder) { this._createOptionsSchemaBuilder.validate(options || {} as any) }
+        });
+        return this._create(resources, this.prepareOptionsMapping(options, "create"));
     }
 
-    protected async _create(resources: CreateResources[], options?: CreateOptions): Promise<T[]> {
+    protected async _create(resources: CreateValues[], options?: CreateOptions): Promise<{ data: T[] } & CreateWrapper> {
         return this.parent.create(resources, options);
     }
 
@@ -156,9 +204,12 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
-        this.validate('read', query, options);
-        return this._read(query, this.prepareOptionsMapping(options));
+    @final async read(query?: ReadQuery, options?: ReadOptions) {
+        this.handleValidate('read', () => {
+            if (this._readQuerySchemaBuilder) { this._readQuerySchemaBuilder.validate(query || {} as any) }
+            if (this._readOptionsSchemaBuilder) { this._readOptionsSchemaBuilder.validate(options || {} as any) }
+        });
+        return this._read(query, this.prepareOptionsMapping(options, "read"));
     }
 
     protected async _read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
@@ -174,13 +225,16 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        this.validate('update', id, values, options);
+    @final async update(id: string, values: UpdateValues, options?: UpdateOptions) {
+        this.handleValidate('update', () => {
+            if (this._updateValuesSchemaBuilder) { this._updateValuesSchemaBuilder.validate(values) }
+            if (this._updateOptionsSchemaBuilder) { this._updateOptionsSchemaBuilder.validate(options || {} as any) }
+        });
         return this._update(id, values, options);
     }
 
-    protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<T> {
-        return this.parent.update(id, values, this.prepareOptionsMapping(options));
+    protected async _update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<{ data: T } & UpdateWrapper> {
+        return this.parent.update(id, values, this.prepareOptionsMapping(options, "update"));
     }
 
     /**
@@ -192,12 +246,16 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
-        this.validate('patch', query, values, options);
-        return this._patch(query, values, this.prepareOptionsMapping(options));
+    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<{ data: T[] } & PatchWrapper> {
+        this.handleValidate('patch', () => {
+            if (this._patchQuerySchemaBuilder) { this._patchQuerySchemaBuilder.validate(query) }
+            if (this._patchValuesSchemaBuilder) { this._patchValuesSchemaBuilder.validate(values) }
+            if (this._patchOptionsSchemaBuilder) { this._patchOptionsSchemaBuilder.validate(options || {} as any) }
+        });
+        return this._patch(query, values, this.prepareOptionsMapping(options, "patch"));
     }
 
-    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<T[]> {
+    protected async _patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<{ data: T[] } & PatchWrapper> {
         return this.parent.patch(query, values, options);
     }
 
@@ -206,24 +264,40 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
-        this.validate('delete', query, options);
-        return this._delete(query, this.prepareOptionsMapping(options));
+    @final async delete(query: DeleteQuery, options?: DeleteOptions) {
+        this.handleValidate('delete', () => {
+            if (this._deleteQuerySchemaBuilder) { this._deleteQuerySchemaBuilder.validate(query) }
+            if (this._deleteOptionsSchemaBuilder) { this._deleteOptionsSchemaBuilder.validate(options || {} as any) }
+        });
+        return this._delete(query, this.prepareOptionsMapping(options, "delete"));
     }
 
-    protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<T[]> {
+    protected async _delete(query: DeleteQuery, options?: DeleteOptions): Promise<{ data: T[] } & DeleteWrapper> {
         return this.parent.delete(query, options);
     }
 
-    public static getCRUDMethods() {
-        return ['create', 'read', 'update', 'patch', 'delete'];
-    }
+    public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
+
+    public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
+
+    private static internalSchemaBuilderNames: InternalSchemaBuilderNames[] = ["_modelSchemaBuilder", "_readQuerySchemaBuilder", "_readOptionsSchemaBuilder", "_readWrapperSchemaBuilder", "_createValuesSchemaBuilder", "_createOptionsSchemaBuilder", "_createWrapperSchemaBuilder", "_updateValuesSchemaBuilder", "_updateOptionsSchemaBuilder", "_updateWrapperSchemaBuilder", "_patchQuerySchemaBuilder", "_patchValuesSchemaBuilder", "_patchOptionsSchemaBuilder", "_patchWrapperSchemaBuilder", "_deleteQuerySchemaBuilder", "_deleteOptionsSchemaBuilder", "_deleteWrapperSchemaBuilder"];
 
     /**
      * Get a readable description of what this pipeline does
      */
     toString(): string {
-        let recursiveSchemas = (target: PipelineAbstract) => target ? [(new PipelineSchemaBuilder(target.modelSchemaBuilder, target.optionsSchema, getDataSchema(target), Object.getPrototypeOf(target).constructor.description, Object.getPrototypeOf(target).constructor.name)).schema, ...recursiveSchemas(target.parent)] : [];
+        let recursiveSchemas = (target: PipelineAbstract) => {
+            if (!target) {
+                return []
+            }
+            let pipelineSchema: any = {}
+            for (let schemaBuilderName of PipelineAbstract.internalSchemaBuilderNames) {
+                if (this[schemaBuilderName]) {
+                    pipelineSchema[schemaBuilderName] = this[schemaBuilderName].schema
+                }
+            }
+            return [pipelineSchema, ...recursiveSchemas(target.parent)];
+        }
         return (util.inspect(recursiveSchemas(this), false, null));
     }
 
@@ -233,98 +307,18 @@ export abstract class PipelineAbstract<
      * 
      * @param pipeline The pipeline to link with this one
      */
-    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>) {
+    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper>) {
         // attach the pipeline to this one
         pipeline.attach(this);
 
         // cast the pipeline and combine all interfaces
-        var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateResources & NCreateResources, CreateOptions & NCreateOptions, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions> = <any>pipeline;
+        var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateValues & NCreateValues, CreateOptions & NCreateOptions, CreateWrapper & NCreateWrapper, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, UpdateWrapper & NUpdateWrapper, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, PatchWrapper & NPatchWrapper, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions, DeleteWrapper & NDeleteWrapper> = <any>pipeline;
         return chainedPipeline;
     }
 
-    /**
-     * Project the current pipeline changing the underlying resource.
-     * /!\ the provided projection MUST NOT be reused somewhere else. The `parent` property can be assigned only once. 
-     * 
-     * @param pipeline The pipeline to link with this one
-     */
-    project<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>(pipeline: PipelineProjectionAbstract<T, N, ReadQuery, ReadOptions, ReadWrapper, CreateResources, CreateOptions, UpdateValues, UpdateOptions, PatchQuery, PatchValues, PatchOptions, DeleteQuery, DeleteOptions, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions>): PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
-        // attach the pipeline to this one
-        pipeline.attach(this);
-        return <any>pipeline;
-    }
-
-    private compileValidationFunctions() {
-        let ajv = new Ajv({ coerceTypes: true, removeAdditional: true, useDefaults: true, meta: metaSchema });
-        let currentSchemaBuilder = this.currentSchemaBuilder.schema;
-        ajv.addSchema(currentSchemaBuilder, "schema");
-
-        this.validationFunctions = {};
-
-        // Create
-        let validateCreateResources = currentSchemaBuilder.definitions.createValues ? ajv.compile({
-            type: 'array',
-            items: { "$ref": "schema#/definitions/createValues" },
-            minItems: 1
-        }) : () => true;
-        let validateCreateOptions = currentSchemaBuilder.definitions.createOptions ? ajv.compile({ "$ref": "schema#/definitions/createOptions" }) : () => true;
-        this.validationFunctions['create'] = (params: any[]) => {
-            let [resources, options] = params;
-            if (!validateCreateResources(resources) || !validateCreateOptions(options || {})) {
-                throw validationError(ajv.errorsText(validateCreateResources.errors || validateCreateOptions.errors))
-            }
-        }
-
-        // Read
-        let validateReadQuery = currentSchemaBuilder.definitions.readQuery ? ajv.compile({ "$ref": "schema#/definitions/readQuery" }) : () => true;
-        let validateReadOptions = currentSchemaBuilder.definitions.readOptions ? ajv.compile({ "$ref": "schema#/definitions/readOptions" }) : () => true;
-        this.validationFunctions['read'] = (params: any[]) => {
-            let [query, options] = params;
-            if (!validateReadQuery(query || {}) || !validateReadOptions(options || {})) {
-                throw validationError(ajv.errorsText(validateReadQuery.errors || validateReadOptions.errors))
-            }
-        }
-
-        // Update
-        let validateUpdateValues = currentSchemaBuilder.definitions.updateValues ? ajv.compile({ "$ref": 'schema#/definitions/updateValues' }) : () => true;
-        let validateUpdateOptions = currentSchemaBuilder.definitions.updateOptions ? ajv.compile({ "$ref": 'schema#/definitions/updateOptions' }) : () => true;
-        this.validationFunctions['update'] = (params: any[]) => {
-            let [id, values, options] = params;
-            if (!validateUpdateValues(values) || !validateUpdateOptions(options || {})) {
-                throw validationError(ajv.errorsText(validateUpdateValues.errors || validateUpdateOptions.errors))
-            }
-        }
-
-        // Patch
-        let validatePatchQuery = currentSchemaBuilder.definitions.patchQuery ? ajv.compile({ "$ref": 'schema#/definitions/patchQuery' }) : () => true;
-        let validatePatchValues = currentSchemaBuilder.definitions.patchValues ? ajv.compile({ "$ref": 'schema#/definitions/patchValues' }) : () => true;
-        let validatePatchOptions = currentSchemaBuilder.definitions.patchOptions ? ajv.compile({ "$ref": 'schema#/definitions/patchOptions' }) : () => true;
-        this.validationFunctions['patch'] = (params: any[]) => {
-            let [query, values, options] = params;
-            if (!validatePatchQuery(query) || !validatePatchValues(values) || !validatePatchOptions(options || {})) {
-                throw validationError(ajv.errorsText(validatePatchQuery.errors || validatePatchValues.errors || validatePatchOptions.errors))
-            }
-        }
-
-        // Delete
-        let validateDeleteQuery = currentSchemaBuilder.definitions.deleteQuery ? ajv.compile({ "$ref": 'schema#/definitions/deleteQuery' }) : () => true;
-        let validateDeleteOptions = currentSchemaBuilder.definitions.deleteOptions ? ajv.compile({ "$ref": 'schema#/definitions/deleteOptions' }) : () => true;
-        this.validationFunctions['delete'] = (params: any[]) => {
-            let [query, options] = params;
-            if (!validateDeleteQuery(query || {}) || !validateDeleteOptions(options || {})) {
-                throw validationError(ajv.errorsText(validateDeleteQuery.errors || validateDeleteOptions.errors))
-            }
-        }
-    }
-
-    private validate(method: string, ...params) {
-        if (!this.validationFunctions) {
-            this.compileValidationFunctions();
-        }
-        let validate = this.validationFunctions[method];
-
+    private handleValidate(method: string, validate: () => void) {
         try {
-            validate(params);
+            validate();
         } catch (error) {
             throw serafinError('SerafinValidationError',
                 `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
@@ -333,21 +327,47 @@ export abstract class PipelineAbstract<
         }
     }
 
-    public remapOptions<MAP extends { [key: string]: string }>(mapping: MAP): PipelineAbstract<T, ReadQuery, ReadOptions & {[OPT in keyof MAP]?: any}, ReadWrapper, CreateResources, CreateOptions & {[OPT in keyof MAP]?: any}, UpdateValues, UpdateOptions & {[OPT in keyof MAP]?: any}, PatchQuery, PatchValues, PatchOptions & {[OPT in keyof MAP]?: any}, DeleteQuery, DeleteOptions & {[OPT in keyof MAP]?: any}> {
-        this.optionsMapping = mapping;
-        for (let key in this.optionsMapping) {
-            for (let method in this.optionsSchema) {
-                this.optionsSchema[method].renameProperty(this.optionsMapping[key], key);
+    /**
+     * Remap a read options to change its name. To be used in case of conflict between two pipelines.
+     * 
+     * @param opt 
+     * @param renamedOpt 
+     */
+    public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): PipelineAbstract<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper> {
+        return this.remapOptions("read", opt, renamedOpt)
+    }
+
+    /**
+     * Remap the given options to change its name for the given method.
+     * 
+     * @param method 
+     * @param opt 
+     * @param renamedOpt 
+     */
+    private remapOptions(method: PipelineMethods, opt: string, renamedOpt: string) {
+        this.optionsMapping = this.optionsMapping || {};
+        this.optionsMapping[method] = this.optionsMapping[method] || {};
+        this.optionsMapping[method][renamedOpt as string] = opt as string;
+        let schemaBuilderName = `_${method}OptionsSchemaBuilder`
+        if (!this.hasOwnProperty(schemaBuilderName)) {
+            this[schemaBuilderName] = this[schemaBuilderName].clone();
+        }
+        this[schemaBuilderName].renameProperty(opt, renamedOpt);
+        return this as any;
+    }
+
+    /**
+     * Map the input options object according to the configured mapping
+     */
+    private prepareOptionsMapping(options, method: PipelineMethods) {
+        if (typeof options === 'object' && this.optionsMapping) {
+            for (let key in this.optionsMapping[method]) {
+                if (options[key]) {
+                    options[this.optionsMapping[key]] = options[key];
+                    delete (options[key]);
+                }
             }
         }
-        this.validationFunctions = null;
-        return this;
+        return options;
     }
-}
-
-/**
- * Type definition of a Projection Pipeline. It has to be used when the pipeline fondamentaly changes the nature of the data it provides : T -> N
- */
-export abstract class PipelineProjectionAbstract<T, N, ReadQuery = {}, ReadOptions = {}, ReadWrapper = {}, CreateResources = {}, CreateOptions = {}, UpdateValues = {}, UpdateOptions = {}, PatchQuery = {}, PatchValues = {}, PatchOptions = {}, DeleteQuery = {}, DeleteOptions = {}, NReadQuery = ReadQuery, NReadOptions = ReadOptions, NReadWrapper = ReadWrapper, NCreateResources = CreateResources, NCreateOptions = CreateOptions, NUpdateValues = UpdateValues, NUpdateOptions = UpdateOptions, NPatchQuery = PatchQuery, NPatchValues = PatchValues, NPatchOptions = PatchOptions, NDeleteQuery = DeleteQuery, NDeleteOptions = DeleteOptions> extends PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateResources, NCreateOptions, NUpdateValues, NUpdateOptions, NPatchQuery, NPatchValues, NPatchOptions, NDeleteQuery, NDeleteOptions> {
-
 }

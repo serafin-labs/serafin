@@ -1,27 +1,22 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineSourceAbstract, Patch, description } from '../../serafin/pipeline';
-import { ResourceIdentityInterface } from '../../serafin/pipeline/schemaBuilder/ResourceInterfaces';
+import { PipelineSourceAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
+
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
-import { PipelineSchemaBuilderModel } from '../../serafin/pipeline/schemaBuilder/Model'
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
+import { Omit, DeepPartial } from '@serafin/schema-builder';
 
 @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineSourceInMemory<
-    T extends ResourceIdentityInterface,
-    ReadQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
-    CreateResources = Partial<T>,
-    UpdateValues = Partial<T>,
-    PatchQuery extends Patch<ResourceIdentityInterface> = Patch<T>,
-    PatchValues = Partial<T>,
-    DeleteQuery extends Patch<ResourceIdentityInterface> = Patch<T>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateResources, {}, UpdateValues, {}, PatchQuery, PatchValues, {}, DeleteQuery, {}> {
-    protected resources: { [index: string]: T };
-
-    constructor(schemaBuilderModel: PipelineSchemaBuilderModel<T, ReadQuery, CreateResources, UpdateValues, PatchQuery, PatchValues, DeleteQuery>) {
-        super(schemaBuilderModel);
-        this.resources = {} as { [index: string]: T };
-    }
+    T extends IdentityInterface,
+    ReadQuery = Partial<Query<Omit<T, "id">>>,
+    CreateValues = Omit<T, "id">,
+    UpdateValues = Omit<T, "id">,
+    PatchQuery = Query<Pick<T, "id">>,
+    PatchValues = DeepPartial<Omit<T, "id">>,
+    DeleteQuery = Query<Pick<T, "id">>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
+    protected resources: { [index: string]: T } = {} as { [index: string]: T };
 
     private generateUUID(): string {
         var uid: string = uuid.v4();
@@ -69,7 +64,7 @@ export class PipelineSourceInMemory<
         return { data: _.cloneDeep(resources) } as any;
     }
 
-    protected async _create(resources: CreateResources[], options?: {}) {
+    protected async _create(resources: CreateValues[], options?: {}) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -82,14 +77,14 @@ export class PipelineSourceInMemory<
             }
         });
 
-        return createdResources;
+        return { data: createdResources };
     }
 
     protected async _read(query?: ReadQuery, options?: {}): Promise<{ data: T[] }> {
         return this.readInMemory(query)
     }
 
-    protected async _update(id: string, values: UpdateValues, options?: {}): Promise<T> {
+    protected async _update(id: string, values: UpdateValues, options?: {}) {
         var resources = await this.readInMemory({
             id: id
         });
@@ -101,9 +96,9 @@ export class PipelineSourceInMemory<
             // in case it wasn't assigned yet
             values["id"] = values["id"] || id;
             this.resources[id] = _.cloneDeep(values) as any;
-            return values as any;
+            return { data: values as any };
         }
-        return undefined;
+        return { data: undefined };
     }
 
     protected async _patch(query: PatchQuery, values: PatchValues, options?: {}) {
@@ -120,7 +115,7 @@ export class PipelineSourceInMemory<
             updatedResources.push(resource);
         });
 
-        return updatedResources;
+        return { data: updatedResources };
     }
 
     protected async _delete(query?: DeleteQuery, options?: {}) {
@@ -132,6 +127,6 @@ export class PipelineSourceInMemory<
             deletedResources.push(resource);
         });
 
-        return deletedResources;
+        return { data: deletedResources };
     }
 }

@@ -8,8 +8,8 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
-    @result("lastCreatedAt", { type: "integer" }, true, "Last creation date")
-    @result("lastUpdatedAt", { type: "integer" }, true, "Last modification date")
+    @result("lastCreatedAt", { type: "integer", description: "Last creation date" }, true)
+    @result("lastUpdatedAt", { type: "integer", description: "Last modification date" }, true)
     protected async _read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
         let readWrapper = (await this.parent.read(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
         let lastCreatedAt = null;

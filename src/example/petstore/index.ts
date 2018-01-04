@@ -1,7 +1,7 @@
 import { fail } from 'assert';
 import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
-import { petSchema } from './model/Pet';
+import { petSchemaBuilder } from './model/Pet';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
 
@@ -45,7 +45,7 @@ async function main() {
             schema: true
         }));
 
-    let petPipeline = (new PipelineSourceInMemory(petSchema)) // Initialize an InMemory Pipepeline Source with the model schema
+    let petPipeline = (new PipelineSourceInMemory(petSchemaBuilder, {})) // Initialize an InMemory Pipepeline Source with the model schema
         .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
         .pipe(new DefaultPetName("Snowball", 1)) // add custom logic to generate pets name
     //.pipe(...)  you can then add any pipeline. You can do pretty much anything, included but not limited to: custom buisness rules, logs, events, cache, api rate limiting, user acl, generated properties, fetch relations, result filters, property filters, custom type checking, etc. 
@@ -59,7 +59,8 @@ async function main() {
 
     // all the beauty of Serafin is that now, we have a programmatic api with typings that supports all the buissness features we have implemented
     // let's create some tests data before the server starts
-    let pets = await petPipeline.create([{ name: "Snowball", category: "cat", tags: ["dead"] }, { name: "", category: "cat", photoUrls: ["aCatUrl"] }])
+    let pets = petPipeline.create([{ name: "Snowball", category: "cat", tags: ["dead"] }, { name: "", category: "cat", photoUrls: ["aCatUrl"] }])
+
 
     // start the server
     let server = app.listen(process.env.PORT || 80, (error: any) => {

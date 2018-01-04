@@ -2,7 +2,7 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import { Api, RestTransport } from '../../serafin/api';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
-import { PipelineSchemaBuilderModel } from '../../serafin/pipeline';
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 // express initialization
 let app = express();
@@ -28,10 +28,10 @@ let api = new Api(app, {
 api.configure(new RestTransport())
 
 // Declare a Schema for our "entity"
-let aModelSchema = new PipelineSchemaBuilderModel({ type: 'object' });
+let aModelSchema = SchemaBuilder.emptySchema().addString("id");
 
 // Define the pipeline, it stores data into memory directly
-let aPipeline = (new PipelineSourceInMemory(aModelSchema))
+let aPipeline = (new PipelineSourceInMemory(aModelSchema, {}))
 //.pipe(...) // Add a pipeline to extend the behavior
 
 // Use the pipeline in the api. It will add all the routes and compute Open Api spec

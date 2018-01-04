@@ -7,7 +7,7 @@
             "request": "attach",
             "port": 9229,
             "timeout": 30000,
-            "address": "localhost",
+            "address": "127.0.0.1",
             "restart": true,
             "sourceMaps": true,
             "smartStep": true,
