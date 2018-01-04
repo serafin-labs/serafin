@@ -4,6 +4,11 @@
 
 It is based on **Open API 3**, **JSON Schema** and **GraphQL** standards.
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/serafin-labs/serafin.svg)](https://greenkeeper.io/)
+[![Dependencies](https://img.shields.io/david/serafin-labs/serafin.svg)](https://david-dm.org/serafin-labs/serafin)
+[![Maintainability](https://api.codeclimate.com/v1/badges/beba161ae0e5f4f69c79/maintainability)](https://codeclimate.com/github/serafin-labs/serafin/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/beba161ae0e5f4f69c79/test_coverage)](https://codeclimate.com/github/serafin-labs/serafin/test_coverage)
+
 ## Installation
 There's no npm package yet! We are close to the alpha release and we will produce packages for this version.
 If you want to test **serafin** you can clone the repo and run it locally or you can include a direct git reference to your ```package.json``` :
