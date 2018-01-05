@@ -10,7 +10,7 @@ function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {
         return modelName
     } else {
-        modelName + _.upperFirst(schemaBuilderName.replace("SchemaBuilder", ""))
+        return modelName + _.upperFirst(schemaBuilderName.replace("SchemaBuilder", ""))
     }
 }
 export class OpenApi {
@@ -23,10 +23,6 @@ export class OpenApi {
         this.upperName = _.upperFirst(name);
         this.upperPluralName = _.upperFirst(pluralName);
 
-        let nameMapping = {
-            model: this.upperName,
-            readQuerySchemaBuilder: `${this.upperName}Read`
-        }
         for (let schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
             let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
             let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline[schemaBuilderName].schema));
@@ -53,19 +49,23 @@ export class OpenApi {
             responses: {
                 200: {
                     description: `${this.upperPluralName} corresponding to the query`,
-                    schema: {
-                        allOf: [
-                            {
-                                type: 'object',
-                                properties: {
-                                    data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}` },
-                                    }
-                                }
-                            },
-                            { $ref: `#/components/schemas/${this.upperName}ReadWrapper` }
-                        ]
+                    content: {
+                        "application/json": {
+                            schema: {
+                                allOf: [
+                                    {
+                                        type: 'object',
+                                        properties: {
+                                            data: {
+                                                type: 'array',
+                                                items: { "$ref": `#/components/schemas/${this.upperName}` },
+                                            }
+                                        }
+                                    },
+                                    { $ref: `#/components/schemas/${this.upperName}ReadWrapper` }
+                                ]
+                            }
+                        }
                     }
                 },
                 400: {

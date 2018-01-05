@@ -53,7 +53,7 @@ async function main() {
     let categoryPipeline = (new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
         .pipe(new Links());
 
-    let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder, {}))
+    let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
         .pipe(new Links());
 

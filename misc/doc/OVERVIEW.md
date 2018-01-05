@@ -54,6 +54,12 @@ The **source pipeline** classes provide an abstraction layer on top of databases
 let inMemoryPipeline = new PipelineSourceInMemory(aModelSchema);
 ```
 
+## Schema Builder
+
+The JSON schema and its associated Typescript type can be built at the same time using our schema builder library.
+
+Check out [serafin-labs/schema-builder](https://github.com/serafin-labs/schema-builder)
+
 ## Pipelines
 
 Each endpoint is linked to a **pipeline**, with a set of **REST** actions possible on it.
@@ -122,17 +128,9 @@ This means that the schema modifications and the options you add endup beeing pa
 
 ![](https://media.giphy.com/media/l2QE7DJSSgkg0I812/giphy.gif)
 
-
-## Model Interfaces generation
-
-The biggest part of the model relies on JSON Schema. But **Typescript** needs **Interfaces** to provide good type checking. To avoid you creating those **Interfaces** manually, we created a gulp task based on **json-schema-to-typescript**.
-
-Check out [serafin-framework/gulp-serafin-json-schema-to-typescript](https://github.com/serafin-framework/gulp-serafin-json-schema-to-typescript)
-
-
 ## Data checking
 
-The schemas provided to the **pipelines** are used to validate the input data. If not valid, a detailed error is thrown and trigger *400 Bad Request* response.
+The schemas provided to the **pipelines** are used to validate the input data. If not valid, a detailed error is thrown.
 
 ## Type coercion
 

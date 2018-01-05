@@ -32,7 +32,8 @@ A very simple example looks like that :
 ```typescript
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import { Api, PipelineSourceInMemory, PipelineSchemaModel, RestTransport } from '@serafin/api';
+import { SchemaBuilder } from '@serafin/schema-builder';
+import { Api, PipelineSourceInMemory, RestTransport } from '@serafin/api';
 
 // express initialization
 let app = express();
@@ -50,7 +51,7 @@ let api = new Api(app, {
 api.configure(new RestTransport());
 
 // Declare a Schema for our "entity"
-let aModelSchema = new PipelineSchemaModel({ type: 'object' });
+let aModelSchema = SchemaBuilder.emptySchema().addString("id").addString("data");
 
 // Define the pipeline, it stores data into memory directly
 let aPipeline = (new PipelineSourceInMemory(aModelSchema))
@@ -73,14 +74,14 @@ With this basic example you now have the following endpoints:
 - PATCH /models/:id
 - DELETE /models/:id
 
-The model schema we have provided doesn't enforce anything and the pipeline doesn't do anything more than the default behaviour. So, obviously, the ```/api.json``` doesn't contain a lot of information. But the important point is that the **Api** react to the **pipeline** behaviour. When you define new constraints on your **schema** or new options in a **pipeline**, the **Api** will react accordingly.
+The important point is that the **Api** react to the **pipeline** behaviour. When you define new constraints on your **schema** or new options in a **pipeline**, the **Api** will react accordingly.
 
 If you want to see more complex examples, take a look at the ```src/example``` folder.
 
 
 ## Contributing
 
-The project interests you ? Good. Read our [contributer guide](./CONTRIBUTING.md) so you can get involved.
+The project interests you ? Read our [contributer guide](./CONTRIBUTING.md) so you can get involved.
 
 
 

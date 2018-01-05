@@ -7,7 +7,6 @@ Currently, being a prototype, the project is not separated into different module
 
 - *pipeline* folder contains the core definition of pipelines (abstract classes) and utils method
 - *api* folder contains the Api class and the default transports (Rest & GraphQL)
-- *openApi* folder contains type definitions for OpenApi spec 3.0.0 & also a custom meta schema for JSON Schema validation
 
 ## Running the project
 

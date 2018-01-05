@@ -47,7 +47,7 @@ export class PipelineSourceAbstract<
             patchQuery?: SchemaBuilder<PatchQuery>,
             patchValues?: SchemaBuilder<PatchValues>,
             deleteQuery?: SchemaBuilder<DeleteQuery>
-        }) {
+        } = {}) {
         super();
         this.parent = null;
         this._modelSchemaBuilder = model;

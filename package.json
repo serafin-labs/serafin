@@ -40,7 +40,6 @@
     "verror": "^1.10.0"
   },
   "devDependencies": {
-    "@serafin/gulp-serafin-json-schema-to-typescript": "^0.2.0",
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
     "@types/chai-http": "^3.0.3",
