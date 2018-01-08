@@ -6,7 +6,7 @@ import { QueryTemplate } from './QueryTemplate';
 export interface PipelineRelationInterface {
     name: string
     pipeline: PipelineAbstract | (() => PipelineAbstract)
-    query: ((o: any) => Promise<any>) | object | QueryTemplate
+    query: object | QueryTemplate
     type?: 'one' | 'many'
 }
 
@@ -15,11 +15,11 @@ export interface PipelineRelationInterface {
  */
 export class PipelineRelations {
 
-    constructor(public list: PipelineRelationInterface[] = []) {
+    constructor(private holdingPipeline: PipelineAbstract, public list: PipelineRelationInterface[] = []) {
     }
 
-    clone(): PipelineRelations {
-        return new PipelineRelations(this.list.map(r => _.clone(r)))
+    clone(holdingPipeline: PipelineAbstract): PipelineRelations {
+        return new PipelineRelations(holdingPipeline, this.list.map(r => _.clone(r)))
     }
 
     /**
@@ -27,25 +27,27 @@ export class PipelineRelations {
      * 
      * @param relation 
      */
-    addRelation(relation: PipelineRelationInterface, pipeline?: PipelineAbstract) {
+    add(name: string, pipeline: PipelineAbstract | (() => PipelineAbstract), query: object | QueryTemplate): this {
+        let relation: PipelineRelationInterface = {
+            name: name,
+            pipeline: pipeline,
+            query: query
+        };
+
         // Converts the query object into a templated query (so that it doesn't have to be used explicitely)
         if (typeof relation.query === 'object' && !(relation.query instanceof QueryTemplate)) {
             relation.query = new QueryTemplate(relation.query);
         }
 
-        // If a local non-array value references a foreign field that is unique (here we handle only the id), then the relation references a single item
-        // In any other case, many items can be referenced 
-        if (pipeline) {
-            relation.type = 'many';
-            if (relation.query instanceof QueryTemplate && relation.query.queryTemplate['id']) {
-                let queryValue = relation.query.queryTemplate['id'];
-                if (!Array.isArray(queryValue) && (
-                    typeof queryValue !== 'string' ||
-                    queryValue.charAt(0) != ':' ||
-                    pipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array'
-                )) {
-                    relation.type = 'one';
-                }
+        relation.type = 'many';
+        if (relation.query instanceof QueryTemplate && relation.query.queryTemplate['id']) {
+            let queryValue = relation.query.queryTemplate['id'];
+            if (!Array.isArray(queryValue) && (
+                typeof queryValue !== 'string' ||
+                queryValue.charAt(0) != ':' ||
+                this.holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array'
+            )) {
+                relation.type = 'one';
             }
         }
 
@@ -68,13 +70,10 @@ export class PipelineRelations {
         if (!relation) {
             throw validationError(`Relation ${relationName} does not exist.`)
         }
-        if (typeof relation.query === 'function') {
+        if (relation.query instanceof QueryTemplate) {
             for (let r of resources) {
-                r[relation.name] = await relation.query(r);
-            }
-        } else if (typeof relation.query === 'object' && relation.query instanceof QueryTemplate) {
-            for (let r of resources) {
-                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read(relation.query.hydrate(r))).data;
+                r[relation.name] = (await (relation.pipeline as PipelineAbstract).read((relation.query instanceof QueryTemplate) ?
+                    relation.query.hydrate(r) : relation.query)).data;
             }
         }
     }
@@ -84,7 +83,7 @@ export class PipelineRelations {
      * @param relation
      * @param resource
      */
-    async fetchRelationForResource(relation: PipelineRelationInterface, resource: any): Promise<any> {
+    async fetchForResource(relation: PipelineRelationInterface, resource: any): Promise<any> {
         if (typeof relation.pipeline === "function") {
             relation.pipeline = relation.pipeline()
         }

@@ -6,6 +6,7 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
 import { SchemaBuilder, Omit } from "@serafin/schema-builder"
+import { QueryTemplate } from './QueryTemplate';
 
 const schemaBuilderCache = Symbol("SchemaBuilderCache");
 
@@ -44,6 +45,7 @@ export abstract class PipelineAbstract<
      * Types are all 'any' because pipelines are reusable and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
+    protected pipelineRelations: PipelineRelations = null;
 
     public get modelSchemaBuilder(): SchemaBuilder<T> { return this.nearestSchemaBuilder("_modelSchemaBuilder") }
     protected _modelSchemaBuilder?: SchemaBuilder<T>
@@ -91,21 +93,21 @@ export abstract class PipelineAbstract<
      * list of relations for this pipeline
      */
     public get relations(): PipelineRelations {
-        if (!this._relationsSchema) {
+        if (!this._pipelineRelations) {
             let existingRelations = this.parent ? this.parent.relations : null;
-            this._relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations()
+            this._pipelineRelations = existingRelations ? existingRelations.clone(this) : new PipelineRelations(this)
         }
-        return this._relationsSchema
+        return this._pipelineRelations
     }
-    protected _relationsSchema: PipelineRelations = null;
+    protected _pipelineRelations: PipelineRelations = null;
 
     /**
      * Shortcut to relations.addRelation
      * 
      * @param relation 
      */
-    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
-        this.relations.addRelation(relation, this);
+    public addRelation(name: string, pipeline: PipelineAbstract | (() => PipelineAbstract), query: object | QueryTemplate): this {
+        this.relations.add(name, pipeline, query);
         return this;
     }
 
