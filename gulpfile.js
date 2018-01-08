@@ -1,5 +1,5 @@
 var gulp = require('gulp');
-var gulpTasks = require('./src/serafin/gulp-tasks/index.js');
+var gulpTasks = require('@serafin/gulp-tasks');
 
 gulp.task('default', ['start']);
 gulp.task('dev', ['watch', 'watch-build-done', 'start']);
