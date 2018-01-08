@@ -35,9 +35,7 @@ export class PipelineSourceInMemory<
 
         let resources = _.filter(this.resources, resource => {
             for (var property in query) {
-                if (!resource[property]) {
-                    return false;
-                } else if (Array.isArray(query[property])) {
+                if (Array.isArray(query[property])) {
                     if (Array.isArray(resource[property])) {
                         // query property: array, resource property: array
 
@@ -52,7 +50,7 @@ export class PipelineSourceInMemory<
                         return false;
                     }
                 }
-                else if (query[property] != resource[property]) {
+                else if (query[property] !== resource[property]) {
                     // query property: other, resource property: other
                     return false;
                 }
