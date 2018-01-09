@@ -10,7 +10,7 @@ import { Omit, DeepPartial } from '@serafin/schema-builder';
 @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineSourceInMemory<
     T extends IdentityInterface,
-    ReadQuery = Partial<Query<Omit<T, "id">>>,
+    ReadQuery = Partial<Query<T>>,
     CreateValues = Omit<T, "id">,
     UpdateValues = Omit<T, "id">,
     PatchQuery = Query<Pick<T, "id">>,

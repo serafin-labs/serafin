@@ -1,11 +1,12 @@
 import * as util from 'util';
 import * as _ from 'lodash';
-import { PipelineRelations, PipelineRelationInterface } from './Relations'
 import { final } from './decorator/Final'
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
 import { SchemaBuilder, Omit } from "@serafin/schema-builder"
+import { PipelineRelation } from './Relation';
+import { IdentityInterface } from './IdentityInterface'
 
 const schemaBuilderCache = Symbol("SchemaBuilderCache");
 
@@ -21,7 +22,7 @@ export type InternalSchemaBuilderNames = "_modelSchemaBuilder" | "_readQuerySche
  * A pipeline is always plugged (piped) to another pipeline except for source pipelines, and can affect one or many of the actions, by overriding them.
  */
 export abstract class PipelineAbstract<
-    T = {},
+    T extends {} = {},
     ReadQuery = {},
     ReadOptions = {},
     ReadWrapper = {},
@@ -37,7 +38,8 @@ export abstract class PipelineAbstract<
     PatchWrapper = {},
     DeleteQuery = {},
     DeleteOptions = {},
-    DeleteWrapper = {}
+    DeleteWrapper = {},
+    Relations = {}
     > {
     /**
      * The parent pipeline. It has to be used internally by pipelines to access the next element of the pipeline.
@@ -90,23 +92,32 @@ export abstract class PipelineAbstract<
     /**
      * list of relations for this pipeline
      */
-    public get relations(): PipelineRelations {
+    public get relations(): Relations {
         if (!this._relationsSchema) {
             let existingRelations = this.parent ? this.parent.relations : null;
-            this._relationsSchema = existingRelations ? existingRelations.clone() : new PipelineRelations()
+            this._relationsSchema = existingRelations ? _.clone(existingRelations) : {} as any
         }
         return this._relationsSchema
     }
-    protected _relationsSchema: PipelineRelations = null;
-
+    protected _relationsSchema: Relations = null;
     /**
-     * Shortcut to relations.addRelation
+     * Add a relation to the pipeline.
+     * This method modifies the pipeline and affect the templated type.
      * 
      * @param relation 
      */
-    public addRelation(relation: Pick<PipelineRelationInterface, 'name' | 'pipeline' | 'query'>): this {
-        this.relations.addRelation(relation, this);
-        return this;
+    public addRelation<N extends keyof any, R extends IdentityInterface, RReadQuery, RReadOptions, RReadWrapper, K1 extends keyof RReadQuery = null, K2 extends keyof RReadOptions = null>(relation: {
+        name: N
+        pipeline: () => PipelineAbstract<R, RReadQuery, RReadOptions, RReadWrapper>
+        query: {[key in K1]: any}
+        options?: {[key in K2]: any}
+    }): PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper, Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}> {
+        if (typeof relation.pipeline !== "function") {
+            let pipeline = relation.pipeline
+            relation.pipeline = () => pipeline
+        }
+        this.relations[relation.name as string] = new PipelineRelation(relation as any, this)
+        return this as any;
     }
 
     /**
@@ -307,12 +318,12 @@ export abstract class PipelineAbstract<
      * 
      * @param pipeline The pipeline to link with this one
      */
-    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper>) {
+    pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper, NRelations>(pipeline: PipelineAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper, NRelations>) {
         // attach the pipeline to this one
         pipeline.attach(this);
 
         // cast the pipeline and combine all interfaces
-        var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateValues & NCreateValues, CreateOptions & NCreateOptions, CreateWrapper & NCreateWrapper, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, UpdateWrapper & NUpdateWrapper, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, PatchWrapper & NPatchWrapper, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions, DeleteWrapper & NDeleteWrapper> = <any>pipeline;
+        var chainedPipeline: PipelineAbstract<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateValues & NCreateValues, CreateOptions & NCreateOptions, CreateWrapper & NCreateWrapper, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, UpdateWrapper & NUpdateWrapper, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, PatchWrapper & NPatchWrapper, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions, DeleteWrapper & NDeleteWrapper, Relations & NRelations> = <any>pipeline;
         return chainedPipeline;
     }
 

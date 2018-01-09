@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import * as chai from "chai";
-import { PipelineAbstract, PipelineSourceAbstract, PipelineRelations } from "../"
+import { PipelineAbstract, PipelineSourceAbstract, PipelineRelation } from "../"
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-as-promised"))
 
 describe('Pipelines', function () {
-    let TestPipeline = class extends PipelineAbstract { }
+    let TestPipeline = class extends PipelineAbstract<any> { }
     let TestSourcePipeline = class extends PipelineSourceAbstract<any> { }
     describe('Abstract', function () {
         it('should be implemented by a concrete class', function () {
@@ -21,36 +21,28 @@ describe('Pipelines', function () {
             expect(p2["parent"]).to.be.eql(p1)
         });
 
-        it('should define a schema', function () {
-            let p = new TestPipeline()
-            expect(p.toString().length).to.be.above(10)
-        });
-
         it('should add relations', function () {
-            let p1 = new TestPipeline()
             let p2 = new TestPipeline()
-            p1.addRelation({
+            let p1 = new TestPipeline().addRelation({
                 name: "test",
-                pipeline: p2,
+                pipeline: () => p2,
                 query: {}
-            });
+            })
             expect(p1.relations).to.exist
-            expect(p1.relations).to.be.an.instanceof(PipelineRelations)
-            expect(p1.relations.list.length).to.eql(1)
+            expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
+            expect(Object.keys(p1.relations).length).to.eql(1)
         });
 
         it('should inherit relations', function () {
-            let p1 = new TestPipeline()
-            let p2 = new TestPipeline()
-            let p = p1.pipe(p2)
-            p1.addRelation({
+            let p1 = new TestPipeline().addRelation({
                 name: "test",
-                pipeline: p2,
+                pipeline: () => p2,
                 query: {}
-            });
+            })
+            let p2 = new TestPipeline()
+            let p = p1.pipe(p2);
             expect(p.relations).to.exist
-            expect(p.relations).to.be.an.instanceof(PipelineRelations)
-            expect(p.relations.list.length).to.eql(1)
+            expect(p.relations.test).to.be.an.instanceof(PipelineRelation)
         });
 
         it('should throw an error if used whitout parent', async function () {

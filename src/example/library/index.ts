@@ -8,7 +8,6 @@ import { categorySchemaBuilder } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
 import { Links } from '../../pipeline/Links';
-import { PipelineRelations } from '../../serafin/pipeline/Relations';
 import { Key } from 'readline';
 
 async function main() {
@@ -46,16 +45,21 @@ async function main() {
             schema: true
         }));
 
+    let bookPipelineRef;
+
     let authorPipeline = (new PipelineSourceInMemory(authorSchemaBuilder, { createValues: authorSchemaBuilder.clone() }))
         .pipe(new Paginate())
-        .pipe(new Links());
+        .addRelation({ name: 'book', pipeline: () => bookPipelineRef, query: { authorId: ':id' } })
+        .addRelation({ name: 'adventureBooks', pipeline: () => bookPipelineRef, query: { authorId: ':id', categoryIds: ['1'] } });;
 
-    let categoryPipeline = (new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
-        .pipe(new Links());
+    let categoryPipeline = new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() });
 
     let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
-        .pipe(new Links());
+        .addRelation({ name: 'author', pipeline: () => authorPipeline, query: { id: ':authorId' } })
+        .addRelation({ name: 'category', pipeline: () => categoryPipeline, query: { id: ':categoryIds' } });
+
+    bookPipelineRef = bookPipeline
 
     await authorPipeline.create([
         { id: '1', firstName: 'Jules', lastName: 'Vernes' },
@@ -81,11 +85,6 @@ async function main() {
         { title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", authorId: '2', categoryIds: ['5', '4', '2'] },
         { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categoryIds: ['5', '4', '2'] },
     ]);
-
-    bookPipeline = bookPipeline.addRelation({ name: 'author', pipeline: authorPipeline, query: { id: ':authorId' } })
-        .addRelation({ name: 'category', pipeline: categoryPipeline, query: { id: ':categoryIds' } })
-    authorPipeline = authorPipeline.addRelation({ name: 'book', pipeline: bookPipeline, query: { authorId: ':id' } })
-        .addRelation({ name: 'adventureBooks', pipeline: bookPipeline, query: { authorId: ':id', categoryIds: '1' } });;
 
     console.log(await authorPipeline.read({ firstName: 'Jules' }));
 

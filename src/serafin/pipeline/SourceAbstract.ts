@@ -1,12 +1,11 @@
 import { notImplementedError } from "../error/Error"
 import { PipelineAbstract } from './Abstract';
 import { Omit, DeepPartial, SchemaBuilder } from "@serafin/schema-builder";
+import { IdentityInterface } from './IdentityInterface'
 
 const METHOD_NOT_IMPLEMENTED = Symbol("Not Implemented");
 
 export type Query<T> = {[P in keyof T]: T[P] | T[P][]};
-
-export interface IdentityInterface { id: string }
 
 /**
  * Base class for a source pipeline. A source pipeline is supposed to be the initial pipeline, 
@@ -14,7 +13,7 @@ export interface IdentityInterface { id: string }
  */
 export class PipelineSourceAbstract<
     T extends IdentityInterface,
-    ReadQuery = Partial<Query<Omit<T, "id">>>,
+    ReadQuery = Partial<Query<T>>,
     ReadOptions = {},
     ReadWrapper = {},
     CreateValues = Omit<T, "id">,
@@ -34,7 +33,7 @@ export class PipelineSourceAbstract<
     extends PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper>
 {
     constructor(model: SchemaBuilder<T>, {
-        readQuery = model.clone().omitProperties(["id"]).transformPropertiesToArray().toOptionals().flatType(),
+        readQuery = model.clone().transformPropertiesToArray().toOptionals().flatType(),
         createValues = model.clone().omitProperties(["id"]).flatType(),
         updateValues = model.clone().omitProperties(["id"]).flatType(),
         patchQuery = model.clone().pickProperties(["id"]).transformPropertiesToArray().flatType(),

@@ -127,13 +127,14 @@ export class GraphQLTransport implements TransportInterface {
 
         // add relations of this model as sub fields of the graphql schema
         if (relations) {
-            for (let relation of relations.list) {
+            for (let relationName in relations) {
+                let relation = relations[relationName]
                 let existingFieldsFunction = modelSchema.fields;
                 modelSchema.fields = ((relation, existingFieldsFunction) => () => {
                     // get the existing fields of the unerlying function
                     let existingFields = existingFieldsFunction();
                     // resolve the pipeline reference
-                    let pipeline = typeof relation.pipeline === "function" ? relation.pipeline() : relation.pipeline
+                    let pipeline = relation.pipeline()
                     // find the model graphql type of this relation
                     let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
                     if (!relationType) {
@@ -154,8 +155,8 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchRelationForResource(relation, entity)
-                                return data[0];
+                                let result = await relation.fetch(entity)
+                                return result.data[0];
                             }
                         }
                     } else {
@@ -165,8 +166,8 @@ export class GraphQLTransport implements TransportInterface {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let data = await relations.fetchRelationForResource(relation, entity)
-                                return data;
+                                let result = await relation.fetch(entity)
+                                return result.data;
                             }
                         }
                     }
