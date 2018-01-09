@@ -46,6 +46,7 @@ export abstract class PipelineAbstract<
      * Types are all 'any' because pipelines are reusable and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
+    protected pipelineRelations: PipelineRelations = null;
 
     public get modelSchemaBuilder(): SchemaBuilder<T> { return this.nearestSchemaBuilder("_modelSchemaBuilder") }
     protected _modelSchemaBuilder?: SchemaBuilder<T>
@@ -93,13 +94,13 @@ export abstract class PipelineAbstract<
      * list of relations for this pipeline
      */
     public get relations(): Relations {
-        if (!this._relationsSchema) {
+        if (!this._pipelineRelations) {
             let existingRelations = this.parent ? this.parent.relations : null;
-            this._relationsSchema = existingRelations ? _.clone(existingRelations) : {} as any
+            this._pipelineRelations = existingRelations ? _.clone(existingRelations) : {} as any
         }
-        return this._relationsSchema
+        return this._pipelineRelations
     }
-    protected _relationsSchema: Relations = null;
+    protected _pipelineRelations: Relations = null;
     /**
      * Add a relation to the pipeline.
      * This method modifies the pipeline and affect the templated type.
