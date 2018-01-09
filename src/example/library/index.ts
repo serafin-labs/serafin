@@ -49,15 +49,15 @@ async function main() {
 
     let authorPipeline = (new PipelineSourceInMemory(authorSchemaBuilder, { createValues: authorSchemaBuilder.clone() }))
         .pipe(new Paginate())
-        .addRelation({ name: 'book', pipeline: () => bookPipelineRef, query: { authorId: ':id' } })
-        .addRelation({ name: 'adventureBooks', pipeline: () => bookPipelineRef, query: { authorId: ':id', categoryIds: ['1'] } });;
+        .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
+        .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
     let categoryPipeline = new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() });
 
     let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
-        .addRelation({ name: 'author', pipeline: () => authorPipeline, query: { id: ':authorId' } })
-        .addRelation({ name: 'category', pipeline: () => categoryPipeline, query: { id: ':categoryIds' } });
+        .addRelation('author', () => authorPipeline, { id: ':authorId' })
+        .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
 
     bookPipelineRef = bookPipeline
 

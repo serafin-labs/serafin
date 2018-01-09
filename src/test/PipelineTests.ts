@@ -23,22 +23,14 @@ describe('Pipelines', function () {
 
         it('should add relations', function () {
             let p2 = new TestPipeline()
-            let p1 = new TestPipeline().addRelation({
-                name: "test",
-                pipeline: () => p2,
-                query: {}
-            })
+            let p1 = new TestPipeline().addRelation("test", () => p2, {})
             expect(p1.relations).to.exist
             expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
             expect(Object.keys(p1.relations).length).to.eql(1)
         });
 
         it('should inherit relations', function () {
-            let p1 = new TestPipeline().addRelation({
-                name: "test",
-                pipeline: () => p2,
-                query: {}
-            })
+            let p1 = new TestPipeline().addRelation("test", () => p2, {})
             let p2 = new TestPipeline()
             let p = p1.pipe(p2);
             expect(p.relations).to.exist

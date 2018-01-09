@@ -46,7 +46,6 @@ export abstract class PipelineAbstract<
      * Types are all 'any' because pipelines are reusable and they can't make assumption on what is the next element of the pipeline.
      */
     protected parent?: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>;
-    protected pipelineRelations: PipelineRelations = null;
 
     public get modelSchemaBuilder(): SchemaBuilder<T> { return this.nearestSchemaBuilder("_modelSchemaBuilder") }
     protected _modelSchemaBuilder?: SchemaBuilder<T>
@@ -101,23 +100,15 @@ export abstract class PipelineAbstract<
         return this._pipelineRelations
     }
     protected _pipelineRelations: Relations = null;
+
     /**
      * Add a relation to the pipeline.
      * This method modifies the pipeline and affect the templated type.
      * 
      * @param relation 
      */
-    public addRelation<N extends keyof any, R extends IdentityInterface, RReadQuery, RReadOptions, RReadWrapper, K1 extends keyof RReadQuery = null, K2 extends keyof RReadOptions = null>(relation: {
-        name: N
-        pipeline: () => PipelineAbstract<R, RReadQuery, RReadOptions, RReadWrapper>
-        query: {[key in K1]: any}
-        options?: {[key in K2]: any}
-    }): PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper, Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}> {
-        if (typeof relation.pipeline !== "function") {
-            let pipeline = relation.pipeline
-            relation.pipeline = () => pipeline
-        }
-        this.relations[relation.name as string] = new PipelineRelation(relation as any, this)
+    public addRelation<N extends keyof any, R extends IdentityInterface, RReadQuery, RReadOptions, RReadWrapper, K1 extends keyof RReadQuery = null, K2 extends keyof RReadOptions = null>(name: N, pipeline: () => PipelineAbstract<R, RReadQuery, RReadOptions, RReadWrapper>, query: {[key in K1]: any}, options?: {[key in K2]: any}): PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper, Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}> {
+        this.relations[name as string] = new PipelineRelation(this, name, pipeline, query, options)
         return this as any;
     }
 

@@ -46,18 +46,25 @@ async function main() {
             schema: true
         }));
 
-    let categoryPipeline = (new PipelineSourceInMemory(categorySchemaBuilder))
-        .pipe(new Paginate());
+    let categoryPipelineBase = (new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
+        .pipe(new Paginate())
 
-    let itemPipeline = (new PipelineSourceInMemory(itemSchemaBuilder))
-        .pipe(new Paginate());
+    let itemPipeline = (new PipelineSourceInMemory(itemSchemaBuilder, { createValues: itemSchemaBuilder.clone() }))
+        .pipe(new Paginate())
+        .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
+
+    let categoryPipeline = categoryPipelineBase
+        .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
+        .addRelation('items', () => itemPipeline, { categoryId: ':id' });
+
+
 
     api.use(categoryPipeline, "category", "categories");
     api.use(itemPipeline, "item");
 
     await categoryPipeline.create([
-        { id: "1", name: "Hardware" },
-        { id: "2", name: "Tools" },
+        { id: "1", name: "Hardware", parentCategory: null },
+        { id: "2", name: "Tools", parentCategory: null },
         { id: "3", name: "Screws", parentCategory: "1" },
         { id: "4", name: "Furniture and cabinets", parentCategory: "1" },
         { id: "5", name: "Anchors", parentCategory: "1" }
@@ -74,10 +81,6 @@ async function main() {
         { id: "8", name: "Saw", price: 20, "categoryId": "2" },
         { id: "9", name: "Drill", price: 50, "categoryId": "2" }
     ]);
-
-    itemPipeline.addRelation('category', categoryPipeline, { id: ':categoryId' });
-    categoryPipeline.addRelation('subCategories', categoryPipeline, { parentId: ':id' });
-
 
     setTimeout(async () => {
 
