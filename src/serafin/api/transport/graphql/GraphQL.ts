@@ -112,10 +112,10 @@ export class GraphQLTransport implements TransportInterface {
         let schemaName = _.upperFirst(name)
 
         // transform json schema to graphql objects
-        let graphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, schemaName, this.api.isNotAnInternalOption);
+        let graphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, schemaName, () => true);
         jsonSchemaToGraphQL(pipeline.readOptionsSchemaBuilder.schema, `${schemaName}ReadOptions`, this.api.isNotAnInternalOption, graphQLSchemas);
-        jsonSchemaToGraphQL(pipeline.readQuerySchemaBuilder.schema, `${schemaName}ReadQuery`, this.api.isNotAnInternalOption, graphQLSchemas);
-        jsonSchemaToGraphQL(pipeline.readWrapperSchemaBuilder.schema, `${schemaName}ReadWrapper`, this.api.isNotAnInternalOption, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.readQuerySchemaBuilder.schema, `${schemaName}ReadQuery`, () => true, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.readWrapperSchemaBuilder.schema, `${schemaName}ReadWrapper`, () => true, graphQLSchemas);
 
         // get the schema of the model
         let modelSchema = graphQLSchemas[schemaName];
@@ -129,6 +129,7 @@ export class GraphQLTransport implements TransportInterface {
         if (relations) {
             for (let relationName in relations) {
                 let relation = relations[relationName]
+                let relationSchemaName = `${schemaName}${_.upperFirst(relationName)}`
                 let existingFieldsFunction = modelSchema.fields;
                 modelSchema.fields = ((relation, existingFieldsFunction) => () => {
                     // get the existing fields of the unerlying function
@@ -141,12 +142,13 @@ export class GraphQLTransport implements TransportInterface {
                         // if the relation type does not exist, this means the pipeline was never added to the api
                         // we have to convert it on the fly
                         let relationModelName = `${schemaName}${_.upperFirst(relation.name)}`;
-                        let relationGraphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, relationModelName, this.api.isNotAnInternalOption);
+                        let relationGraphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, relationModelName, () => true);
                         relationType = {
                             schema: relationGraphQLSchemas[relationModelName].schema,
                             pipeline: pipeline
                         }
                     }
+
                     // add the field for this relation
                     if (relation.type === "one") {
                         existingFields[relation.name] = {
@@ -160,13 +162,31 @@ export class GraphQLTransport implements TransportInterface {
                             }
                         }
                     } else {
+                        // obtain query and options schemas for this relation 
+                        let queryFilter = (param: string) => !(param in relation.query)
+                        let optionsFilter = (param: string) => this.api.isNotAnInternalOption(param) && (!relation.options || !(param in relation.options))
+                        let relationGraphQlSchemas = jsonSchemaToGraphQL(pipeline.readOptionsSchemaBuilder.schema, `${relationSchemaName}ReadOptions`, optionsFilter);
+                        jsonSchemaToGraphQL(pipeline.readQuerySchemaBuilder.schema, `${relationSchemaName}ReadQuery`, queryFilter, relationGraphQlSchemas);
                         existingFields[relation.name] = {
                             type: new graphql.GraphQLList(relationType.schema),
-                            resolve: async (entity) => {
+                            args: {
+                                query: {
+                                    type: relationGraphQlSchemas[`${relationSchemaName}ReadQuery`].schema
+                                },
+                                options: {
+                                    type: relationGraphQlSchemas[`${relationSchemaName}ReadOptions`].schema
+                                }
+                            },
+                            resolve: async (entity, params, request) => {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let result = await relation.fetch(entity)
+                                let options = this.api.filterInternalOptions(_.cloneDeep(params.options || {}));
+                                if (this.options.internalOptions) {
+                                    _.merge(options, this.options.internalOptions(request))
+                                }
+                                let query = _.cloneDeep(params.query || {});
+                                let result = await relation.fetch(entity, query, options)
                                 return result.data;
                             }
                         }
