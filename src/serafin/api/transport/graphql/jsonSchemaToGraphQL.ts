@@ -29,10 +29,10 @@ function pathToSchemaName(path: string) {
  * 
  * @param rootSchema the JSON schema to convert
  * @param rootName name of the main schema object
- * @param optionsFilter filter function applied to 'options' objects. 'true' means that the property is kept.
+ * @param propertiesFilter filter function applied to 'options' objects. 'true' means that the property is kept.
  * @param schemaByNames the result schema objects for the given JSON schema
  */
-export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, optionsFilter: (name: string) => boolean, schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } = {}): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
+export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, propertiesFilter: (name: string) => boolean, schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } = {}): { [name: string]: { schema: graphql.GraphQLObjectType, fields: () => any } } {
     // let's define the recursive method to convert JSON schemas
     let _jsonSchemaToGraphQL = (schema: JSONSchema, name: string) => {
         // if this schema was already converted, let's use the existing reference
@@ -46,7 +46,7 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, op
         // if the schema type is "object" and we have properties definied, we can convert it to GraphQLObjectType or GraphQLInputObjectType
         if (schema.type === "object" || (!schema.hasOwnProperty("type") && schema.properties)) {
             // filter internal options, so they don't appear in the schema
-            let properties = name.endsWith("Options") ? _.pickBy(schema.properties, (v, n) => optionsFilter(n)) : schema.properties;
+            let properties = _.pickBy(schema.properties, (v, n) => propertiesFilter(n));
             // map all properties to their graphql equivalent
             let fields = _.mapValues(properties, (propertySchema, propertyName) => {
                 return {
