@@ -52,7 +52,7 @@ async function main() {
         .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
         .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new Pipeline().pipe(PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }));
+    let categoryPipeline = new Pipeline().pipe(new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }));
 
     let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())

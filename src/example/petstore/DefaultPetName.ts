@@ -11,20 +11,20 @@ export class DefaultPetName extends PipeAbstract {
     }
 
     @description("Generate pet names for new Pets if they were not provided.")
-    protected async _create(resources: { name: string }[], options?: {}) {
+    protected async _create(next, resources: { name: string }[], options?: {}) {
         resources.forEach(resource => {
             if (!resource.name) {
                 resource.name = this.generatePetName()
             }
         });
-        return this.parent.create(resources, options);
+        return next(resources, options);
     }
 
     @description("Generate a new Pet name for the updated Pet if it was not provided.")
-    protected async _update(id: string, values: { name: string }, options?: {}) {
+    protected async _update(next, id: string, values: { name: string }, options?: {}) {
         if (!values.name) {
             values.name = this.generatePetName()
         }
-        return this.parent.update(id, values, options);
+        return next(id, values, options);
     }
 }

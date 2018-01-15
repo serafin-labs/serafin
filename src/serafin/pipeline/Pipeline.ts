@@ -94,7 +94,7 @@ export class Pipeline<
         return this._create(resources, this.prepareOptionsMapping(options, "create"));
     }
 
-    private _create(resources, options) {
+    private _create(resources, options): Promise<{ data: T[] } & CreateWrapper> {
         throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -113,7 +113,7 @@ export class Pipeline<
         return this._read(query, this.prepareOptionsMapping(options, "read"));
     }
 
-    private _read(query, options) {
+    private _read(query, options): Promise<{ data: T[] } & ReadWrapper> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -134,7 +134,7 @@ export class Pipeline<
         return this._update(id, values, options);
     }
 
-    private _update(id, values, options) {
+    private _update(id, values, options): Promise<{ data: T } & UpdateWrapper> {
         throw notImplementedError("update", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -173,7 +173,7 @@ export class Pipeline<
         return this._delete(query, this.prepareOptionsMapping(options, "delete"));
     }
 
-    private _delete(query, options) {
+    private _delete(query, options): Promise<{ data: T[] } & DeleteWrapper> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -187,7 +187,7 @@ export class Pipeline<
                 pipelineSchema[schemaBuilderName] = this[schemaBuilderName].schema
             }
         }
-        return (util.inspect(pipelineSchema(this), false, null));
+        return (util.inspect(pipelineSchema, false, null));
     }
 
     /**
@@ -198,22 +198,29 @@ export class Pipeline<
      */
     pipe<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper, NRelations>
         (pipe: PipeAbstract<N, NReadQuery, NReadOptions, NReadWrapper, NCreateValues, NCreateOptions, NCreateWrapper, NUpdateValues, NUpdateOptions, NUpdateWrapper, NPatchQuery, NPatchValues, NPatchOptions, NPatchWrapper, NDeleteQuery, NDeleteOptions, NDeleteWrapper>)
-      : Pipeline<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateValues & NCreateValues, CreateOptions & NCreateOptions, CreateWrapper & NCreateWrapper, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, UpdateWrapper & NUpdateWrapper, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, PatchWrapper & NPatchWrapper, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions, DeleteWrapper & NDeleteWrapper, Relations> 
+        // : Pipeline<T & N, ReadQuery & NReadQuery, ReadOptions & NReadOptions, ReadWrapper & NReadWrapper, CreateValues & NCreateValues, CreateOptions & NCreateOptions, CreateWrapper & NCreateWrapper, UpdateValues & NUpdateValues, UpdateOptions & NUpdateOptions, UpdateWrapper & NUpdateWrapper, PatchQuery & NPatchQuery, PatchValues & NPatchValues, PatchOptions & NPatchOptions, PatchWrapper & NPatchWrapper, DeleteQuery & NDeleteQuery, DeleteOptions & NDeleteOptions, DeleteWrapper & NDeleteWrapper, Relations> 
+        : any
     {
         pipe.attach(this);
 
+        for (var schemaBuilderName of Pipeline.schemaBuilderNames) {
+            if (pipe[schemaBuilderName]) {
+                if (!this[schemaBuilderName]) {
+                    this[schemaBuilderName] = SchemaBuilder.emptySchema();
+                }
+
+                this[schemaBuilderName] = pipe[schemaBuilderName].mergeProperties(this[schemaBuilderName]);
+            }
+        }
+
         for (var method of Pipeline.CRUDMethods) {
             if (typeof pipe[method] == 'function') {
-                for (var builder of ['Query', 'Options', 'Wrapper', 'Values']) {
-                    if (pipe[`_${method}${builder}SchemaBuilder`]) {
-                        this[`_${method}${builder}SchemaBuilder`] = pipe[`_${method}${builder}SchemaBuilder`].mergeProperties(this[`_${method}${builder}SchemaBuilder`]);
-                    }
 
-                    let next = this[`_${method}`];
-                    this[`_${method}`] = function (...args) {
-                        return (pipe[method] as (...args) => any).call(pipe, args);
-                    };
-                }
+
+                let next = this[`_${method}`];
+                this[`_${method}`] = function (...args) {
+                    return (pipe[method] as (...args) => any).call(pipe, args);
+                };
             }
         }
 
@@ -263,15 +270,15 @@ export class Pipeline<
     // /**
     //  * Map the input options object according to the configured mapping
     //  */
-    // private prepareOptionsMapping(options, method: PipelineMethods) {
-    //     if (typeof options === 'object' && this.optionsMapping) {
-    //         for (let key in this.optionsMapping[method]) {
-    //             if (options[key]) {
-    //                 options[this.optionsMapping[key]] = options[key];
-    //                 delete (options[key]);
-    //             }
+    private prepareOptionsMapping(options, method: PipelineMethods) {
+        // if (typeof options === 'object' && this.optionsMapping) {
+        //     for (let key in this.optionsMapping[method]) {
+        //         if (options[key]) {
+        //             options[this.optionsMapping[key]] = options[key];
+        //             delete (options[key]);
     //         }
     //     }
-    //     return options;
     // }
+        return options;
+    }
 }
