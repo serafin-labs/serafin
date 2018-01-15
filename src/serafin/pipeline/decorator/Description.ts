@@ -12,9 +12,6 @@ export function description(text: string) {
             targetOrCtor['description'] = text;
         } else {
             // Method
-            if (propertyKey.startsWith('_')) {
-                propertyKey = propertyKey.slice(1);
-            }
             let optionsSchemaBuilder: SchemaBuilder<{}>;
             let schemaBuilderName = `_${propertyKey}OptionsSchemaBuilder`;
             if (!targetOrCtor.hasOwnProperty(schemaBuilderName)) {

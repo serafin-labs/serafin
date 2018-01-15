@@ -3,7 +3,7 @@ import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { petSchemaBuilder } from './model/Pet';
 import * as bodyParser from 'body-parser';
-import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
+import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
 
 import { DefaultPetName } from './DefaultPetName';
 
@@ -45,7 +45,7 @@ async function main() {
             schema: true
         }));
 
-    let petPipeline = (new PipelineSourceInMemory(petSchemaBuilder)) // Initialize an InMemory Pipepeline Source with the model schema
+    let petPipeline = (new PipeSourceInMemory(petSchemaBuilder)) // Initialize an InMemory Pipepeline Source with the model schema
         .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
         .pipe(new DefaultPetName("Snowball", 1)) // add custom logic to generate pets name
     //.pipe(...)  you can then add any pipeline. You can do pretty much anything, included but not limited to: custom buisness rules, logs, events, cache, api rate limiting, user acl, generated properties, fetch relations, result filters, property filters, custom type checking, etc. 

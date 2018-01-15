@@ -11,9 +11,6 @@ import { JSONSchema } from '@serafin/open-api';
  */
 export function result(name: string, schema: JSONSchema, required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        if (propertyKey.startsWith('_')) {
-            propertyKey = propertyKey.slice(1);
-        }
         let schemaBuilder: SchemaBuilder<{}>;
         let schemaBuilderName = `_${propertyKey}WrapperSchemaBuilder`;
         if (!target.hasOwnProperty(schemaBuilderName)) {

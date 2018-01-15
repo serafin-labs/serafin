@@ -1,7 +1,7 @@
-import { PipelineAbstract, description } from '../../serafin/pipeline';
+import { PipeAbstract, description } from '../../serafin/pipeline';
 
 @description("Pipeline used to generate pet names if you don't have an idea.")
-export class DefaultPetName extends PipelineAbstract {
+export class DefaultPetName extends PipeAbstract {
     constructor(private baseName: string, private currentCount: number = 0) {
         super();
     }

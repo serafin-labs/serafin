@@ -1,11 +1,8 @@
 import * as _ from 'lodash'
-import { PipelineAbstract } from "./Abstract"
+import { Pipeline } from "./Pipeline"
 import { validationError } from "../error/Error"
 import { QueryTemplate } from './QueryTemplate';
 import { Merge } from '@serafin/schema-builder';
-import { PipelineSourceInMemory } from '../../pipeline/source/InMemory';
-import { petSchemaBuilder } from "../../example/petstore/model/Pet"
-import { Paginate } from '../../pipeline/Paginate';
 import { Omit } from "@serafin/schema-builder"
 import { IdentityInterface } from './IdentityInterface';
 
@@ -13,9 +10,9 @@ import { IdentityInterface } from './IdentityInterface';
  * Represents a Relation for the given pipeline
  */
 export class PipelineRelation<T extends {} = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadWrapper = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
-    type?: 'one' | 'many'
+    type?: 'one' | 'many';
 
-    constructor(private holdingPipeline: PipelineAbstract<T>, public name: N, public pipeline: () => PipelineAbstract<R, ReadQuery, ReadOptions, ReadWrapper>, public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
+    constructor(private holdingPipeline: Pipeline<T>, public name: N, public pipeline: () => Pipeline<R, ReadQuery, ReadOptions, ReadWrapper>, public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
         this.type = 'many';
         if (query['id']) {
             let queryValue = query['id'];

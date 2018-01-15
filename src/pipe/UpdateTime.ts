@@ -1,8 +1,7 @@
-import { PipelineAbstract, option, description, result } from '../serafin/pipeline'
+import { PipeAbstract, option, description, result } from '../serafin/pipeline'
 
 @description("Adds creation and update timestamps to the resources")
-export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt: number }, {}, {}, { lastCreatedAt: number, lastUpdatedAt: number }> {
-
+export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: number }, {}, {}, { lastCreatedAt: number, lastUpdatedAt: number }> {
     constructor() {
         super()
     }
@@ -10,8 +9,8 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
     @result("lastCreatedAt", { type: "integer", description: "Last creation date" }, true)
     @result("lastUpdatedAt", { type: "integer", description: "Last modification date" }, true)
-    protected async _read(query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
-        let readWrapper = (await this.parent.read(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
+    public async read(next, query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
+        let readWrapper = (await next(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
         let lastCreatedAt = null;
         let lastUpdatedAt = null;
         readWrapper.data.forEach(result => {
@@ -35,23 +34,23 @@ export class UpdateTime extends PipelineAbstract<{ createdAt: number, updatedAt:
     }
 
     @description("Sets the creation time")
-    protected async _create(resources: { createdAt: number }[], options?: {}) {
+    public async create(next, resources: { createdAt: number }[], options?: {}) {
         resources.forEach(resource => {
             resource.createdAt = Date.now();
         });
 
-        return this.parent.create(resources, options);
+        return next(resources, options);
     }
 
     @description("Sets the update time")
-    protected async _update(id: string, values: { updatedAt: number }, options?: {}) {
+    public async update(next, id: string, values: { updatedAt: number }, options?: {}) {
         values.updatedAt = Date.now();
-        return this.parent.update(id, values, options);
+        return next(id, values, options);
     }
 
     @description("Sets the update time")
-    protected async _patch(query: {}, values: { updatedAt: number }, options?: {}) {
+    public async patch(next, query: {}, values: { updatedAt: number }, options?: {}) {
         values.updatedAt = Date.now();
-        return this.parent.patch(query, values, options);
+        return next(query, values, options);
     }
 }

@@ -10,9 +10,6 @@ import { JSONSchema } from '@serafin/open-api';
  */
 export function option(option: string, schema: JSONSchema, required: boolean = true) {
     return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        if (propertyKey.startsWith('_')) {
-            propertyKey = propertyKey.slice(1);
-        }
         let optionsSchemaBuilder: SchemaBuilder<{}>;
         let schemaBuilderName = `_${propertyKey}OptionsSchemaBuilder`;
         if (!target.hasOwnProperty(schemaBuilderName)) {

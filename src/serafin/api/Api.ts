@@ -2,7 +2,7 @@ import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
-import { PipelineAbstract } from "../pipeline/Abstract"
+import { Pipeline } from "../pipeline/Pipeline"
 import { throughJsonSchema } from "../util/throughJsonSchema"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
 import { TransportInterface } from "./transport/TransportInterface";
@@ -16,7 +16,7 @@ export class Api {
     /**
      * Map of all exposed pipelines
      */
-    public pipelineByName: { [name: string]: PipelineAbstract } = {}
+    public pipelineByName: { [name: string]: Pipeline } = {}
 
     /**
      * Base path of the API
@@ -92,7 +92,7 @@ export class Api {
      * @param name The singular name of the underlying resource.
      * @param pluralName The plural name the underlying resource. If not provided, it defaults to `${name}s`
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string = `${name}s`): this {
+    use(pipeline: Pipeline, name: string, pluralName: string = `${name}s`): this {
         this.pipelineByName[pluralName] = pipeline
         for (let transport of this.transports) {
             transport.use(pipeline, name, pluralName)

@@ -1,6 +1,6 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineSourceAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
+import { PipeSourceAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
 
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
@@ -8,14 +8,14 @@ import * as uuid from "node-uuid"
 import { Omit, DeepPartial } from '@serafin/schema-builder';
 
 @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
-export class PipelineSourceInMemory<
+export class PipeSourceInMemory<
     T extends IdentityInterface,
     ReadQuery = Partial<Query<T>>,
     CreateValues = Omit<T, "id">,
     UpdateValues = Omit<T, "id">,
     PatchQuery = Query<Pick<T, "id">>,
     PatchValues = DeepPartial<Omit<T, "id">>,
-    DeleteQuery = Query<Pick<T, "id">>> extends PipelineSourceAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
+    DeleteQuery = Query<Pick<T, "id">>> extends PipeSourceAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
     protected resources: { [index: string]: T } = {} as { [index: string]: T };
 
     private generateUUID(): string {
@@ -62,7 +62,7 @@ export class PipelineSourceInMemory<
         return { data: _.cloneDeep(resources) } as any;
     }
 
-    protected async _create(resources: CreateValues[], options?: {}) {
+    async create(next, resources: CreateValues[], options?: {}) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -78,11 +78,11 @@ export class PipelineSourceInMemory<
         return { data: createdResources };
     }
 
-    protected async _read(query?: ReadQuery, options?: {}): Promise<{ data: T[] }> {
+    async read(next, query?: ReadQuery, options?: {}): Promise<{ data: T[] }> {
         return this.readInMemory(query)
     }
 
-    protected async _update(id: string, values: UpdateValues, options?: {}) {
+    async update(next, id: string, values: UpdateValues, options?: {}) {
         var resources = await this.readInMemory({
             id: id
         });
@@ -99,7 +99,7 @@ export class PipelineSourceInMemory<
         return { data: undefined };
     }
 
-    protected async _patch(query: PatchQuery, values: PatchValues, options?: {}) {
+    async patch(next, query: PatchQuery, values: PatchValues, options?: {}) {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
@@ -116,7 +116,7 @@ export class PipelineSourceInMemory<
         return { data: updatedResources };
     }
 
-    protected async _delete(query?: DeleteQuery, options?: {}) {
+    async delete(next, query?: DeleteQuery, options?: {}) {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 

@@ -6,8 +6,8 @@ import { bookSchemaBuilder } from './model/Book';
 import { authorSchemaBuilder } from './model/Author';
 import { categorySchemaBuilder } from './model/Category';
 import * as bodyParser from 'body-parser';
-import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
-import { Links } from '../../pipeline/Links';
+import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
+import { Pipeline } from '../../serafin/pipeline';
 import { Key } from 'readline';
 
 async function main() {
@@ -47,14 +47,14 @@ async function main() {
 
     let bookPipelineRef;
 
-    let authorPipeline = (new PipelineSourceInMemory(authorSchemaBuilder, { createValues: authorSchemaBuilder.clone() }))
+    let authorPipeline = (new PipeSourceInMemory(authorSchemaBuilder, { createValues: authorSchemaBuilder.clone() }))
         .pipe(new Paginate())
         .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
         .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() });
+    let categoryPipeline = new Pipeline().pipe(PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }));
 
-    let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
+    let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('author', () => authorPipeline, { id: ':authorId' })
         .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });

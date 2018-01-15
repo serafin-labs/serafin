@@ -4,7 +4,7 @@ import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 
 import { Api } from "../../Api"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils";
-import { PipelineAbstract, throughJsonSchema } from '../../../../';
+import { Pipeline, throughJsonSchema } from '../../../../';
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {
@@ -18,12 +18,12 @@ export class OpenApi {
     private upperName: string;
     private upperPluralName: string
 
-    constructor(private api: Api, private pipeline: PipelineAbstract, private resourcesPath, private name: string, private pluralName: string) {
+    constructor(private api: Api, private pipeline: Pipeline, private resourcesPath, private name: string, private pluralName: string) {
         // import pipeline schemas to openApi definitions
         this.upperName = _.upperFirst(name);
         this.upperPluralName = _.upperFirst(pluralName);
 
-        for (let schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
+        for (let schemaBuilderName of Pipeline.schemaBuilderNames) {
             let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
             let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline[schemaBuilderName].schema));
             schema.title = schemaName;

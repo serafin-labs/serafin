@@ -5,7 +5,7 @@ import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { categorySchemaBuilder } from './model/Category';
 import { itemSchemaBuilder } from './model/Item';
 import * as bodyParser from 'body-parser';
-import { PipelineSourceInMemory, Paginate, UpdateTime } from '../../pipeline';
+import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
 import { setTimeout } from 'timers';
 
 async function main() {
@@ -46,10 +46,10 @@ async function main() {
             schema: true
         }));
 
-    let categoryPipelineBase = (new PipelineSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
+    let categoryPipelineBase = (new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
         .pipe(new Paginate())
 
-    let itemPipeline = (new PipelineSourceInMemory(itemSchemaBuilder, { createValues: itemSchemaBuilder.clone() }))
+    let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder, { createValues: itemSchemaBuilder.clone() }))
         .pipe(new Paginate())
         .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
 
