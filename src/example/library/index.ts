@@ -7,7 +7,6 @@ import { authorSchemaBuilder } from './model/Author';
 import { categorySchemaBuilder } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
-import { Pipeline } from '../../serafin/pipeline';
 import { Key } from 'readline';
 
 async function main() {
@@ -52,7 +51,7 @@ async function main() {
         .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
         .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new Pipeline().pipe(new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }));
+    let categoryPipeline = new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() });
 
     let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())

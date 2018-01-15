@@ -9,5 +9,4 @@ export { IdentityInterface } from './IdentityInterface'
 
 // pipeline
 export { PipeAbstract } from "./PipeAbstract"
-export { Pipeline } from "./Pipeline"
-export { PipeSourceAbstract, Query } from "./PipeSourceAbstract"
+export { PipelineAbstract, Query } from "./PipelineAbstract"

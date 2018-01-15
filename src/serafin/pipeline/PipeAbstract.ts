@@ -4,7 +4,7 @@ import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, } from "../error/Error"
 import { SchemaBuilder, Omit } from "@serafin/schema-builder"
-import { Pipeline } from './Pipeline';
+import { PipelineAbstract } from './PipelineAbstract';
 import { PipelineRelation } from './Relation';
 import { IdentityInterface } from './IdentityInterface'
 
@@ -92,21 +92,6 @@ export abstract class PipeAbstract<
 
     // private optionsMapping: Partial<Record<PipeMethods, { [k: string]: string }>> = {};
 
-    protected pipeline: Pipeline = null;
-
-    /**
-     * Flag indicating if this pipeline has been attached to a source
-     */
-    // protected get isAttachedToSource() {
-    //     if (!this._isAttachedToSource) {
-    //         this._isAttachedToSource = this.parent ? this.parent.isAttachedToSource : false
-    //     }
-    //     return this._isAttachedToSource
-    // }
-
-    public attach(pipeline: Pipeline) {
-        this.pipeline = pipeline;
-    }
 
     /**
      * Remap a read options to change its name. To be used in case of conflict between two pipelines.

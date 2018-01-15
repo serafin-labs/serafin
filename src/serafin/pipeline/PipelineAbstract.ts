@@ -3,11 +3,12 @@ import * as _ from 'lodash';
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
 import { validationError, serafinError, notImplementedError } from "../error/Error"
-import { SchemaBuilder, Omit } from "@serafin/schema-builder"
+import { SchemaBuilder, Omit, DeepPartial } from "@serafin/schema-builder"
 import { PipelineRelation } from './Relation';
 import { IdentityInterface } from './IdentityInterface'
 import { PipeAbstract } from './PipeAbstract';
 
+export type Query<T> = {[P in keyof T]: T[P] | T[P][]};
 export type PipelineMethods = "create" | "read" | "update" | "patch" | "delete";
 export type SchemaBuilderNames = "modelSchemaBuilder" | "readQuerySchemaBuilder" | "readOptionsSchemaBuilder" | "readWrapperSchemaBuilder" | "createValuesSchemaBuilder" | "createOptionsSchemaBuilder" | "createWrapperSchemaBuilder" | "updateValuesSchemaBuilder" | "updateOptionsSchemaBuilder" | "updateWrapperSchemaBuilder" | "patchQuerySchemaBuilder" | "patchValuesSchemaBuilder" | "patchOptionsSchemaBuilder" | "patchWrapperSchemaBuilder" | "deleteQuerySchemaBuilder" | "deleteOptionsSchemaBuilder" | "deleteWrapperSchemaBuilder";
 
@@ -18,25 +19,24 @@ export type SchemaBuilderNames = "modelSchemaBuilder" | "readQuerySchemaBuilder"
  * A pipeline is a component designed to define and modify a resource access behavior (read, write, delete actions...) using a functional approach.
  * A pipeline is always plugged (piped) to another pipeline except for source pipelines, and can affect one or many of the actions, by overriding them.
  */
-export class Pipeline<
-    T extends {} = {},
-    ReadQuery = {},
+export abstract class PipelineAbstract<
+    T extends IdentityInterface,
+    ReadQuery = Partial<Query<T>>,
     ReadOptions = {},
     ReadWrapper = {},
-    CreateValues = {},
+    CreateValues = Omit<T, "id">,
     CreateOptions = {},
     CreateWrapper = {},
-    UpdateValues = {},
+    UpdateValues = Omit<T, "id">,
     UpdateOptions = {},
     UpdateWrapper = {},
-    PatchQuery = {},
-    PatchValues = {},
+    PatchQuery = Query<Pick<T, "id">>,
+    PatchValues = DeepPartial<Omit<T, "id">>,
     PatchOptions = {},
     PatchWrapper = {},
-    DeleteQuery = {},
+    DeleteQuery = Query<Pick<T, "id">>,
     DeleteOptions = {},
-    DeleteWrapper = {},
-    Relations = {}
+    DeleteWrapper = {}
     > {
     public modelSchemaBuilder?: SchemaBuilder<T>
 
@@ -67,6 +67,30 @@ export class Pipeline<
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
     public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
 
+    constructor(model: SchemaBuilder<T>, {
+        readQuery = model.clone().transformPropertiesToArray().toOptionals().flatType(),
+        createValues = model.clone().omitProperties(["id"]).flatType(),
+        updateValues = model.clone().omitProperties(["id"]).flatType(),
+        patchQuery = model.clone().pickProperties(["id"]).transformPropertiesToArray().flatType(),
+        patchValues = model.clone().omitProperties(["id"]).toDeepOptionals().flatType(),
+        deleteQuery = model.clone().pickProperties(["id"]).transformPropertiesToArray().flatType()
+}: {
+            readQuery?: SchemaBuilder<ReadQuery>,
+            createValues?: SchemaBuilder<CreateValues>,
+            updateValues?: SchemaBuilder<UpdateValues>,
+            patchQuery?: SchemaBuilder<PatchQuery>,
+            patchValues?: SchemaBuilder<PatchValues>,
+            deleteQuery?: SchemaBuilder<DeleteQuery>
+        } = {}) {
+        this.modelSchemaBuilder = model;
+        this.readQuerySchemaBuilder = readQuery as any;
+        this.createValuesSchemaBuilder = createValues as any;
+        this.updateValuesSchemaBuilder = updateValues as any;
+        this.patchQuerySchemaBuilder = patchQuery as any;
+        this.patchValuesSchemaBuilder = patchValues as any;
+        this.deleteQuerySchemaBuilder = deleteQuery as any;
+    }
+
     /**
      * Add a relation to the pipeline.
      * This method modifies the pipeline and affect the templated type.
@@ -74,8 +98,8 @@ export class Pipeline<
      * @param relation 
      */
     public addRelation<N extends keyof any, R extends IdentityInterface, RReadQuery, RReadOptions, RReadWrapper, K1 extends keyof RReadQuery = null, K2 extends keyof RReadOptions = null>
-    (name: N, pipeline: () => Pipeline<R, RReadQuery, RReadOptions, RReadWrapper>, query: {[key in K1]: any}, options?: {[key in K2]: any})
-    : Pipeline<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper, Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}> {
+    (name: N, pipeline: () => PipelineAbstract<R, RReadQuery, RReadOptions, RReadWrapper>, query: {[key in K1]: any}, options?: {[key in K2]: any})
+    : PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper, Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}> {
         this.relations[name as string] = new PipelineRelation(this, name, pipeline, query, options)
         return this as any;
     }
@@ -182,7 +206,7 @@ export class Pipeline<
      */
     toString(): string {
         let pipelineSchema: any = {}
-        for (let schemaBuilderName of Pipeline.schemaBuilderNames) {
+        for (let schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
             if (this[schemaBuilderName]) {
                 pipelineSchema[schemaBuilderName] = this[schemaBuilderName].schema
             }
@@ -203,7 +227,7 @@ export class Pipeline<
     {
         pipe.attach(this);
 
-        for (var schemaBuilderName of Pipeline.schemaBuilderNames) {
+        for (var schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
             if (pipe[schemaBuilderName]) {
                 if (!this[schemaBuilderName]) {
                     this[schemaBuilderName] = SchemaBuilder.emptySchema();
@@ -213,12 +237,10 @@ export class Pipeline<
             }
         }
 
-        for (var method of Pipeline.CRUDMethods) {
+        for (var method of PipelineAbstract.CRUDMethods) {
             if (typeof pipe[method] == 'function') {
-
-
                 let next = this[`_${method}`];
-                this[`_${method}`] = function (...args) {
+                this[`_${method}`] = function (next, ...args) {
                     return (pipe[method] as (...args) => any).call(pipe, args);
                 };
             }

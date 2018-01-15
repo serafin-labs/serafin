@@ -47,7 +47,7 @@ async function main() {
         }));
 
     let categoryPipelineBase = (new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
-        .pipe(new Paginate())
+        .pipe(new Paginate());
 
     let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder, { createValues: itemSchemaBuilder.clone() }))
         .pipe(new Paginate())

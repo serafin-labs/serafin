@@ -1,6 +1,6 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipeSourceAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
+import { PipelineAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
 
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
@@ -15,7 +15,7 @@ export class PipeSourceInMemory<
     UpdateValues = Omit<T, "id">,
     PatchQuery = Query<Pick<T, "id">>,
     PatchValues = DeepPartial<Omit<T, "id">>,
-    DeleteQuery = Query<Pick<T, "id">>> extends PipeSourceAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
+    DeleteQuery = Query<Pick<T, "id">>> extends PipelineAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
     protected resources: { [index: string]: T } = {} as { [index: string]: T };
 
     private generateUUID(): string {
