@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import * as chai from "chai";
-import { PipeAbstract, PipeSourceAbstract, PipelineRelation } from "../"
+import { PipelineAbstract, PipeAbstract, PipelineRelation } from "../"
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-as-promised"))

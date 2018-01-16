@@ -5,4 +5,3 @@ export var itemSchemaBuilder = SchemaBuilder.emptySchema()
   .addString("name", { description: "Item name" })
   .addNumber("price", { description: "Item price" })
   .addString("categoryId", { description: "Item category identifier" })
-  .flatType();

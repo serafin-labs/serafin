@@ -5,7 +5,7 @@ import * as ExpressGraphQL from 'express-graphql'
 import * as graphql from "graphql"
 import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
 import { TransportInterface } from "../TransportInterface"
-import { Pipeline } from "../../../pipeline"
+import { PipelineAbstract } from "../../../pipeline"
 import { Api } from "../../Api"
 import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
@@ -37,7 +37,7 @@ export interface GraphQLOptions {
  */
 export class GraphQLTransport implements TransportInterface {
     private api: Api
-    private graphQlModelTypes: { pipeline: Pipeline, schema: graphql.GraphQLObjectType }[] = [];
+    private graphQlModelTypes: { pipeline: PipelineAbstract, schema: graphql.GraphQLObjectType }[] = [];
     private graphQlSchemaQueries: any = {};
     private _graphQlSchema: graphql.GraphQLSchema;
     private get graphQlSchema() {
@@ -85,7 +85,7 @@ export class GraphQLTransport implements TransportInterface {
      * @param name 
      * @param pluralName 
      */
-    use(pipeline: Pipeline, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
         let relations = pipeline.relations;
 
         // prepare Ajv filters

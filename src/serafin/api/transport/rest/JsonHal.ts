@@ -2,7 +2,6 @@ import * as _ from 'lodash';
 import * as express from 'express';
 import { Api } from '../../../../index';
 import { QueryTemplate } from '../../../pipeline/QueryTemplate';
-import { Pipeline } from '../../../pipeline/Pipeline';
 import { PipelineRelation } from '../../../pipeline/Relation';
 
 export class JsonHal {

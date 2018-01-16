@@ -1,4 +1,4 @@
-import { Pipeline } from "../../pipeline/Pipeline"
+import { PipelineAbstract } from "../../pipeline/PipelineAbstract"
 import { Api } from "../Api"
 
 /**
@@ -14,5 +14,5 @@ export interface TransportInterface {
     /**
      * The 'use' method is called by the Api class to pass the pipeline to register
      */
-    use(pipeline: Pipeline, name: string, pluralName: string)
+    use(pipeline: PipelineAbstract, name: string, pluralName: string)
 }

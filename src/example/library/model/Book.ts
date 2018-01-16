@@ -6,4 +6,3 @@ export var bookSchemaBuilder = SchemaBuilder.emptySchema({ title: "Book", descri
   .addOptionalString("summary", { description: "Book summary" })
   .addOptionalString("authorId", { description: "The id of the associated author" })
   .addOptionalStringArray("categoryIds", { description: "Book categories" })
-  .flatType()

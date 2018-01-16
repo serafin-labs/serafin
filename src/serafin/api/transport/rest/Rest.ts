@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import * as VError from 'verror';
 import { JSONSchema, metaSchema } from "@serafin/open-api"
 import { TransportInterface } from "../TransportInterface"
-import { Pipeline} from "../../../pipeline/Pipeline"
+import { PipelineAbstract } from "../../../pipeline/PipelineAbstract"
 import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
 import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
@@ -34,7 +34,7 @@ export class RestTransport implements TransportInterface {
      * @param name 
      * @param pluralName 
      */
-    use(pipeline: Pipeline, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
         // setup the router
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;

@@ -15,7 +15,9 @@ export class PipeSourceInMemory<
     UpdateValues = Omit<T, "id">,
     PatchQuery = Query<Pick<T, "id">>,
     PatchValues = DeepPartial<Omit<T, "id">>,
-    DeleteQuery = Query<Pick<T, "id">>> extends PipelineAbstract<T, ReadQuery, {}, {}, CreateValues, {}, {}, UpdateValues, {}, {}, PatchQuery, PatchValues, {}, {}, DeleteQuery, {}, {}> {
+    DeleteQuery = Query<Pick<T, "id">>> extends PipelineAbstract {
+
+
     protected resources: { [index: string]: T } = {} as { [index: string]: T };
 
     private generateUUID(): string {
@@ -62,7 +64,7 @@ export class PipeSourceInMemory<
         return { data: _.cloneDeep(resources) } as any;
     }
 
-    async create(next, resources: CreateValues[], options?: {}) {
+    async create(resources: CreateValues[], options?: {}) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -78,11 +80,11 @@ export class PipeSourceInMemory<
         return { data: createdResources };
     }
 
-    async read(next, query?: ReadQuery, options?: {}): Promise<{ data: T[] }> {
+    async read(query?: ReadQuery, options?: {}): Promise<{ data: T[] }> {
         return this.readInMemory(query)
     }
 
-    async update(next, id: string, values: UpdateValues, options?: {}) {
+    async update(id: string, values: UpdateValues, options?: {}) {
         var resources = await this.readInMemory({
             id: id
         });
@@ -99,7 +101,7 @@ export class PipeSourceInMemory<
         return { data: undefined };
     }
 
-    async patch(next, query: PatchQuery, values: PatchValues, options?: {}) {
+    async patch(query: PatchQuery, values: PatchValues, options?: {}) {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
@@ -116,7 +118,7 @@ export class PipeSourceInMemory<
         return { data: updatedResources };
     }
 
-    async delete(next, query?: DeleteQuery, options?: {}) {
+    async delete(query?: DeleteQuery, options?: {}) {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 

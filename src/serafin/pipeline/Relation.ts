@@ -1,5 +1,5 @@
 import * as _ from 'lodash'
-import { Pipeline } from "./Pipeline"
+import { PipelineAbstract } from "./PipelineAbstract"
 import { validationError } from "../error/Error"
 import { QueryTemplate } from './QueryTemplate';
 import { Merge } from '@serafin/schema-builder';
@@ -9,10 +9,12 @@ import { IdentityInterface } from './IdentityInterface';
 /**
  * Represents a Relation for the given pipeline
  */
-export class PipelineRelation<T extends {} = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadWrapper = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
+export class PipelineRelation<T extends {} & IdentityInterface = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadWrapper = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
     type?: 'one' | 'many';
 
-    constructor(private holdingPipeline: Pipeline<T>, public name: N, public pipeline: () => Pipeline<R, ReadQuery, ReadOptions, ReadWrapper>, public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
+    constructor(private holdingPipeline: PipelineAbstract<T>,
+        public name: N, public pipeline: () => PipelineAbstract<R & IdentityInterface, ReadQuery, ReadOptions, ReadWrapper>,
+        public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
         this.type = 'many';
         if (query['id']) {
             let queryValue = query['id'];

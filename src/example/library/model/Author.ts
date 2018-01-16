@@ -4,4 +4,3 @@ export var authorSchemaBuilder = SchemaBuilder.emptySchema({ title: "Author", de
   .addString("id", { description: "Author identifier" })
   .addString("firstName", { description: "Author first name" })
   .addOptionalString("lastName", { description: "Author last name" })
-  .flatType()
