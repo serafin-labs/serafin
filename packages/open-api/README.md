@@ -8,4 +8,4 @@ npm i @serafin/open-api
 This repo contains type definitions for the Open Api 3 standard. See official documentation for more details: [https://www.openapis.org/](https://www.openapis.org/)
 ## Serafin JSON
 
-This repo contains also a ```metaschema``` for the JSON schema used by Serafin framework. It's basicaly the same as Open API with ```definitions``` added to it.
+This repo contains also a ```metaschema``` for the JSON schema used by Open Api 3.

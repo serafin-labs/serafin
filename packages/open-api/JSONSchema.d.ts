@@ -1,6 +1,6 @@
 /**
  * Interface that represents a JSON Schema.
- * This is a subpart of the actual JSON Schema spec. It follows what Open API 3 has decided to support + definitions
+ * This is a subpart of the current JSON Schema spec. It follows what Open API 3 has decided to support
  * @see https://swagger.io/specification/#schema-object-98
  */
 export interface JSONSchema {
@@ -39,13 +39,6 @@ export interface JSONSchema {
     anyOf?: JSONSchema[]
     oneOf?: JSONSchema[]
     not?: JSONSchema
-
-    /**
-     * Additional definitions are allowed in a schema. Serafin will take care of flattening the result in the resulting Open API spec.
-     */
-    definitions?: {
-        [k: string]: JSONSchema
-    }
 
     // fields added by Open Api Spec
     /**

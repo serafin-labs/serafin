@@ -140,11 +140,6 @@ exports.metaSchema = {
         },
         "default": {
         },
-        "definitions": {
-            "type": "object",
-            "additionalProperties": { "$ref": "#" },
-            "default": {}
-        },
         "discriminator": {
             "type": "object",
             "required": [
