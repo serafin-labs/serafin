@@ -215,6 +215,16 @@ export abstract class PipelineAbstract<
         // Pipe attached to this pipeline
         pipe.attach(this as any);
 
+        // Methods chaining
+        for (var method of PipelineAbstract.CRUDMethods) {
+            if (typeof pipe[method] == 'function') {
+                let next = this[`_${method}`];
+                this[`_${method}`] = function (next, ...args) {
+                    return (pipe[method] as (...args) => any).call(pipe, args);
+                };
+            }
+        }
+
         // Schema properties merging (has to be done out of a loop to gather the typings)
         let modelSchemaBuilder = this.modelSchemaBuilder.overwriteProperties(pipe.modelSchemaBuilder);
         this.modelSchemaBuilder = modelSchemaBuilder as any;
@@ -267,33 +277,23 @@ export abstract class PipelineAbstract<
         let deleteWrapperSchemaBuilder = this.deleteWrapperSchemaBuilder.overwriteProperties(pipe.deleteWrapperSchemaBuilder);
         this.deleteWrapperSchemaBuilder = deleteWrapperSchemaBuilder as any;
 
-        // Methods chaining
-        for (var method of PipelineAbstract.CRUDMethods) {
-            if (typeof pipe[method] == 'function') {
-                let next = this[`_${method}`];
-                this[`_${method}`] = function (next, ...args) {
-                    return (pipe[method] as (...args) => any).call(pipe, args);
-                };
-            }
-        }
-
         type newT = (typeof modelSchemaBuilder.T) & IdentityInterface;
-        type newReadQuery = (typeof readQuerySchemaBuilder.T);
-        type newReadOptions = (typeof readOptionsSchemaBuilder.T);
-        type newReadWrapper = (typeof readWrapperSchemaBuilder.T);
-        type newCreateValues = (typeof createValuesSchemaBuilder.T);
-        type newCreateOptions = (typeof createOptionsSchemaBuilder.T);
-        type newCreateWrapper = (typeof createWrapperSchemaBuilder.T);
-        type newUpdateValues = (typeof updateValuesSchemaBuilder.T);
-        type newUpdateOptions = (typeof updateOptionsSchemaBuilder.T);
-        type newUpdateWrapper = (typeof updateWrapperSchemaBuilder.T);
-        type newPatchQuery = (typeof patchQuerySchemaBuilder.T);
-        type newPatchValues = (typeof patchValuesSchemaBuilder.T);
-        type newPatchOptions = (typeof patchOptionsSchemaBuilder.T);
-        type newPatchWrapper = (typeof patchWrapperSchemaBuilder.T);
-        type newDeleteQuery = (typeof deleteQuerySchemaBuilder.T);
-        type newDeleteOptions = (typeof deleteOptionsSchemaBuilder.T);
-        type newDeleteWrapper = (typeof deleteWrapperSchemaBuilder.T);
+        // type newReadQuery = (typeof readQuerySchemaBuilder.T);
+        // type newReadOptions = (typeof readOptionsSchemaBuilder.T);
+        // type newReadWrapper = (typeof readWrapperSchemaBuilder.T);
+        // type newCreateValues = (typeof createValuesSchemaBuilder.T);
+        // type newCreateOptions = (typeof createOptionsSchemaBuilder.T);
+        // type newCreateWrapper = (typeof createWrapperSchemaBuilder.T);
+        // type newUpdateValues = (typeof updateValuesSchemaBuilder.T);
+        // type newUpdateOptions = (typeof updateOptionsSchemaBuilder.T);
+        // type newUpdateWrapper = (typeof updateWrapperSchemaBuilder.T);
+        // type newPatchQuery = (typeof patchQuerySchemaBuilder.T);
+        // type newPatchValues = (typeof patchValuesSchemaBuilder.T);
+        // type newPatchOptions = (typeof patchOptionsSchemaBuilder.T);
+        // type newPatchWrapper = (typeof patchWrapperSchemaBuilder.T);
+        // type newDeleteQuery = (typeof deleteQuerySchemaBuilder.T);
+        // type newDeleteOptions = (typeof deleteOptionsSchemaBuilder.T);
+        // type newDeleteWrapper = (typeof deleteWrapperSchemaBuilder.T);
 
         return this as any as PipelineAbstract<{[P in keyof newT]: newT[P]},
             typeof readQuerySchemaBuilder.T, typeof readOptionsSchemaBuilder.T, typeof readWrapperSchemaBuilder.T,

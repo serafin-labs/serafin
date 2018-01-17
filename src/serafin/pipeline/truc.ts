@@ -3,14 +3,15 @@ import { PipelineAbstract } from './PipelineAbstract';
 import { SchemaBuilder } from '@serafin/schema-builder';
 
 class Toto extends PipeAbstract {
-    modelSchemaBuilder = SchemaBuilder.emptySchema().addNumber('trucdebile');
     async read(next, query) {
         return null;
     }
 }
 
 class Tutu extends PipeAbstract {
-    modelSchemaBuilder = SchemaBuilder.emptySchema().addBoolean('trucdebile');
+    constructor() {
+        super({ model: SchemaBuilder.emptySchema().addBoolean('trucdebile') });
+    }
 
     async read(next, query) {
         return { 'trucdebile': false };
