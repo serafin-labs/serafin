@@ -17,13 +17,7 @@
   },
   "dependencies": {
     "@serafin/open-api": "git+ssh://git@github.com/serafin-labs/open-api.git",
-    "@serafin/schema-builder": "git+ssh://git@github.com/serafin-labs/schema-builder.git",
-    "@types/ajv": "^1.0.0",
-    "@types/body-parser": "^1.16.7",
-    "@types/compression": "0.0.34",
-    "@types/express": "^4.0.39",
-    "@types/node": "^6.0.52",
-    "@types/node-uuid": "0.0.28",
+    "@serafin/schema-builder": "^0.1.0",
     "ajv": "^6.0.0-beta.2",
     "body-parser": "^1.18.2",
     "compression": "^1.7.1",
@@ -41,12 +35,18 @@
   },
   "devDependencies": {
     "@serafin/gulp-tasks": "git+ssh://git@github.com/serafin-labs/gulp-tasks.git",
+    "@types/ajv": "^1.0.0",
+    "@types/body-parser": "^1.16.7",
     "@types/chai": "^3.4.34",
     "@types/chai-as-promised": "0.0.29",
     "@types/chai-http": "^3.0.3",
     "@types/chai-spies": "0.0.0",
+    "@types/compression": "0.0.34",
+    "@types/express": "^4.0.39",
     "@types/lodash": "^4.14.44",
     "@types/mocha": "^2.2.33",
+    "@types/node": "^6.0.52",
+    "@types/node-uuid": "0.0.28",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.2.0",
     "chai-http": "^3.0.0",
@@ -58,7 +58,7 @@
     "merge-stream": "^1.0.0",
     "mocha": "^3.5.3",
     "remap-istanbul": "^0.7.0",
-    "typescript": "^2.5.3"
+    "typescript": "^2.6.2"
   },
   "scripts": {
     "start": "forever --minUptime 1000 --spinSleepTime 1000 lib/index.js",

@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import * as chai from "chai";
-import { PipelineAbstract, PipeAbstract, PipelineRelation } from "../"
+import { PipelineAbstract, PipeAbstract, PipelineRelation } from ".."
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-as-promised"))
 
 // describe('Pipelines', function () {
 //     let TestPipe = class extends PipeAbstract<any> { }
-//     let TestSourcePipe = class extends PipeSourceAbstract<any> { }
+//     let TestSourcePipe = class extends PipelineAbstract<any> { }
 //     describe('Abstract', function () {
 //         it('should be implemented by a concrete class', function () {
 //             let i = new TestPipe()

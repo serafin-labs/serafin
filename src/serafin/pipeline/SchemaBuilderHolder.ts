@@ -27,4 +27,29 @@ export abstract class SchemaBuilderHolder<T = {}, ReadQuery = {}, ReadOptions = 
     public deleteQuerySchemaBuilder?: SchemaBuilder<DeleteQuery>
     public deleteOptionsSchemaBuilder?: SchemaBuilder<DeleteOptions>
     public deleteWrapperSchemaBuilder?: SchemaBuilder<DeleteWrapper>
+
+    constructor() {
+        this.modelSchemaBuilder = SchemaBuilder.emptySchema() as any;
+
+        this.readQuerySchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.readOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.readWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+
+        this.createValuesSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.createOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.createWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+
+        this.updateValuesSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.updateOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.updateWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+
+        this.patchQuerySchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.patchValuesSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.patchOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.patchWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+
+        this.deleteQuerySchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.deleteOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
+        this.deleteWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+    }
 }
