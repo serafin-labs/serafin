@@ -57,8 +57,6 @@ async function main() {
         .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
         .addRelation('items', () => itemPipeline, { categoryId: ':id' });
 
-
-
     api.use(categoryPipeline, "category", "categories");
     api.use(itemPipeline, "item");
 

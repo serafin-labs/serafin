@@ -1,4 +1,3 @@
-import * as util from 'util';
 import * as _ from 'lodash';
 import * as Ajv from 'ajv'
 import * as VError from 'verror';
@@ -191,19 +190,6 @@ export abstract class PipelineAbstract<
 
     protected _delete(query, options): Promise<{ data: T[] } & DeleteWrapper> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name);
-    }
-
-    /**
-     * Get a readable description of what this pipeline does
-     */
-    toString(): string {
-        let pipelineSchema: any = {}
-        for (let schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
-            if (this[schemaBuilderName]) {
-                pipelineSchema[schemaBuilderName] = this[schemaBuilderName].schema
-            }
-        }
-        return (util.inspect(pipelineSchema, false, null));
     }
 
     /**

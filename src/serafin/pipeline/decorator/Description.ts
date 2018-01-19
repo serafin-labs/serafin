@@ -13,7 +13,7 @@ export function description(text: string) {
         } else {
             // Method
             let optionsSchemaBuilder: SchemaBuilder<{}>;
-            let schemaBuilderName = `_${propertyKey}OptionsSchemaBuilder`;
+            let schemaBuilderName = `${propertyKey}OptionsSchemaBuilder`;
             if (!targetOrCtor.hasOwnProperty(schemaBuilderName)) {
                 targetOrCtor[schemaBuilderName] = SchemaBuilder.emptySchema()
             }

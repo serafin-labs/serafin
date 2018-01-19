@@ -1,3 +1,4 @@
+import * as util from 'util';
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 export type SchemaBuilderNames = "modelSchemaBuilder" | "readQuerySchemaBuilder" | "readOptionsSchemaBuilder" | "readWrapperSchemaBuilder" | "createValuesSchemaBuilder" | "createOptionsSchemaBuilder" | "createWrapperSchemaBuilder" | "updateValuesSchemaBuilder" | "updateOptionsSchemaBuilder" | "updateWrapperSchemaBuilder" | "patchQuerySchemaBuilder" | "patchValuesSchemaBuilder" | "patchOptionsSchemaBuilder" | "patchWrapperSchemaBuilder" | "deleteQuerySchemaBuilder" | "deleteOptionsSchemaBuilder" | "deleteWrapperSchemaBuilder";
@@ -51,5 +52,18 @@ export abstract class SchemaBuilderHolder<T = {}, ReadQuery = {}, ReadOptions = 
         this.deleteQuerySchemaBuilder = SchemaBuilder.emptySchema() as any;
         this.deleteOptionsSchemaBuilder = SchemaBuilder.emptySchema() as any;
         this.deleteWrapperSchemaBuilder = SchemaBuilder.emptySchema() as any;
+    }
+
+    /**
+     * Get a readable description the schemas
+     */
+    toString(): string {
+        let pipelineSchema: any = {}
+        for (let schemaBuilderName of SchemaBuilderHolder.schemaBuilderNames) {
+            if (this[schemaBuilderName]) {
+                pipelineSchema[schemaBuilderName] = this[schemaBuilderName].schema
+            }
+        }
+        return (util.inspect(pipelineSchema, false, null));
     }
 }
