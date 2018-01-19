@@ -15,6 +15,14 @@ export type PipelineMethods = "create" | "read" | "update" | "patch" | "delete";
 export type Resolve<T> = {[P in keyof T]: T[P]}
 
 const PIPELINE = Symbol("Pipeline");
+// const schmemaBuilder = function <M, S>(model: M, schemaBuilder: S):SchemaBuilder<M> {return schemaBuilder};
+
+export type ReadQuery<T extends IdentityInterface> = PipelineAbstract<T>["readQuerySchemaBuilder"]["T"];
+export type CreateValues<T extends IdentityInterface> = PipelineAbstract<T>["createValuesSchemaBuilder"]["T"];
+export type UpdateValues<T extends IdentityInterface> = PipelineAbstract<T>["updateValuesSchemaBuilder"]["T"];
+export type PatchQuery<T extends IdentityInterface> = PipelineAbstract<T>["patchQuerySchemaBuilder"]["T"];
+export type PatchValues<T extends IdentityInterface> = PipelineAbstract<T>["patchValuesSchemaBuilder"]["T"];
+export type DeleteQuery<T extends IdentityInterface> = PipelineAbstract<T>["deleteQuerySchemaBuilder"]["T"];
 
 /**
  * Abstract Class representing a pipeline.
@@ -24,54 +32,60 @@ const PIPELINE = Symbol("Pipeline");
  * A pipeline is always plugged (piped) to another pipeline except for source pipelines, and can affect one or many of the actions, by overriding them.
  */
 export abstract class PipelineAbstract<
-    T extends IdentityInterface = IdentityInterface, ReadQuery = Partial<Query<T>>, ReadOptions = {}, ReadWrapper = {},
-    CreateValues = Omit<T, "id">, CreateOptions = {}, CreateWrapper = {},
-    UpdateValues = Omit<T, "id">, UpdateOptions = {}, UpdateWrapper = {},
-    PatchQuery = Query<Pick<T, "id">>, PatchValues = DeepPartial<Omit<T, "id">>, PatchOptions = {}, PatchWrapper = {},
-    DeleteQuery = Query<Pick<T, "id">>, DeleteOptions = {}, DeleteWrapper = {}, Relations = {}>
+    T extends IdentityInterface = IdentityInterface, ReadOptions = {}, ReadWrapper = {},
+    CreateOptions = {}, CreateWrapper = {},
+    UpdateOptions = {}, UpdateWrapper = {},
+    PatchOptions = {}, PatchWrapper = {},
+    DeleteOptions = {}, DeleteWrapper = {}, Relations = {}>
 
-    extends SchemaBuilderHolder<T, ReadQuery, ReadOptions, ReadWrapper,
-    CreateValues, CreateOptions, CreateWrapper,
-    UpdateValues, UpdateOptions, UpdateWrapper,
-    PatchQuery, PatchValues, PatchOptions, PatchWrapper,
-    DeleteQuery, DeleteOptions, DeleteWrapper> {
+    extends SchemaBuilderHolder<T, ReadOptions, ReadWrapper,
+    CreateOptions, CreateWrapper,
+    UpdateOptions, UpdateWrapper,
+    PatchOptions, PatchWrapper,
+    DeleteOptions, DeleteWrapper> {
 
     //private optionsMapping: Partial<Record<PipelineMethods, { [k: string]: string }>> = {};
     public relations: { [key: string]: PipelineRelation } = {};
 
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
 
-    constructor(model: SchemaBuilder<T>, {
-        readQuery = model.clone().transformPropertiesToArray().toOptionals(),
-        createValues = model.clone().omitProperties(["id"]),
-        updateValues = model.clone().omitProperties(["id"]),
-        patchQuery = model.clone().pickProperties(["id"]).transformPropertiesToArray(),
-        patchValues = model.clone().omitProperties(["id"]).toDeepOptionals(),
-        deleteQuery = model.clone().pickProperties(["id"]).transformPropertiesToArray()
-    }: {
-            readQuery?: SchemaBuilder<ReadQuery>,
-            createValues?: SchemaBuilder<CreateValues>,
-            updateValues?: SchemaBuilder<UpdateValues>,
-            patchQuery?: SchemaBuilder<PatchQuery>,
-            patchValues?: SchemaBuilder<PatchValues>,
-            deleteQuery?: SchemaBuilder<DeleteQuery>
-        } = {}) {
+    constructor(model: SchemaBuilder<T>) {
 
         super();
         this.modelSchemaBuilder = model;
-        this.readQuerySchemaBuilder = readQuery as any;
-        this.createValuesSchemaBuilder = createValues as any;
-        this.updateValuesSchemaBuilder = updateValues as any;
-        this.patchQuerySchemaBuilder = patchQuery as any;
-        this.patchValuesSchemaBuilder = patchValues as any;
-        this.deleteQuerySchemaBuilder = deleteQuery as any;
 
+        // Workaround for the 'this' context of the pipeline methods when chaining pipes
         for (let method of PipelineAbstract.CRUDMethods) {
             let thisMethod = this[`_${method}`];
             this[`_${method}`] = (...args) => {
                 return (thisMethod.call(this, ...args));
             };
         }
+    }
+
+    get readQuerySchemaBuilder() {
+        return this.modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals();
+
+    }
+
+    get createValuesSchemaBuilder() {
+        return this.modelSchemaBuilder.clone().omitProperties(["id"]);
+    }
+
+    get updateValuesSchemaBuilder() {
+        return this.modelSchemaBuilder.clone().omitProperties(["id"]);
+    }
+
+    get patchQuerySchemaBuilder() {
+        return this.modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray();
+    }
+
+    get patchValuesSchemaBuilder() {
+        return this.modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals();
+    }
+
+    get deleteQuerySchemaBuilder() {
+        return this.modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray();
     }
 
     /**
@@ -87,11 +101,11 @@ export abstract class PipelineAbstract<
         query: {[key in K1]: any }, options?: {[key in K2]: any }) {
 
         this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
-        return this as PipelineAbstract<T, ReadQuery, ReadOptions, ReadWrapper,
-            CreateValues, CreateOptions, CreateWrapper,
-            UpdateValues, UpdateOptions, UpdateWrapper,
-            PatchQuery, PatchValues, PatchOptions, PatchWrapper,
-            DeleteQuery, DeleteOptions, DeleteWrapper,
+        return this as PipelineAbstract<T, ReadOptions, ReadWrapper,
+            CreateOptions, CreateWrapper,
+            UpdateOptions, UpdateWrapper,
+            PatchOptions, PatchWrapper,
+            DeleteOptions, DeleteWrapper,
             Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}>;
     }
 
@@ -101,7 +115,7 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipelines
      */
-    @final async create(resources: CreateValues[], options?: CreateOptions): Promise<{ data: T[] } & CreateWrapper> {
+    @final async create(resources: CreateValues<T>[], options?: CreateOptions): Promise<{ data: T[] } & CreateWrapper> {
         this.handleValidate('create', () => {
             if (this.createValuesSchemaBuilder) { this.createValuesSchemaBuilder.validateList(resources) }
             if (this.createOptionsSchemaBuilder) { this.createOptionsSchemaBuilder.validate(options || {} as any) }
@@ -119,7 +133,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: ReadQuery, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
+    @final async read(query?: ReadQuery<T>, options?: ReadOptions): Promise<{ data: T[] } & ReadWrapper> {
         this.handleValidate('read', () => {
             if (this.readQuerySchemaBuilder) { this.readQuerySchemaBuilder.validate(query || {} as any) }
             if (this.readOptionsSchemaBuilder) { this.readOptionsSchemaBuilder.validate(options || {} as any) }
@@ -141,7 +155,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async update(id: string, values: UpdateValues, options?: UpdateOptions): Promise<{ data: T } & UpdateWrapper> {
+    @final async update(id: string, values: UpdateValues<T>, options?: UpdateOptions): Promise<{ data: T } & UpdateWrapper> {
         this.handleValidate('update', () => {
             if (this.updateValuesSchemaBuilder) { this.updateValuesSchemaBuilder.validate(values) }
             if (this.updateOptionsSchemaBuilder) { this.updateOptionsSchemaBuilder.validate(options || {} as any) }
@@ -162,7 +176,7 @@ export abstract class PipelineAbstract<
      * @param values 
      * @param options 
      */
-    @final async patch(query: PatchQuery, values: PatchValues, options?: PatchOptions): Promise<{ data: T[] } & PatchWrapper> {
+    @final async patch(query: PatchQuery<T>, values: PatchValues<T>, options?: PatchOptions): Promise<{ data: T[] } & PatchWrapper> {
         this.handleValidate('patch', () => {
             if (this.patchQuerySchemaBuilder) { this.patchQuerySchemaBuilder.validate(query) }
             if (this.patchValuesSchemaBuilder) { this.patchValuesSchemaBuilder.validate(values) }
@@ -180,7 +194,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param options Map of options to be used by pipelines
      */
-    @final async delete(query: DeleteQuery, options?: DeleteOptions): Promise<{ data: T[] } & DeleteWrapper> {
+    @final async delete(query: DeleteQuery<T>, options?: DeleteOptions): Promise<{ data: T[] } & DeleteWrapper> {
         this.handleValidate('delete', () => {
             if (this.deleteQuerySchemaBuilder) { this.deleteQuerySchemaBuilder.validate(query) }
             if (this.deleteOptionsSchemaBuilder) { this.deleteOptionsSchemaBuilder.validate(options || {} as any) }
@@ -203,11 +217,11 @@ export abstract class PipelineAbstract<
         PPatchQuery, PPatchValues, PPatchOptions, PPatchWrapper,
         PDeleteQuery, PDeleteOptions, PDeleteWrapper>
 
-        (pipe: PipeAbstract<P, PReadQuery, PReadOptions, PReadWrapper,
-            PCreateValues, PCreateOptions, PCreateWrapper,
-            PUpdateValues, PUpdateOptions, PUpdateWrapper,
-            PPatchQuery, PPatchValues, PPatchOptions, PPatchWrapper,
-            PDeleteQuery, PDeleteOptions, PDeleteWrapper>) {
+        (pipe: PipeAbstract<P, PReadOptions, PReadWrapper,
+            PCreateOptions, PCreateWrapper,
+            PUpdateOptions, PUpdateWrapper,
+            PPatchOptions, PPatchWrapper,
+            PDeleteOptions, PDeleteWrapper>) {
 
         // Pipe attached to this pipeline
         if (pipe[PIPELINE]) {
@@ -230,8 +244,8 @@ export abstract class PipelineAbstract<
         let modelSchemaBuilder = this.modelSchemaBuilder.intersectProperties(pipe.modelSchemaBuilder);
         this.modelSchemaBuilder = modelSchemaBuilder as any;
 
-        let readQuerySchemaBuilder = this.readQuerySchemaBuilder.intersectProperties(pipe.readQuerySchemaBuilder);
-        this.readQuerySchemaBuilder = readQuerySchemaBuilder as any;
+        // let readQuerySchemaBuilder = this.readQuerySchemaBuilder.intersectProperties(pipe.readQuerySchemaBuilder);
+        // this.readQuerySchemaBuilder = readQuerySchemaBuilder as any;
 
         let readOptionsSchemaBuilder = this.readOptionsSchemaBuilder.intersectProperties(pipe.readOptionsSchemaBuilder);
         this.readOptionsSchemaBuilder = readOptionsSchemaBuilder as any;
@@ -239,8 +253,8 @@ export abstract class PipelineAbstract<
         let readWrapperSchemaBuilder = this.readWrapperSchemaBuilder.intersectProperties(pipe.readWrapperSchemaBuilder);
         this.readWrapperSchemaBuilder = readWrapperSchemaBuilder as any;
 
-        let createValuesSchemaBuilder = this.createValuesSchemaBuilder.intersectProperties(pipe.createValuesSchemaBuilder);
-        this.createValuesSchemaBuilder = createValuesSchemaBuilder as any;
+        // let createValuesSchemaBuilder = this.createValuesSchemaBuilder.intersectProperties(pipe.createValuesSchemaBuilder);
+        // this.createValuesSchemaBuilder = createValuesSchemaBuilder as any;
 
         let createOptionsSchemaBuilder = this.createOptionsSchemaBuilder.intersectProperties(pipe.createOptionsSchemaBuilder);
         this.createOptionsSchemaBuilder = createOptionsSchemaBuilder as any;
@@ -248,8 +262,8 @@ export abstract class PipelineAbstract<
         let createWrapperSchemaBuilder = this.createWrapperSchemaBuilder.intersectProperties(pipe.createWrapperSchemaBuilder);
         this.createWrapperSchemaBuilder = createWrapperSchemaBuilder as any;
 
-        let updateValuesSchemaBuilder = this.updateValuesSchemaBuilder.intersectProperties(pipe.updateValuesSchemaBuilder);
-        this.updateValuesSchemaBuilder = updateValuesSchemaBuilder as any;
+        // let updateValuesSchemaBuilder = this.updateValuesSchemaBuilder.intersectProperties(pipe.updateValuesSchemaBuilder);
+        // this.updateValuesSchemaBuilder = updateValuesSchemaBuilder as any;
 
         let updateOptionsSchemaBuilder = this.updateOptionsSchemaBuilder.intersectProperties(pipe.updateOptionsSchemaBuilder);
         this.updateOptionsSchemaBuilder = updateOptionsSchemaBuilder as any;
@@ -257,11 +271,11 @@ export abstract class PipelineAbstract<
         let updateWrapperSchemaBuilder = this.updateWrapperSchemaBuilder.intersectProperties(pipe.updateWrapperSchemaBuilder);
         this.updateWrapperSchemaBuilder = updateWrapperSchemaBuilder as any;
 
-        let patchQuerySchemaBuilder = this.patchQuerySchemaBuilder.intersectProperties(pipe.patchQuerySchemaBuilder);
-        this.patchQuerySchemaBuilder = patchQuerySchemaBuilder as any;
+        // let patchQuerySchemaBuilder = this.patchQuerySchemaBuilder.intersectProperties(pipe.patchQuerySchemaBuilder);
+        // this.patchQuerySchemaBuilder = patchQuerySchemaBuilder as any;
 
-        let patchValuesSchemaBuilder = this.patchValuesSchemaBuilder.intersectProperties(pipe.patchValuesSchemaBuilder);
-        this.patchValuesSchemaBuilder = patchValuesSchemaBuilder as any;
+        // let patchValuesSchemaBuilder = this.patchValuesSchemaBuilder.intersectProperties(pipe.patchValuesSchemaBuilder);
+        // this.patchValuesSchemaBuilder = patchValuesSchemaBuilder as any;
 
         let patchOptionsSchemaBuilder = this.patchOptionsSchemaBuilder.intersectProperties(pipe.patchOptionsSchemaBuilder);
         this.patchOptionsSchemaBuilder = patchOptionsSchemaBuilder as any;
@@ -269,8 +283,8 @@ export abstract class PipelineAbstract<
         let patchWrapperSchemaBuilder = this.patchWrapperSchemaBuilder.intersectProperties(pipe.patchWrapperSchemaBuilder);
         this.patchWrapperSchemaBuilder = patchWrapperSchemaBuilder as any;
 
-        let deleteQuerySchemaBuilder = this.deleteQuerySchemaBuilder.intersectProperties(pipe.deleteQuerySchemaBuilder);
-        this.deleteQuerySchemaBuilder = deleteQuerySchemaBuilder as any;
+        // let deleteQuerySchemaBuilder = this.deleteQuerySchemaBuilder.intersectProperties(pipe.deleteQuerySchemaBuilder);
+        // this.deleteQuerySchemaBuilder = deleteQuerySchemaBuilder as any;
 
         let deleteOptionsSchemaBuilder = this.deleteOptionsSchemaBuilder.intersectProperties(pipe.deleteOptionsSchemaBuilder);
         this.deleteOptionsSchemaBuilder = deleteOptionsSchemaBuilder as any;
@@ -279,12 +293,11 @@ export abstract class PipelineAbstract<
         this.deleteWrapperSchemaBuilder = deleteWrapperSchemaBuilder as any;
 
         return this as any as PipelineAbstract<Resolve<typeof modelSchemaBuilder.T>,
-            Resolve<typeof readQuerySchemaBuilder.T>, Resolve<typeof readOptionsSchemaBuilder.T>, Resolve<typeof readWrapperSchemaBuilder.T>,
-            Resolve<typeof createValuesSchemaBuilder.T>, Resolve<typeof createOptionsSchemaBuilder.T>, Resolve<typeof createWrapperSchemaBuilder.T>,
-            Resolve<typeof updateValuesSchemaBuilder.T>, Resolve<typeof updateOptionsSchemaBuilder.T>, Resolve<typeof updateWrapperSchemaBuilder.T>,
-            Resolve<typeof patchQuerySchemaBuilder.T>, Resolve<typeof patchValuesSchemaBuilder.T>,
+            Resolve<typeof readOptionsSchemaBuilder.T>, Resolve<typeof readWrapperSchemaBuilder.T>,
+            Resolve<typeof createOptionsSchemaBuilder.T>, Resolve<typeof createWrapperSchemaBuilder.T>,
+            Resolve<typeof updateOptionsSchemaBuilder.T>, Resolve<typeof updateWrapperSchemaBuilder.T>,
             Resolve<typeof patchOptionsSchemaBuilder.T>, Resolve<typeof patchWrapperSchemaBuilder.T>,
-            Resolve<typeof deleteQuerySchemaBuilder.T>, Resolve<typeof deleteOptionsSchemaBuilder.T>, Resolve<typeof deleteWrapperSchemaBuilder.T>>;
+            Resolve<typeof deleteOptionsSchemaBuilder.T>, Resolve<typeof deleteWrapperSchemaBuilder.T>>;
     }
 
     private handleValidate(method: string, validate: () => void) {
