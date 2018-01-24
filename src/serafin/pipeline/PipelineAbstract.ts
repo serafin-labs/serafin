@@ -69,9 +69,14 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
     //         Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}>;
     // }
 
-    alterSchemaBuilders<newS extends SchemaBuildersInterface["schemaBuilders"]>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
-        this.schemaBuilders = func(this.modelSchemaBuilder, this.schemaBuilders) as any;
-        return this as any as PipelineAbstract<M, newS>;
+    alterSchemaBuilders<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
+        let schemaBuilders = this.schemaBuilders =
+            Object.assign(this.schemaBuilders as this["schemaBuilders"], func(this.modelSchemaBuilder, this.schemaBuilders as this["schemaBuilders"]));
+        return this as any as PipelineAbstract<M, typeof schemaBuilders>;
+    }
+
+    extend<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
+        return Object.assign(this.schemaBuilders, func(this.modelSchemaBuilder, this.schemaBuilders));
     }
 
     /**
@@ -80,8 +85,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
      * @param pipe The pipe to add
      */
     pipe<P, PS extends SchemaBuildersInterface["schemaBuilders"]>(pipe: PipeAbstract<P, PS>) {
-
-        // Pipe attached to this pipeline
+        // Pipe already attached to this pipeline
         if (pipe[PIPELINE]) {
             throw Error("Pipe already associated to a pipeline");
         }
