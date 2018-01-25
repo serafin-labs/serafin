@@ -1,4 +1,5 @@
 import * as _ from "lodash";
+import * as util from "util";
 import { SchemaBuilder, DeepPartial, Resolve } from "@serafin/schema-builder";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { IdentityInterface } from "./IdentityInterface";
@@ -9,12 +10,14 @@ import { final } from "./Decorator/Final";
 
 const PIPELINE = Symbol("Pipeline");
 export type PipelineMethods = "create" | "read" | "update" | "patch" | "delete";
+export type SchemaBuilderNames = "modelSchemaBuilder" | "readQuerySchemaBuilder" | "readOptionsSchemaBuilder" | "readWrapperSchemaBuilder" | "createValuesSchemaBuilder" | "createOptionsSchemaBuilder" | "createWrapperSchemaBuilder" | "updateValuesSchemaBuilder" | "updateOptionsSchemaBuilder" | "updateWrapperSchemaBuilder" | "patchQuerySchemaBuilder" | "patchValuesSchemaBuilder" | "patchOptionsSchemaBuilder" | "patchWrapperSchemaBuilder" | "deleteQuerySchemaBuilder" | "deleteOptionsSchemaBuilder" | "deleteWrapperSchemaBuilder";
 
 export abstract class PipelineAbstract<M extends IdentityInterface,
-    S extends SchemaBuildersInterface['schemaBuilders']= PipelineAbstract<M, null>["defaultSchema"]> implements SchemaBuildersInterface {
+    S extends SchemaBuildersInterface['schemaBuilders']= PipelineAbstract<M, null>["defaultSchemaType"]> implements SchemaBuildersInterface {
 
     public relations: { [key: string]: PipelineRelation } = {};
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
+    public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
 
     constructor(public modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
         if (schemaBuilders == null) {
@@ -29,23 +32,26 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
         }
     }
 
-    private defaultSchema = {
-        readQuery: this.modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
-        createValues: this.modelSchemaBuilder.clone().omitProperties(["id"]),
-        updateValues: this.modelSchemaBuilder.clone().omitProperties(["id"]),
-        patchQuery: this.modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
-        patchValues: this.modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals(),
-        deleteQuery: this.modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
-        readOptions: SchemaBuilder.emptySchema(),
-        readWrapper: SchemaBuilder.emptySchema().addString("limit"),
-        createOptions: SchemaBuilder.emptySchema(),
-        createWrapper: SchemaBuilder.emptySchema(),
-        updateOptions: SchemaBuilder.emptySchema(),
-        updateWrapper: SchemaBuilder.emptySchema(),
-        patchOptions: SchemaBuilder.emptySchema(),
-        patchWrapper: SchemaBuilder.emptySchema(),
-        deleteOptions: SchemaBuilder.emptySchema(),
-        deleteWrapper: SchemaBuilder.emptySchema(),
+    private defaultSchemaType = (false as true) && this.defaultSchema(this.modelSchemaBuilder);
+    private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
+        return {
+            readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
+            createValues: modelSchemaBuilder.clone().omitProperties(["id"]),
+            updateValues: modelSchemaBuilder.clone().omitProperties(["id"]),
+            patchQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
+            patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals(),
+            deleteQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
+            readOptions: SchemaBuilder.emptySchema(),
+            readWrapper: SchemaBuilder.emptySchema(),
+            createOptions: SchemaBuilder.emptySchema(),
+            createWrapper: SchemaBuilder.emptySchema(),
+            updateOptions: SchemaBuilder.emptySchema(),
+            updateWrapper: SchemaBuilder.emptySchema(),
+            patchOptions: SchemaBuilder.emptySchema(),
+            patchWrapper: SchemaBuilder.emptySchema(),
+            deleteOptions: SchemaBuilder.emptySchema(),
+            deleteWrapper: SchemaBuilder.emptySchema(),
+        }
     }
 
     /**
@@ -77,6 +83,16 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
 
     extend<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
         return Object.assign(this.schemaBuilders, func(this.modelSchemaBuilder, this.schemaBuilders));
+    }
+
+    /**
+     * Get a readable description of what this pipeline does
+     */
+    toString(): string {
+        let pipelineSchema = Object.assign({ "modelSchemaBuilder": this.modelSchemaBuilder.schema }, _.mapKeys(
+            _.mapValues(this.schemaBuilders, (schemaBuilder: SchemaBuilder<any>) => schemaBuilder.schema)
+            , (value, key) => (key + "SchemaBuilder")));
+        return (util.inspect(pipelineSchema, false, null));
     }
 
     /**
@@ -244,34 +260,34 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
         }
     }
 
-    //     /**
-    //      * Remap a read options to change its name. To be used in case of conflict between two pipelines.
-    //      * 
-    //      * @param opt 
-    //      * @param renamedOpt 
-    //      */
-    //     // public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): Pipeline<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper> {
-    //     //     return this.remapOptions("read", opt, renamedOpt)
-    //     // }
+    /**
+     * Remap a read options to change its name. To be used in case of conflict between two pipelines.
+     * 
+     * @param opt 
+     * @param renamedOpt 
+     */
+    // public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): Pipeline<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper> {
+    //     return this.remapOptions("read", opt, renamedOpt)
+    // }
 
-    //     // /**
-    //     //  * Remap the given options to change its name for the given method.
-    //     //  * 
-    //     //  * @param method 
-    //     //  * @param opt 
-    //     //  * @param renamedOpt 
-    //     //  */
-    //     // private remapOptions(method: PipelineMethods, opt: string, renamedOpt: string) {
-    //     //     this.optionsMapping = this.optionsMapping || {};
-    //     //     this.optionsMapping[method] = this.optionsMapping[method] || {};
-    //     //     this.optionsMapping[method][renamedOpt as string] = opt as string;
-    //     //     let schemaBuilderName = `_${method}OptionsSchemaBuilder`
-    //     //     if (!this.hasOwnProperty(schemaBuilderName)) {
-    //     //         this[schemaBuilderName] = this[schemaBuilderName].clone();
-    //     //     }
-    //     //     this[schemaBuilderName].renameProperty(opt, renamedOpt);
-    //     //     return this as any;
-    //     // }
+    /**
+     * Remap the given options to change its name for the given method.
+     * 
+     * @param method 
+     * @param opt 
+     * @param renamedOpt 
+     */
+    private remapOptions(method: PipelineMethods, opt: string, renamedOpt: string) {
+        // this.optionsMapping = this.optionsMapping || {};
+        // this.optionsMapping[method] = this.optionsMapping[method] || {};
+        // this.optionsMapping[method][renamedOpt as string] = opt as string;
+        // let schemaBuilderName = `_${method}OptionsSchemaBuilder`
+        // if (!this.hasOwnProperty(schemaBuilderName)) {
+        //     this[schemaBuilderName] = this[schemaBuilderName].clone();
+        // }
+        // this[schemaBuilderName].renameProperty(opt, renamedOpt);
+        // return this as any;
+    }
 
     // /**
     //  * Map the input options object according to the configured mapping

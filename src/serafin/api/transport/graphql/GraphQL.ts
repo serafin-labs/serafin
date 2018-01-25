@@ -37,7 +37,7 @@ export interface GraphQLOptions {
  */
 export class GraphQLTransport implements TransportInterface {
     private api: Api
-    private graphQlModelTypes: { pipeline: PipelineAbstract, schema: graphql.GraphQLObjectType }[] = [];
+    private graphQlModelTypes: { pipeline: PipelineAbstract<any, any>, schema: graphql.GraphQLObjectType }[] = [];
     private graphQlSchemaQueries: any = {};
     private _graphQlSchema: graphql.GraphQLSchema;
     private get graphQlSchema() {
@@ -85,7 +85,7 @@ export class GraphQLTransport implements TransportInterface {
      * @param name 
      * @param pluralName 
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string) {
         let relations = pipeline.relations;
 
         // prepare Ajv filters
@@ -98,8 +98,8 @@ export class GraphQLTransport implements TransportInterface {
             }
             let query = _.cloneDeep(params.query || {});
             try {
-                pipeline.readOptionsSchemaBuilder.validate(options);
-                pipeline.readQuerySchemaBuilder.validate(query);
+                pipeline.schemaBuilders.readOptions.validate(options);
+                pipeline.schemaBuilders.readQuery.validate(query);
             } catch (e) {
                 throw Api.apiError(e, request)
             }
@@ -113,9 +113,9 @@ export class GraphQLTransport implements TransportInterface {
 
         // transform json schema to graphql objects
         let graphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, schemaName, () => true);
-        jsonSchemaToGraphQL(pipeline.readOptionsSchemaBuilder.schema, `${schemaName}ReadOptions`, this.api.isNotAnInternalOption, graphQLSchemas);
-        jsonSchemaToGraphQL(pipeline.readQuerySchemaBuilder.schema, `${schemaName}ReadQuery`, () => true, graphQLSchemas);
-        jsonSchemaToGraphQL(pipeline.readWrapperSchemaBuilder.schema, `${schemaName}ReadWrapper`, () => true, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.schemaBuilders.readOptions.schema, `${schemaName}ReadOptions`, this.api.isNotAnInternalOption, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.schemaBuilders.readQuery.schema, `${schemaName}ReadQuery`, () => true, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.schemaBuilders.readWrapper.schema, `${schemaName}ReadWrapper`, () => true, graphQLSchemas);
 
         // get the schema of the model
         let modelSchema = graphQLSchemas[schemaName];

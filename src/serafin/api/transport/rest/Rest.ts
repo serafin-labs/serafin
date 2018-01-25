@@ -34,7 +34,7 @@ export class RestTransport implements TransportInterface {
      * @param name 
      * @param pluralName 
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string) {
         // setup the router
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
@@ -42,21 +42,21 @@ export class RestTransport implements TransportInterface {
         let openApi = new OpenApi(this.api, pipeline, resourcesPath, name, pluralName);
 
         // determine what are the available actions
-        let canRead = !!pipeline.readQuerySchemaBuilder
-        let canCreate = !!pipeline.createValuesSchemaBuilder
-        let canUpdate = !!pipeline.updateValuesSchemaBuilder
-        let canPatch = !!pipeline.patchValuesSchemaBuilder
-        let canDelete = !!pipeline.deleteQuerySchemaBuilder
+        let canRead = !!pipeline.schemaBuilders.readQuery
+        let canCreate = !!pipeline.schemaBuilders.createValues
+        let canUpdate = !!pipeline.schemaBuilders.updateValues
+        let canPatch = !!pipeline.schemaBuilders.patchValues
+        let canDelete = !!pipeline.schemaBuilders.deleteQuery
 
-        this.testOptionsAndQueryConflict(pipeline.readQuerySchemaBuilder.schema, pipeline.readOptionsSchemaBuilder.schema);
-        this.testOptionsAndQueryConflict(pipeline.patchQuerySchemaBuilder.schema, pipeline.patchOptionsSchemaBuilder.schema);
-        this.testOptionsAndQueryConflict(pipeline.deleteQuerySchemaBuilder.schema, pipeline.deleteOptionsSchemaBuilder.schema);
+        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.readOptions.schema);
+        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.patchOptions.schema);
+        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.deleteOptions.schema);
 
         // create the routes for this endpoint
         if (canRead) {
             // get many resources
             router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.readOptionsSchemaBuilder, pipeline.readQuerySchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.readOptions, pipeline.schemaBuilders.readQuery);
                 if (!pipelineParams) {
                     return
                 }
@@ -86,7 +86,7 @@ export class RestTransport implements TransportInterface {
             // get a resource by its id
             router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 let id = req.params.id
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.readOptionsSchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.readOptions);
                 if (!pipelineParams) {
                     return
                 }
@@ -115,7 +115,7 @@ export class RestTransport implements TransportInterface {
         if (canCreate) {
             // create a new resource
             router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.createOptionsSchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.createOptions);
                 if (!pipelineParams) {
                     return
                 }
@@ -138,7 +138,7 @@ export class RestTransport implements TransportInterface {
         if (canPatch) {
             // patch an existing resource
             router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.patchOptionsSchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.patchOptions);
                 if (!pipelineParams) {
                     return
                 }
@@ -168,7 +168,7 @@ export class RestTransport implements TransportInterface {
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.updateOptionsSchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.updateOptions);
                 if (!pipelineParams) {
                     return
                 }
@@ -196,7 +196,7 @@ export class RestTransport implements TransportInterface {
 
             // delete an existing resource
             router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.deleteOptionsSchemaBuilder);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.deleteOptions);
                 if (!pipelineParams) {
                     return
                 }

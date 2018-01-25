@@ -2,7 +2,6 @@ import * as chai from "chai";
 import * as util from 'util';
 import { expect } from "chai";
 import { TestPipe, schemaTestPipe } from "./TestPipe";
-import { SchemaBuilderHolder } from "../SchemaBuilderHolder";
 import { PipeAbstract } from "../PipeAbstract";
 
 chai.use(require("chai-as-promised"))
@@ -12,7 +11,6 @@ describe('PipeAbstract', function () {
         let s = new TestPipe();
         expect(s).to.be.an.instanceOf(TestPipe);
         expect(s).to.be.an.instanceOf(PipeAbstract);
-        expect(s).to.be.an.instanceOf(SchemaBuilderHolder);
     });
     it('should not be piped', function () {
         let s = new TestPipe();

@@ -46,17 +46,17 @@ async function main() {
 
     let bookPipelineRef;
 
-    let authorPipeline = (new PipeSourceInMemory(authorSchemaBuilder, { createValues: authorSchemaBuilder.clone() }))
+    let authorPipeline = (new PipeSourceInMemory(authorSchemaBuilder))
         .pipe(new Paginate())
-        .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
-        .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
+    // .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
+    // .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() });
+    let categoryPipeline = new PipeSourceInMemory(categorySchemaBuilder);
 
     let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
-        .addRelation('author', () => authorPipeline, { id: ':authorId' })
-        .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
+    // .addRelation('author', () => authorPipeline, { id: ':authorId' })
+    // .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
 
     bookPipelineRef = bookPipeline
 
@@ -67,12 +67,12 @@ async function main() {
     ]);
 
     await categoryPipeline.create([
-        { id: '1', name: 'adventure' },
-        { id: '2', name: 'introspection' },
-        { id: '3', name: 'relaxation' },
-        { id: '4', name: 'religion' },
-        { id: '5', name: 'must-have' },
-        { id: '6', name: 'comedy' }
+        { name: 'adventure' },
+        { name: 'introspection' },
+        { name: 'relaxation' },
+        { name: 'religion' },
+        { name: 'must-have' },
+        { name: 'comedy' }
     ]);
 
     await bookPipeline.create([

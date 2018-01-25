@@ -46,16 +46,16 @@ async function main() {
             schema: true
         }));
 
-    let categoryPipelineBase = (new PipeSourceInMemory(categorySchemaBuilder, { createValues: categorySchemaBuilder.clone() }))
+    let categoryPipelineBase = (new PipeSourceInMemory(categorySchemaBuilder))
         .pipe(new Paginate());
 
-    let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder, { createValues: itemSchemaBuilder.clone() }))
+    let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder))
         .pipe(new Paginate())
-        .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
+    // .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
 
     let categoryPipeline = categoryPipelineBase
-        .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
-        .addRelation('items', () => itemPipeline, { categoryId: ':id' });
+    // .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
+    // .addRelation('items', () => itemPipeline, { categoryId: ':id' });
 
     api.use(categoryPipeline, "category", "categories");
     api.use(itemPipeline, "item");

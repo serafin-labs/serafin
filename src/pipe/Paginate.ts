@@ -1,14 +1,18 @@
+import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeAbstract, option, description, result } from '../serafin/pipeline'
 import * as _ from 'lodash'
 
 @description("Provides pagination over the read results")
-export class Paginate extends PipeAbstract<{}, {}, { offset?: number, count?: number, page?: number }, { count: number }> {
-    @description("Reads a limited count of results")
-    @option('offset', { type: "integer", description: 'Offset of the first resource to return' }, false)
-    @option('page', { type: "integer", description: "Offset of the first page to read (one page represents 'count' resources)" }, false)
-    @option('count', { type: "integer", description: "Number of resources to return" }, false)
-    @result('count', { type: "integer", description: "Number of resources available" }, false)
-    public async read(next, query?: {}, options?: { offset?: number, count?: number, page?: number }): Promise<{ count: number, data: {}[] }> {
+export class Paginate extends PipeAbstract {
+    schemaBuilders = this.extend((m) => ({
+        readOptions: SchemaBuilder.emptySchema()
+            .addInteger("offset", { description: "Offset of the first resource to return" })
+            .addInteger("page", { description: "Offset of the first page to read (one page represents 'count' resources)" })
+            .addInteger("count", { description: "Number of resources to return" }),
+        readWrapper: SchemaBuilder.emptySchema().addNumber("count", { description: "Number of resources available" })
+    }));
+
+    public async read(next, query?: {}, options?: this["schemaBuilders"]["readOptions"]["T"]): Promise<this["schemaBuilders"]["readWrapper"]["T"] & { data: {}[] }> {
         let resources = await next(query, options);
         let offset = 0;
 

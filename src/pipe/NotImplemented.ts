@@ -6,15 +6,21 @@ import { SchemaBuilder } from '@serafin/schema-builder';
 @description("Force given actions to be unavailable")
 export class NotImplemented extends PipeAbstract<{}> {
     constructor(private notImplementedMethods: ("create" | "update" | "patch" | "delete" | "read")[]) {
-        super()
+        super();
     }
 
-    public get readQuerySchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("read") !== -1 ? null : this.pipeline.readQuerySchemaBuilder }
-    public get createValuesSchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("create") !== -1 ? null : this.pipeline.createValuesSchemaBuilder }
-    public get updateValuesSchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("update") !== -1 ? null : this.pipeline.updateValuesSchemaBuilder }
-    public get patchQuerySchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("patch") !== -1 ? null : this.pipeline.patchQuerySchemaBuilder }
-    public get patchValuesSchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("patch") !== -1 ? null : this.pipeline.patchValuesSchemaBuilder }
-    public get deleteQuerySchemaBuilder(): SchemaBuilder<{}> { return this.notImplementedMethods.indexOf("delete") !== -1 ? null : this.pipeline.deleteQuerySchemaBuilder }
+    // schemaBuilders = {
+    //     readQuery: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery,
+    //     readOptions: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery,
+    //     readWrapper: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readWrapper,
+    //     createValues: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createValues,
+    //     createOptions: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createOptions,
+    //     createWrapper: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createWrapper,
+    //     updateValues: this.notImplementedMethods.indexOf("update") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.updateValues,
+    //     patchQuery: this.notImplementedMethods.indexOf("patch") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchQuery,
+    //     patchValues: this.notImplementedMethods.indexOf("patch") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchValues,
+    //     deleteQuery: this.notImplementedMethods.indexOf("delete") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.deleteQuery
+    // };
 
     public async create(next, resources, options?) {
         if (this.notImplementedMethods.indexOf("create") !== -1) {

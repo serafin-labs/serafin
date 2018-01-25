@@ -4,26 +4,26 @@ import { SchemaBuilder } from "@serafin/schema-builder";
 export class TestPipe extends PipeAbstract {
     modelSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString description" });
 
-    readQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    readOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadOptionString', { description: "testReadOptionString options description" });
-    readWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadWrapperString', { description: "testReadWrapperString wrapper description" });
+    // readQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
+    // readOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadOptionString', { description: "testReadOptionString options description" });
+    // readWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadWrapperString', { description: "testReadWrapperString wrapper description" });
 
-    createValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
-    createOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
-    createWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
+    // createValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
+    // createOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
+    // createWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
 
-    updateValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
-    updateOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
-    updateWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
+    // updateValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
+    // updateOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
+    // updateWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
 
-    patchQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    patchValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString description" });
-    patchOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchOptionsString', { description: "testPatchOptionsString options  description" });
-    patchWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchWrapperString', { description: "testPatchWrapperString wrapper description" });
+    // patchQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
+    // patchValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString description" });
+    // patchOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchOptionsString', { description: "testPatchOptionsString options  description" });
+    // patchWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchWrapperString', { description: "testPatchWrapperString wrapper description" });
 
-    deleteQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    deleteOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteOptionsString', { description: "testDeleteOptionsString options description" });
-    deleteWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteWrapperString', { description: "testDeleteWrapperString wrapper description" });
+    // deleteQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
+    // deleteOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteOptionsString', { description: "testDeleteOptionsString options description" });
+    // deleteWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteWrapperString', { description: "testDeleteWrapperString wrapper description" });
 
     @description("create test description")
     public async create(next: (resources: any, options?: any) => Promise<any>, resources: any[], options?: any): Promise<any> {

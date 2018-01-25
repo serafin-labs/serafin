@@ -1,14 +1,14 @@
 import { PipeAbstract, option, description, result } from '../serafin/pipeline'
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 @description("Adds creation and update timestamps to the resources")
-export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: number }, {}, {}, { lastCreatedAt: number, lastUpdatedAt: number }> {
-    constructor() {
-        super()
-    }
+export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: number }> {
+    schemaBuilders = this.extend((m) => ({
+        readWrapper: SchemaBuilder.emptySchema()
+            .addNumber("lastCreatedAt", { description: "Most recent creation date" })
+            .addNumber("lastUpdatedAt", { description: "Most recent update date" })
+    }));
 
-    @description("Returns the creation and update time of each resource, and the latest creation and update time overall")
-    @result("lastCreatedAt", { type: "integer", description: "Last creation date" }, true)
-    @result("lastUpdatedAt", { type: "integer", description: "Last modification date" }, true)
     public async read(next, query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
         let readWrapper = (await next(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
         let lastCreatedAt = null;
