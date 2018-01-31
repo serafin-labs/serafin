@@ -1,11 +1,11 @@
 import { PipelineAbstract } from "./PipelineAbstract";
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
+import { SchemaBuildersInterface, PartialSchemaBuilders, SchemaBuildersInterfaceMerger } from "./SchemaBuildersInterface";
 import { SchemaBuilder } from "@serafin/schema-builder";
+import { final } from "./Decorator/Final";
 
 const PIPELINE = Symbol("Pipeline");
 
-export interface PipeAbstract<M = {},
-    S extends SchemaBuildersInterface['schemaBuilders']= PipeAbstract<M, null>["defaultSchemaType"]> {
+export interface PipeAbstract {
     create(next: (resources: any, options?: any) => Promise<any>, resources: any[], options?: any): Promise<any>;
     read(next: (query?: any, options?: any) => Promise<any>, query?: any, options?: any): Promise<any>;
     update(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any>;
@@ -13,45 +13,18 @@ export interface PipeAbstract<M = {},
     delete(next: (query: any, options?: any) => Promise<any>, query: any, options?: any): Promise<any>;
 }
 
-
-export abstract class PipeAbstract<M = {},
-    S extends SchemaBuildersInterface['schemaBuilders']= PipeAbstract<M, null>["defaultSchemaType"]> implements SchemaBuildersInterface {
-
-    constructor(public modelSchemaBuilder: SchemaBuilder<M> = null, public schemaBuilders: S = null) {
-        if (modelSchemaBuilder == null) {
-            this.modelSchemaBuilder = SchemaBuilder.emptySchema() as any;
-        }
-
-        if (schemaBuilders == null) {
-            this.schemaBuilders = this.defaultSchema(this.modelSchemaBuilder) as any;
-        }
+export abstract class PipeAbstract {
+    @final resolveSchemaBuilders<S extends SchemaBuildersInterface['schemaBuilders']>(s: S) {
+        return SchemaBuildersInterfaceMerger.merge(s, this.schemaBuildersResolver);
     }
 
-    extend<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
-        return Object.assign(this.schemaBuilders, func(this.modelSchemaBuilder, this.schemaBuilders));
+    get schemaBuilders() {
+        return this.schemaBuildersResolver as this["schemaBuildersResolver"];
     }
 
-    private defaultSchemaType = (false as true) && this.defaultSchema(this.modelSchemaBuilder);
-    private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
-        return {
-            readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
-            readOptions: SchemaBuilder.emptySchema(),
-            readWrapper: SchemaBuilder.emptySchema(),
-            createValues: modelSchemaBuilder.clone(),
-            createOptions: SchemaBuilder.emptySchema(),
-            createWrapper: SchemaBuilder.emptySchema(),
-            updateValues: modelSchemaBuilder.clone(),
-            updateOptions: SchemaBuilder.emptySchema(),
-            updateWrapper: SchemaBuilder.emptySchema(),
-            patchQuery: modelSchemaBuilder.clone().transformPropertiesToArray(),
-            patchValues: modelSchemaBuilder.clone().toDeepOptionals(),
-            patchOptions: SchemaBuilder.emptySchema(),
-            patchWrapper: SchemaBuilder.emptySchema(),
-            deleteQuery: modelSchemaBuilder.transformPropertiesToArray(),
-            deleteOptions: SchemaBuilder.emptySchema(),
-            deleteWrapper: SchemaBuilder.emptySchema()
-        }
-    }
+    // schemaBuildersResolver: <newS extends PartialSchemaBuilders>(s: SchemaBuildersInterface['schemaBuilders']) => newS
+
+    schemaBuildersResolver: (s: SchemaBuildersInterface['schemaBuilders']) => PartialSchemaBuilders
 
     get pipeline(): PipelineAbstract<any, any> {
         if (!this[PIPELINE]) {

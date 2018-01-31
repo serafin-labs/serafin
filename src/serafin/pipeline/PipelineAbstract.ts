@@ -1,7 +1,7 @@
 import * as _ from "lodash";
 import * as util from "util";
 import { SchemaBuilder, DeepPartial, Resolve } from "@serafin/schema-builder";
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
+import { SchemaBuildersInterface, SchemaBuildersInterfaceMerger, PartialSchemaBuilders } from "./SchemaBuildersInterface";
 import { IdentityInterface } from "./IdentityInterface";
 import { PipeAbstract } from "./PipeAbstract";
 import { PipelineRelation } from "./Relation";
@@ -19,7 +19,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
     public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
 
-    constructor(public modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
+    constructor(modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
         if (schemaBuilders == null) {
             this.schemaBuilders = this.defaultSchema as any;
         }
@@ -32,9 +32,10 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
         }
     }
 
-    private defaultSchemaType = (false as true) && this.defaultSchema(this.modelSchemaBuilder);
+    private defaultSchemaType = (false as true) && this.defaultSchema(this.schemaBuilders.model);
     private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
         return {
+            model: modelSchemaBuilder,
             readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
             createValues: modelSchemaBuilder.clone().omitProperties(["id"]),
             updateValues: modelSchemaBuilder.clone().omitProperties(["id"]),
@@ -75,14 +76,14 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
     //         Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}>;
     // }
 
-    alterSchemaBuilders<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
-        let schemaBuilders = this.schemaBuilders =
-            Object.assign(this.schemaBuilders as this["schemaBuilders"], func(this.modelSchemaBuilder, this.schemaBuilders as this["schemaBuilders"]));
-        return this as any as PipelineAbstract<M, typeof schemaBuilders>;
+    alterSchemaBuilders<newS extends PartialSchemaBuilders>(func: (sch: this["schemaBuilders"]) => newS) {
+        let schemaBuilders = SchemaBuildersInterfaceMerger.merge(this.schemaBuilders, func);
+        this.schemaBuilders = schemaBuilders as any;
+        return this as PipelineAbstract<M, typeof schemaBuilders>;
     }
 
-    extend<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (model: SchemaBuilder<M>, sch: this["schemaBuilders"]) => newS) {
-        return Object.assign(this.schemaBuilders, func(this.modelSchemaBuilder, this.schemaBuilders));
+    protected extendsSchemaBuilders<newS extends Partial<SchemaBuildersInterface["schemaBuilders"]>>(func: (sch: S) => newS) {
+        return SchemaBuildersInterfaceMerger.merge(this.schemaBuilders, func);
     }
 
     /**
@@ -122,28 +123,12 @@ export abstract class PipelineAbstract<M extends IdentityInterface,
         let modelSchemaBuilder = this.modelSchemaBuilder.intersectProperties(pipe.modelSchemaBuilder);
         this.modelSchemaBuilder = modelSchemaBuilder as any;
 
-        let schemaBuilders = {
-            readQuery: this.schemaBuilders.readQuery.intersectProperties(pipe.schemaBuilders.readQuery),
-            createValues: this.schemaBuilders.createValues.intersectProperties(pipe.schemaBuilders.createValues),
-            updateValues: this.schemaBuilders.updateValues.intersectProperties(pipe.schemaBuilders.updateValues),
-            patchQuery: this.schemaBuilders.patchQuery.intersectProperties(pipe.schemaBuilders.patchQuery),
-            patchValues: this.schemaBuilders.patchValues.intersectProperties(pipe.schemaBuilders.patchValues),
-            deleteQuery: this.schemaBuilders.deleteQuery.intersectProperties(pipe.schemaBuilders.deleteQuery),
-            readOptions: this.schemaBuilders.readOptions.intersectProperties(pipe.schemaBuilders.readOptions),
-            readWrapper: this.schemaBuilders.readWrapper.intersectProperties(pipe.schemaBuilders.readWrapper),
-            createOptions: this.schemaBuilders.createOptions.intersectProperties(pipe.schemaBuilders.createOptions),
-            createWrapper: this.schemaBuilders.createWrapper.intersectProperties(pipe.schemaBuilders.createWrapper),
-            updateOptions: this.schemaBuilders.updateOptions.intersectProperties(pipe.schemaBuilders.updateOptions),
-            updateWrapper: this.schemaBuilders.updateWrapper.intersectProperties(pipe.schemaBuilders.updateWrapper),
-            patchOptions: this.schemaBuilders.patchOptions.intersectProperties(pipe.schemaBuilders.patchOptions),
-            patchWrapper: this.schemaBuilders.patchWrapper.intersectProperties(pipe.schemaBuilders.patchWrapper),
-            deleteOptions: this.schemaBuilders.deleteOptions.intersectProperties(pipe.schemaBuilders.deleteOptions),
-            deleteWrapper: this.schemaBuilders.deleteWrapper.intersectProperties(pipe.schemaBuilders.deleteWrapper)
-        }
+        //   let schemaBuilders = SchemaBuildersInterfaceMerger.merge(this.schemaBuilders["schema"], pipe.schemaBuilders);
 
-        this.schemaBuilders = schemaBuilders as any;
 
-        return this as any as PipelineAbstract<Resolve<typeof modelSchemaBuilder.T>, typeof schemaBuilders>;
+        //    this.schemaBuilders = schemaBuilders as any;
+
+        return this as any;// as PipelineAbstract<Resolve<typeof modelSchemaBuilder.T>, typeof schemaBuilders>;
     }
 
 
