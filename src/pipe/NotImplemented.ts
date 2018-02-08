@@ -1,26 +1,25 @@
-import { PipeAbstract, option, description, result } from '../serafin/pipeline'
-import { notImplementedError } from "../serafin/error/Error"
 import * as _ from 'lodash'
+import { PipeAbstract } from '../serafin/pipeline'
+import { notImplementedError } from "../serafin/error/Error"
 import { SchemaBuilder } from '@serafin/schema-builder';
+import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
-@description("Force given actions to be unavailable")
-export class NotImplemented extends PipeAbstract<{}> {
+// @description("Force given actions to be unavailable")
+export class NotImplemented extends PipeAbstract implements PipeInterface {
     constructor(private notImplementedMethods: ("create" | "update" | "patch" | "delete" | "read")[]) {
         super();
     }
 
-    // schemaBuilders = {
-    //     readQuery: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery,
-    //     readOptions: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery,
-    //     readWrapper: this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readWrapper,
-    //     createValues: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createValues,
-    //     createOptions: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createOptions,
-    //     createWrapper: this.notImplementedMethods.indexOf("create") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createWrapper,
-    //     updateValues: this.notImplementedMethods.indexOf("update") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.updateValues,
-    //     patchQuery: this.notImplementedMethods.indexOf("patch") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchQuery,
-    //     patchValues: this.notImplementedMethods.indexOf("patch") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchValues,
-    //     deleteQuery: this.notImplementedMethods.indexOf("delete") !== -1 ?  SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.deleteQuery
-    // };
+    schemaBuilderReadQuery = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery
+    schemaBuilderReadOptionsSchemaBuilder = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery
+    schemaBuilderReadWrapperSchemaBuilder = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readWrapper
+    schemaBuilderCreateValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createValues
+    schemaBuilderCreateOptionsSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createOptions
+    schemaBuilderCreateWrapperSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createWrapper
+    schemaBuilderUpdateValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("update") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.updateValues
+    schemaBuilderPatchQuerySchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchQuery
+    schemaBuilderPatchValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchValues
+    schemaBuilderDdeleteQuerySchemaBuilder = (s) => this.notImplementedMethods.indexOf("delete") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.deleteQuery
 
     public async create(next, resources, options?) {
         if (this.notImplementedMethods.indexOf("create") !== -1) {

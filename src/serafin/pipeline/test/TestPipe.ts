@@ -1,31 +1,31 @@
-import { PipelineAbstract, PipeAbstract, PipelineRelation, description } from ".."
+import { PipelineAbstract, PipeAbstract, PipelineRelation } from ".."
 import { SchemaBuilder } from "@serafin/schema-builder";
+import { PipeInterface } from "../PipeInterface";
 
-export class TestPipe extends PipeAbstract {
-    modelSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString description" });
+export class TestPipe<M, RQ, RO, RW, CV, CO, CW, UV, UO, UW, PQ, PV, PO, PW, DQ, DO, DW> extends PipeAbstract implements PipeInterface {
+    schemaBuilderModel = (s: SchemaBuilder<M>) => s.addOptionalString('testModelString', { description: "testModelString description" });
 
-    // readQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    // readOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadOptionString', { description: "testReadOptionString options description" });
-    // readWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testReadWrapperString', { description: "testReadWrapperString wrapper description" });
+    schemaBuilderReadQuery = (s: SchemaBuilder<RQ>) => s.addString('testReadQueryString', { description: "testReadQueryString query description" });
+    schemaBuilderReadOptions = (s: SchemaBuilder<RO>) => s.addString('testReadOptionString', { description: "testReadOptionString options description" });
+    schemaBuilderReadWrapper = (s: SchemaBuilder<RW>) => s.addString('testReadWrapperString', { description: "testReadWrapperString wrapper description" });
 
-    // createValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
-    // createOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
-    // createWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
+    schemaBuilderCreateValues = (s: SchemaBuilder<CV>) => s.addString('testCreateValuesString', { description: "testCreateValuesString values description" });
+    schemaBuilderCreateOptions = (s: SchemaBuilder<CO>) => s.addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
+    schemaBuilderCreateWrapper = (s: SchemaBuilder<CW>) => s.addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
 
-    // updateValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString values description" });
-    // updateOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
-    // updateWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
+    schemaBuilderUpdateValues = (s: SchemaBuilder<UV>) => s.addString('tesUpdateValuesString', { description: "tesUpdateValuesString values description" });
+    schemaBuilderUpdateOptions = (s: SchemaBuilder<UO>) => s.addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
+    schemaBuilderUpdateWrapper = (s: SchemaBuilder<UW>) => s.addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
 
-    // patchQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    // patchValuesSchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString description" });
-    // patchOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchOptionsString', { description: "testPatchOptionsString options  description" });
-    // patchWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testPatchWrapperString', { description: "testPatchWrapperString wrapper description" });
+    schemaBuilderPatchQuery = (s: SchemaBuilder<PQ>) => s.addString('testPatchQueryString', { description: "testPatchQueryString query description" });
+    schemaBuilderPatchValues = (s: SchemaBuilder<PV>) => s.addString('testPatchValuesString', { description: "testPatchValuesString description" });
+    schemaBuilderPatchOptions = (s: SchemaBuilder<PO>) => s.addString('testPatchOptionsString', { description: "testPatchOptionsString options  description" });
+    schemaBuilderPatchWrapper = (s: SchemaBuilder<PW>) => s.addString('testPatchWrapperString', { description: "testPatchWrapperString wrapper description" });
 
-    // deleteQuerySchemaBuilder = SchemaBuilder.emptySchema().addString('testModelString', { description: "testModelString query description" });
-    // deleteOptionsSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteOptionsString', { description: "testDeleteOptionsString options description" });
-    // deleteWrapperSchemaBuilder = SchemaBuilder.emptySchema().addString('testDeleteWrapperString', { description: "testDeleteWrapperString wrapper description" });
+    schemaBuilderDeleteQuery = (s: SchemaBuilder<DQ>) => s.addString('testDeleteQueryString', { description: "testDeleteQueryString query description" });
+    schemaBuilderDeleteOptions = (s: SchemaBuilder<DO>) => s.addString('testDeleteOptionsString', { description: "testDeleteOptionsString options description" });
+    schemaBuilderDeleteWrapper = (s: SchemaBuilder<DW>) => s.addString('testDeleteWrapperString', { description: "testDeleteWrapperString wrapper description" });
 
-    @description("create test description")
     public async create(next: (resources: any, options?: any) => Promise<any>, resources: any[], options?: any): Promise<any> {
         let results = await (next(resources, options));
         if (results.data[0]) {
@@ -34,7 +34,6 @@ export class TestPipe extends PipeAbstract {
         results.testCreateWrapperString = 'testCreateWrapperValue';
     }
 
-    @description("read test description")
     public async read(next: (query?: any, options?: any) => Promise<any>, query?: any, options?: any): Promise<any> {
         let results = await (next(query, options));
         if (results.data[0]) {
@@ -43,7 +42,6 @@ export class TestPipe extends PipeAbstract {
         results.testReadWrapperString = 'testReadWrapperValue';
     }
 
-    @description("update test description")
     public async update(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any> {
         let results = await (next(id, values, options));
         if (results.data[0]) {
@@ -52,7 +50,6 @@ export class TestPipe extends PipeAbstract {
         results.testUpdateWrapperString = 'testUpdateWrapperValue';
     }
 
-    @description("patch test description")
     public async patch(next: (query: any, values: any, options?: any) => Promise<any>, query: any, values: any, options?: any): Promise<any> {
         let results = await (next(query, values, options));
         if (results.data[0]) {
@@ -61,7 +58,6 @@ export class TestPipe extends PipeAbstract {
         results.testUpdateWrapperString = 'testPatchWrapperValue';
     }
 
-    @description("delete test description")
     public async delete(next: (query: any, options?: any) => Promise<any>, query: any, options?: any): Promise<any> {
         let results = await (next(query, options));
         if (results.data[0]) {
@@ -72,230 +68,4 @@ export class TestPipe extends PipeAbstract {
 }
 
 export const schemaTestPipe = {
-    modelSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                { testModelString: { description: 'testModelString description', type: 'string' } },
-            required: ['testModelString']
-        },
-    readQuerySchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testModelString:
-                        {
-                            description: 'testModelString query description',
-                            type: 'string'
-                        }
-                },
-            required: ['testModelString']
-        },
-    readOptionsSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testReadOptionString:
-                        {
-                            description: 'testReadOptionString options description',
-                            type: 'string'
-                        }
-                },
-            required: ['testReadOptionString']
-        },
-    readWrapperSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testReadWrapperString:
-                        {
-                            description: 'testReadWrapperString wrapper description',
-                            type: 'string'
-                        }
-                },
-            required: ['testReadWrapperString']
-        },
-    createValuesSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testModelString:
-                        {
-                            description: 'testModelString values description',
-                            type: 'string'
-                        }
-                },
-            required: ['testModelString']
-        },
-    createOptionsSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testCreateOptionsString:
-                        {
-                            description: 'testCreateOptionsString options description',
-                            type: 'string'
-                        }
-                },
-            required: ['testCreateOptionsString']
-        },
-    createWrapperSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testCreateWrapperString:
-                        {
-                            description: 'testCreateWrapperString wrapper description',
-                            type: 'string'
-                        }
-                },
-            required: ['testCreateWrapperString']
-        },
-    updateValuesSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testModelString:
-                        {
-                            description: 'testModelString values description',
-                            type: 'string'
-                        }
-                },
-            required: ['testModelString']
-        },
-    updateOptionsSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testUpdateOptionsString:
-                        {
-                            description: 'testUpdateOptionsString options description',
-                            type: 'string'
-                        }
-                },
-            required: ['testUpdateOptionsString']
-        },
-    updateWrapperSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testUpdateWrapperString:
-                        {
-                            description: 'testUpdateWrapperString wrapper description',
-                            type: 'string'
-                        }
-                },
-            required: ['testUpdateWrapperString']
-        },
-    patchQuerySchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testModelString:
-                        {
-                            description: 'testModelString query description',
-                            type: 'string'
-                        }
-                },
-            required: ['testModelString']
-        },
-    patchValuesSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                { testModelString: { description: 'testModelString description', type: 'string' } },
-            required: ['testModelString']
-        },
-    patchOptionsSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testPatchOptionsString:
-                        {
-                            description: 'testPatchOptionsString options  description',
-                            type: 'string'
-                        }
-                },
-            required: ['testPatchOptionsString']
-        },
-    patchWrapperSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testPatchWrapperString:
-                        {
-                            description: 'testPatchWrapperString wrapper description',
-                            type: 'string'
-                        }
-                },
-            required: ['testPatchWrapperString']
-        },
-    deleteQuerySchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testModelString:
-                        {
-                            description: 'testModelString query description',
-                            type: 'string'
-                        }
-                },
-            required: ['testModelString']
-        },
-    deleteOptionsSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testDeleteOptionsString:
-                        {
-                            description: 'testDeleteOptionsString options description',
-                            type: 'string'
-                        }
-                },
-            required: ['testDeleteOptionsString']
-        },
-    deleteWrapperSchemaBuilder:
-        {
-            type: 'object',
-            additionalProperties: false,
-            properties:
-                {
-                    testDeleteWrapperString:
-                        {
-                            description: 'testDeleteWrapperString wrapper description',
-                            type: 'string'
-                        }
-                },
-            required: ['testDeleteWrapperString']
-        }
 };

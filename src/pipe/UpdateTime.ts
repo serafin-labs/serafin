@@ -1,13 +1,12 @@
-import { PipeAbstract, option, description, result } from '../serafin/pipeline'
+import { PipeAbstract } from '../serafin/pipeline'
 import { SchemaBuilder } from '@serafin/schema-builder';
+import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
-@description("Adds creation and update timestamps to the resources")
-export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: number }> {
-    schemaBuilders = this.extend((m) => ({
-        readWrapper: SchemaBuilder.emptySchema()
-            .addNumber("lastCreatedAt", { description: "Most recent creation date" })
-            .addNumber("lastUpdatedAt", { description: "Most recent update date" })
-    }));
+// @description("Adds creation and update timestamps to the resources")
+export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
+    schemaBuilderReadWrapper = (s: SchemaBuilder<RW>) => s
+        .addNumber("lastCreatedAt", { description: "Most recent creation date" })
+        .addNumber("lastUpdatedAt", { description: "Most recent update date" })
 
     public async read(next, query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
         let readWrapper = (await next(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
@@ -33,7 +32,6 @@ export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: num
         return readWrapper
     }
 
-    @description("Sets the creation time")
     public async create(next, resources: { createdAt: number }[], options?: {}) {
         resources.forEach(resource => {
             resource.createdAt = Date.now();
@@ -42,13 +40,11 @@ export class UpdateTime extends PipeAbstract<{ createdAt: number, updatedAt: num
         return next(resources, options);
     }
 
-    @description("Sets the update time")
     public async update(next, id: string, values: { updatedAt: number }, options?: {}) {
         values.updatedAt = Date.now();
         return next(id, values, options);
     }
 
-    @description("Sets the update time")
     public async patch(next, query: {}, values: { updatedAt: number }, options?: {}) {
         values.updatedAt = Date.now();
         return next(query, values, options);

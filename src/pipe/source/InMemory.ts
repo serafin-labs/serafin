@@ -1,13 +1,13 @@
 import * as VError from 'verror';
 import { conflictError } from "../../serafin/error/Error"
-import { PipelineAbstract, Query, description, IdentityInterface } from '../../serafin/pipeline';
+import { PipelineAbstract, IdentityInterface } from '../../serafin/pipeline';
 
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 import { Omit, DeepPartial } from '@serafin/schema-builder';
 
-@description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
+// @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbstract<T> {
     protected resources: { [index: string]: T } = {} as { [index: string]: T };
 
@@ -55,7 +55,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: _.cloneDeep(resources) } as any;
     }
 
-    protected async _create(resources, options): Promise<{ data: T[] } & this["schemaBuilders"]["createWrapper"]["T"]> {
+    protected async _create(resources, options) {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -71,11 +71,11 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: createdResources };
     }
 
-    protected _read(query, options): Promise<{ data: T[] } & this["schemaBuilders"]["readWrapper"]["T"]> {
+    protected _read(query, options) {
         return this.readInMemory(query)
     }
 
-    protected async _update(id, values, options): Promise<{ data: T } & this["schemaBuilders"]["updateWrapper"]["T"]> {
+    protected async _update(id, values, options) {
         var resources = await this.readInMemory({
             id: id
         });
@@ -92,7 +92,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: undefined };
     }
 
-    protected async _patch(query, values, options): Promise<{ data: T[] } & this["schemaBuilders"]["patchWrapper"]["T"]> {
+    protected async _patch(query, values, options) {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
@@ -109,7 +109,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: updatedResources };
     }
 
-    protected async _delete(query, options): Promise<{ data: T[] } & this["schemaBuilders"]["deleteWrapper"]["T"]> {
+    protected async _delete(query, options) {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 
