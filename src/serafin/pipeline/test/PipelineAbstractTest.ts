@@ -5,6 +5,7 @@ import { TestPipeline, schemaTestPipeline } from "./TestPipeline";
 import { TestPipe } from "./TestPipe";
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { PipelineAbstract } from "../PipelineAbstract";
+import { IdentityInterface } from "../IdentityInterface";
 
 chai.use(require("chai-as-promised"))
 
@@ -49,6 +50,7 @@ describe('PipelineAbstract', function () {
         expect(p).to.be.an.instanceOf(TestPipeline);
         expect(p).to.be.an.instanceOf(PipelineAbstract);
     });
+
     it('should represent itself as JSONSchema definitions', function () {
         let p = testPipeline();
         expect(p.toString()).to.be.equal(util.inspect(schemaTestPipeline, false, null));
@@ -67,6 +69,95 @@ describe('PipelineAbstract', function () {
         p.pipe(testPipe as any);
         let p2 = testPipeline();
         return expect(() => p2.pipe(testPipe as any)).to.throw();
+    });
+
+    it(`should extend schema builders`, function () {
+        class ExtendedPipeline<M extends IdentityInterface> extends PipelineAbstract<M> {
+            schemaBuilders = {
+                model: super.getSchemaBuilders().model,
+                createValues: super.getSchemaBuilders().createValues.addString("additionalValue"),
+                createOptions: super.getSchemaBuilders().createOptions.addString("additionalOption"),
+                createWrapper: super.getSchemaBuilders().createWrapper.addString("additionalWrapper"),
+                readQuery: super.getSchemaBuilders().readQuery.addString("additionalQuery"),
+                readOptions: super.getSchemaBuilders().readOptions.addString("additionalOption"),
+                readWrapper: super.getSchemaBuilders().readWrapper.addString("additionalWrapper"),
+                updateValues: super.getSchemaBuilders().updateValues,
+                updateOptions: super.getSchemaBuilders().updateOptions.addString("additionalOption"),
+                updateWrapper: super.getSchemaBuilders().updateWrapper.addString("additionalWrapper"),
+                patchQuery: super.getSchemaBuilders().patchQuery.addString("additionalQuery"),
+                patchValues: super.getSchemaBuilders().patchValues,
+                patchOptions: super.getSchemaBuilders().patchOptions.addString("additionalOption"),
+                patchWrapper: super.getSchemaBuilders().patchWrapper.addString("additionalWrapper"),
+                deleteQuery: super.getSchemaBuilders().deleteQuery.addString("additionalQuery"),
+                deleteOptions: super.getSchemaBuilders().deleteOptions.addString("additionalOption"),
+                deleteWrapper: super.getSchemaBuilders().deleteWrapper.addString("additionalWrapper")
+            }
+        };
+        let p = new ExtendedPipeline
+            (SchemaBuilder.emptySchema()
+                .addString("id", { description: "id" })
+                .addString("method", { description: "method" }));
+
+        expect(p.schemaBuilders.model instanceof SchemaBuilder &&
+            p.schemaBuilders.createValues instanceof SchemaBuilder && p.schemaBuilders.createValues.schema.properties.additionalValue.type == 'string' &&
+            p.schemaBuilders.createOptions instanceof SchemaBuilder && p.schemaBuilders.createOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.createWrapper instanceof SchemaBuilder && p.schemaBuilders.createWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.readQuery instanceof SchemaBuilder && p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.readWrapper instanceof SchemaBuilder && p.schemaBuilders.readWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.updateValues instanceof SchemaBuilder &&
+            p.schemaBuilders.updateOptions instanceof SchemaBuilder && p.schemaBuilders.updateOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.updateWrapper instanceof SchemaBuilder && p.schemaBuilders.updateWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.patchValues instanceof SchemaBuilder &&
+            p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.patchWrapper instanceof SchemaBuilder && p.schemaBuilders.patchWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.deleteQuery instanceof SchemaBuilder && p.schemaBuilders.deleteQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.deleteOptions instanceof SchemaBuilder && p.schemaBuilders.deleteOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.deleteWrapper instanceof SchemaBuilder && p.schemaBuilders.deleteWrapper.schema.properties.additionalWrapper.type == 'string'
+        ).to.be.true;
+    });
+
+    it(`should alter schema builders`, function () {
+        let p = testPipeline()
+            .alterSchemaBuilders((s) => ({
+                model: s.model,
+                createValues: s.createValues.addString("additionalValue"),
+                createOptions: s.createOptions.addString("additionalOption"),
+                createWrapper: s.createWrapper.addString("additionalWrapper"),
+                readQuery: s.readQuery.addString("additionalQuery"),
+                readOptions: s.readOptions.addString("additionalOption"),
+                readWrapper: s.readWrapper.addString("additionalWrapper"),
+                updateValues: s.updateValues.addString("additionalValue"),
+                updateOptions: s.updateOptions.addString("additionalOption"),
+                updateWrapper: s.updateWrapper.addString("additionalWrapper"),
+                patchQuery: s.patchQuery.addString("additionalQuery"),
+                patchValues: s.patchValues.addString("additionalValue"),
+                patchOptions: s.patchOptions.addString("additionalOption"),
+                patchWrapper: s.patchWrapper.addString("additionalWrapper"),
+                deleteQuery: s.deleteQuery.addString("additionalQuery"),
+                deleteOptions: s.deleteOptions.addString("additionalOption"),
+                deleteWrapper: s.deleteWrapper.addString("additionalWrapper")
+            }));
+
+        expect(p.schemaBuilders.model instanceof SchemaBuilder &&
+            p.schemaBuilders.createValues instanceof SchemaBuilder && p.schemaBuilders.createValues.schema.properties.additionalValue.type == 'string' &&
+            p.schemaBuilders.createOptions instanceof SchemaBuilder && p.schemaBuilders.createOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.createWrapper instanceof SchemaBuilder && p.schemaBuilders.createWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.readQuery instanceof SchemaBuilder && p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.readWrapper instanceof SchemaBuilder && p.schemaBuilders.readWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.updateValues instanceof SchemaBuilder && p.schemaBuilders.updateValues.schema.properties.additionalValue.type == 'string' &&
+            p.schemaBuilders.updateOptions instanceof SchemaBuilder && p.schemaBuilders.updateOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.updateWrapper instanceof SchemaBuilder && p.schemaBuilders.updateWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.patchValues instanceof SchemaBuilder && p.schemaBuilders.patchValues.schema.properties.additionalValue.type == 'string' &&
+            p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.patchWrapper instanceof SchemaBuilder && p.schemaBuilders.patchWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.deleteQuery instanceof SchemaBuilder && p.schemaBuilders.deleteQuery.schema.properties.additionalQuery.type == 'string' &&
+            p.schemaBuilders.deleteOptions instanceof SchemaBuilder && p.schemaBuilders.deleteOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.deleteWrapper instanceof SchemaBuilder && p.schemaBuilders.deleteWrapper.schema.properties.additionalWrapper.type == 'string'
+        ).to.be.true;
     });
 
     describe('Pipeline methods', function () {
@@ -179,4 +270,5 @@ describe('PipelineAbstract', function () {
         });
 
     });
+
 });
