@@ -45,7 +45,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
         return {
             model: modelSchemaBuilder,
-            createValues: modelSchemaBuilder.clone().omitProperties(["id"]),
+            createValues: modelSchemaBuilder.clone().setOptionalProperties(["id"]),
             createOptions: SchemaBuilder.emptySchema(),
             createWrapper: SchemaBuilder.emptySchema(),
             readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
