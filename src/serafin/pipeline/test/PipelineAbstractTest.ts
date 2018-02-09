@@ -49,7 +49,7 @@ describe('PipelineAbstract', function () {
         expect(p).to.be.an.instanceOf(TestPipeline);
         expect(p).to.be.an.instanceOf(PipelineAbstract);
     });
-    it.skip('should represent itself as JSONSchema definitions', function () {
+    it('should represent itself as JSONSchema definitions', function () {
         let p = testPipeline();
         expect(p.toString()).to.be.equal(util.inspect(schemaTestPipeline, false, null));
     });
@@ -66,7 +66,7 @@ describe('PipelineAbstract', function () {
         let testPipe = new TestPipe();
         p.pipe(testPipe as any);
         let p2 = testPipeline();
-        return expect(p2.pipe(testPipe as any)).to.throw;
+        return expect(() => p2.pipe(testPipe as any)).to.throw();
     });
 
     describe('Pipeline methods', function () {
@@ -89,6 +89,7 @@ describe('PipelineAbstract', function () {
         it(`should fail calling the create method`, function () {
             return expect(testPipeline().create([{ val: 'create' } as any])).to.be.rejected;
         });
+        // TODO: design question: should we allow additional properties in these fields as a default?
         it.skip(`should fail calling the read method`, function () {
             return expect(testPipeline().read({ q: 'read' } as any, { opt: 'read' } as any)).to.be.rejected;
         });
@@ -104,38 +105,38 @@ describe('PipelineAbstract', function () {
     });
 
     describe('Pipeline with no implemented methods', function () {
-        it(`should fail calling the create method with invalid params`, function () {
-            return expect(testEmptyPipeline().create([{ val: 'create' } as any])).to.be.rejected;
+        it(`should fail calling the create method`, function () {
+            return expect(testEmptyPipeline().create([{ 'method': 'test' } as any])).to.be.rejected;
         });
-        it(`should fail calling the read method with invalid params`, function () {
-            return expect(testEmptyPipeline().read({ val: 'read' } as any)).to.be.rejected;
+        it(`should fail calling the read method`, function () {
+            return expect(testEmptyPipeline().read({})).to.be.rejected;
         });
-        it(`should fail calling the update method with invalid params`, function () {
-            return expect(testEmptyPipeline().update('1', { val: 'update' })).to.be.rejected;
+        it(`should fail calling the update method`, function () {
+            return expect(testEmptyPipeline().update('1', { 'method': 'test' })).to.be.rejected;
         });
-        it(`should fail calling the patch method with invalid params`, function () {
-            return expect(testEmptyPipeline().patch({ id: '1' }, { val: 'patch' })).to.be.rejected;
+        it(`should fail calling the patch method`, function () {
+            return expect(testEmptyPipeline().patch({ id: '1' }, {})).to.be.rejected;
         });
-        it(`should fail calling the delete method with invalid params`, function () {
-            return expect(testEmptyPipeline().delete({ val: '1' } as any)).to.be.rejected;
+        it(`should fail calling the delete method`, function () {
+            return expect(testEmptyPipeline().delete({ id: '1' })).to.be.rejected;
         });
     });
 
     describe('Pipeline with no implemented methods, and a pipe', function () {
         it(`should fail calling the create method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).create([{ val: 'create' } as any])).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).create([{ 'method': 'test' } as any])).to.be.rejected;
         });
         it(`should fail calling the read method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).read({ val: 'read' } as any)).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).read({})).to.be.rejected;
         });
         it(`should fail calling the update method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).update('1', { val: 'update' } as any)).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).update('1', { 'method': 'test' })).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).patch({ id: '1' } as any, { val: 'patch' } as any)).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).patch({ id: '1' }, { id: '1' })).to.be.rejected;
         });
         it(`should fail calling the delete method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).delete({ val: '1' } as any)).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).delete({ id: '1' })).to.be.rejected;
         });
     });
 

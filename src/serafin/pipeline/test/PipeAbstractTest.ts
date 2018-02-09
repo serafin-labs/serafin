@@ -16,16 +16,4 @@ describe('PipeAbstract', function () {
         let s = new TestPipe();
         expect(() => s.pipeline).to.throw();
     });
-    it.skip('should represent itself as JSONSchema definitions', function () {
-        let s = new TestPipe();
-        expect(s.toString()).to.equal(util.inspect(schemaTestPipe, false, null));
-    });
-    // it('should fail on unimplemented operations', async function () {
-    //     let s = new TestSourcePipeline(SchemaBuilder.emptySchema().addString("id"), {})
-    //     await expect(s.read()).to.eventually.be.rejected
-    //     await expect(s.create([{}])).to.eventually.be.rejected
-    //     await expect(s.update("", {})).to.eventually.be.rejected
-    //     await expect(s.patch({ id: "" }, {})).to.eventually.be.rejected
-    //     await expect(s.delete({ id: "" })).to.eventually.be.rejected
-    // });
 });

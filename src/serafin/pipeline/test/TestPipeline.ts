@@ -25,6 +25,108 @@ export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<
     }
 }
 
-export const schemaTestPipeline = {
-
-};
+export const schemaTestPipeline =
+    {
+        model:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties:
+                    {
+                        id:
+                            {
+                                oneOf:
+                                    [{ description: 'id', type: 'string' },
+                                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                            }
+                    },
+                required: ['id']
+            },
+        createValues:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties:
+                    {
+                        id: { description: 'id', type: 'string' },
+                        method: { description: 'method', type: 'string' }
+                    },
+                required: ['method']
+            },
+        createOptions: { type: 'object', additionalProperties: false },
+        createWrapper: { type: 'object', additionalProperties: false },
+        readQuery:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties:
+                    {
+                        id:
+                            {
+                                oneOf:
+                                    [{ description: 'id', type: 'string' },
+                                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                            },
+                        method:
+                            {
+                                oneOf:
+                                    [{ description: 'method', type: 'string' },
+                                    {
+                                        type: 'array',
+                                        items: { description: 'method', type: 'string' }
+                                    }]
+                            }
+                    }
+            },
+        readOptions: { type: 'object', additionalProperties: false },
+        readWrapper: { type: 'object', additionalProperties: false },
+        updateValues:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties: { method: { description: 'method', type: 'string' } },
+                required: ['method']
+            },
+        updateOptions: { type: 'object', additionalProperties: false },
+        updateWrapper: { type: 'object', additionalProperties: false },
+        patchQuery:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties:
+                    {
+                        id:
+                            {
+                                oneOf:
+                                    [{ description: 'id', type: 'string' },
+                                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                            }
+                    },
+                required: ['id']
+            },
+        patchValues:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties: { method: { description: 'method', type: 'string' } }
+            },
+        patchOptions: { type: 'object', additionalProperties: false },
+        patchWrapper: { type: 'object', additionalProperties: false },
+        deleteQuery:
+            {
+                type: 'object',
+                additionalProperties: false,
+                properties:
+                    {
+                        id:
+                            {
+                                oneOf:
+                                    [{ description: 'id', type: 'string' },
+                                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                            }
+                    },
+                required: ['id']
+            },
+        deleteOptions: { type: 'object', additionalProperties: false },
+        deleteWrapper: { type: 'object', additionalProperties: false }
+    };
