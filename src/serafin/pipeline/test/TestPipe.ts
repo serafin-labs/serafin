@@ -6,14 +6,14 @@ export class TestPipe<M, RQ, RO, RW, CV, CO, CW, UV, UO, UW, PQ, PV, PO, PW, DQ,
     schemaBuilderModel = (s: SchemaBuilder<M>) => s.addOptionalString('testModelString', { description: "testModelString description" });
 
     schemaBuilderReadQuery = (s: SchemaBuilder<RQ>) => s.addString('testReadQueryString', { description: "testReadQueryString query description" });
-    schemaBuilderReadOptions = (s: SchemaBuilder<RO>) => s.addString('testReadOptionString', { description: "testReadOptionString options description" });
+    schemaBuilderReadOptions = (s: SchemaBuilder<RO>) => s.addString('testReadOptionsString', { description: "testReadOptionString options description" });
     schemaBuilderReadWrapper = (s: SchemaBuilder<RW>) => s.addString('testReadWrapperString', { description: "testReadWrapperString wrapper description" });
 
     schemaBuilderCreateValues = (s: SchemaBuilder<CV>) => s.addString('testCreateValuesString', { description: "testCreateValuesString values description" });
     schemaBuilderCreateOptions = (s: SchemaBuilder<CO>) => s.addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
     schemaBuilderCreateWrapper = (s: SchemaBuilder<CW>) => s.addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
 
-    schemaBuilderUpdateValues = (s: SchemaBuilder<UV>) => s.addString('tesUpdateValuesString', { description: "tesUpdateValuesString values description" });
+    schemaBuilderUpdateValues = (s: SchemaBuilder<UV>) => s.addString('testUpdateValuesString', { description: "tesUpdateValuesString values description" });
     schemaBuilderUpdateOptions = (s: SchemaBuilder<UO>) => s.addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
     schemaBuilderUpdateWrapper = (s: SchemaBuilder<UW>) => s.addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
 
@@ -29,41 +29,51 @@ export class TestPipe<M, RQ, RO, RW, CV, CO, CW, UV, UO, UW, PQ, PV, PO, PW, DQ,
     public async create(next: (resources: any, options?: any) => Promise<any>, resources: any[], options?: any): Promise<any> {
         let results = await (next(resources, options));
         if (results.data[0]) {
-            results.data[0].testModelString = options.testCreateOptionsString;
+            results.data[0].testString = options.testCreateOptionsString;
         }
         results.testCreateWrapperString = 'testCreateWrapperValue';
+        return results;
     }
 
     public async read(next: (query?: any, options?: any) => Promise<any>, query?: any, options?: any): Promise<any> {
         let results = await (next(query, options));
         if (results.data[0]) {
-            results.data[0].testModelString = options.testReadOptionString;
+            results.data[0].testQueryString = query.testReadQueryString;
+            results.data[0].testOptionsString = options.testReadOptionsString;
         }
         results.testReadWrapperString = 'testReadWrapperValue';
+        return results;
     }
 
     public async update(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any> {
         let results = await (next(id, values, options));
         if (results.data[0]) {
-            results.data[0].testModelString = options.testUpdateOptionString;
+            results.data[0].testOptionsString = options.testUpdateOptionsString;
+            results.data[0].testValuesString = values.testUpdateValuesString;
         }
         results.testUpdateWrapperString = 'testUpdateWrapperValue';
+        return results;
     }
 
     public async patch(next: (query: any, values: any, options?: any) => Promise<any>, query: any, values: any, options?: any): Promise<any> {
         let results = await (next(query, values, options));
         if (results.data[0]) {
-            results.data[0].testModelString = options.testPatchOptionString;
+            results.data[0].testValuesString = values.testPatchValuesString;
+            results.data[0].testOptionsString = options.testPatchOptionsString;
+            results.data[0].testQueryString = query.testPatchQueryString;
         }
-        results.testUpdateWrapperString = 'testPatchWrapperValue';
+        results.testPatchWrapperString = 'testPatchWrapperValue';
+        return results;
     }
 
     public async delete(next: (query: any, options?: any) => Promise<any>, query: any, options?: any): Promise<any> {
         let results = await (next(query, options));
         if (results.data[0]) {
-            results.data[0].testModelString = options.testDeleteOptionString;
+            results.data[0].testQueryString = query.testDeleteQueryString;
+            results.data[0].testOptionsString = options.testDeleteOptionsString;
         }
         results.testDeleteWrapperString = 'testDeleteWrapperValue';
+        return results;
     }
 }
 

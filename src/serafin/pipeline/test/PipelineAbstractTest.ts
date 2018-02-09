@@ -61,6 +61,14 @@ describe('PipelineAbstract', function () {
         return expect(testPipe.pipeline).to.equal(p);
     });
 
+    it(`should fail when associating an already associated pipe to a pipeline`, function () {
+        let p = testPipeline();
+        let testPipe = new TestPipe();
+        p.pipe(testPipe as any);
+        let p2 = testPipeline();
+        return expect(p2.pipe(testPipe as any)).to.throw;
+    });
+
     describe('Pipeline methods', function () {
         it(`should call properly the create method`, function () {
             return expect(testPipeline().create([{ 'method': 'create' }])).to.eventually.deep.equal({ data: [{ id: '1', method: 'create' }] });
@@ -81,6 +89,9 @@ describe('PipelineAbstract', function () {
         it(`should fail calling the create method`, function () {
             return expect(testPipeline().create([{ val: 'create' } as any])).to.be.rejected;
         });
+        it.skip(`should fail calling the read method`, function () {
+            return expect(testPipeline().read({ q: 'read' } as any, { opt: 'read' } as any)).to.be.rejected;
+        });
         it(`should fail calling the update method`, function () {
             return expect(testPipeline().update('1', { val: 'update' } as any)).to.be.rejected;
         });
@@ -94,7 +105,7 @@ describe('PipelineAbstract', function () {
 
     describe('Pipeline with no implemented methods', function () {
         it(`should fail calling the create method with invalid params`, function () {
-            return expect(testEmptyPipeline().create([{ val: 'create' }])).to.be.rejected;
+            return expect(testEmptyPipeline().create([{ val: 'create' } as any])).to.be.rejected;
         });
         it(`should fail calling the read method with invalid params`, function () {
             return expect(testEmptyPipeline().read({ val: 'read' } as any)).to.be.rejected;
@@ -130,25 +141,41 @@ describe('PipelineAbstract', function () {
 
     describe('Pipeline with a pipe', function () {
         it(`should call properly the create method`, function () {
-
             return expect(testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString: 'value' }], { testCreateOptionsString: 'test' })).to.eventually.deep.equal(
-                { testCreateWrapperString: 'testCreateWrapperValue', data: [{ id: '1', method: 'create', testModelString: 'test' }] });
+                { testCreateWrapperString: 'testCreateWrapperValue', data: [{ id: '1', method: 'create', testString: 'test' }] });
         });
         it(`should call properly the read method`, function () {
-            return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionString: 'test' })).to.eventually.deep.equal(
-                { testReadWrapperString: 'testReadWrapperValue', data: [{ id: '1', method: 'read', testModelString: 'test' }] });
+            return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString: 'test' })).to.eventually.deep.equal(
+                { testReadWrapperString: 'testReadWrapperValue', data: [{ id: '1', method: 'read', testQueryString: 'test', testOptionsString: 'test' }] });
         });
         it(`should call properly the update method`, function () {
-            return expect(testPipeline().pipe(new TestPipe()).update('1', { method: 'update', tesUpdateValuesString: 'test' }, { testUpdateOptionsString: 'test' })).to.eventually.deep.equal(
-                { testUpdateWrapperString: 'testUpdateWrapperValue', data: [{ id: '1', method: 'update', testModelString: 'test' }] });
+            return expect(testPipeline().pipe(new TestPipe()).update('1', { method: 'update', testUpdateValuesString: 'test' }, { testUpdateOptionsString: 'test' })).to.eventually.deep.equal(
+                { testUpdateWrapperString: 'testUpdateWrapperValue', data: [{ id: '1', method: 'update', testOptionsString: 'test', testValuesString: 'test' }] });
         });
         it(`should call properly the patch method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).patch({ id: '1', testPatchQueryString: 'test' }, { method: 'patch', testPatchValuesString: 'test' }, { testPatchOptionsString: 'test' })).to.eventually.deep.equal(
-                { testPatchWrapperString: 'testPatchWrapperValue', data: [{ id: '1', method: 'patch', testModelString: 'test' }] });
+                { testPatchWrapperString: 'testPatchWrapperValue', data: [{ id: '1', method: 'patch', testValuesString: 'test', testQueryString: 'test', testOptionsString: 'test' }] });
         });
         it(`should call properly the delete method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).delete({ id: '1', testDeleteQueryString: 'test' }, { testDeleteOptionsString: 'test' })).to.eventually.deep.equal(
-                { testDeleteWrapperString: 'testDeleteWrapperValue', data: [{ id: '1', method: 'delete', testModelString: 'test' }] });
+                { testDeleteWrapperString: 'testDeleteWrapperValue', data: [{ id: '1', method: 'delete', testOptionsString: 'test', testQueryString: 'test' }] });
         });
+
+        it(`should fail calling the create method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString2: 'value' } as any], { testCreateOptionsString: 'test' })).to.be.rejected;
+        });
+        it(`should fail calling the read method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString2: 'test' } as any)).to.be.rejected;
+        });
+        it(`should fail calling the update method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).update('1', { method: 'update', testUpdateValuesString2: 'test' } as any, { testUpdateOptionsString: 'test' })).to.be.rejected;
+        });
+        it(`should fail calling the patch method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).patch({ id: '1', testPatchQueryString: 'test' }, { method: 'patch', testPatchValuesString2: 'test' } as any, { testPatchOptionsString: 'test' })).to.be.rejected;
+        });
+        it(`should fail calling the delete method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).delete({ id: '1', testDeleteQueryString: 'test' }, { testDeleteOptionsString2: 'test' } as any)).to.be.rejected;
+        });
+
     });
 });
