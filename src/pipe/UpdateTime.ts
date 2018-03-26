@@ -4,32 +4,32 @@ import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Adds creation and update timestamps to the resources")
 export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
-    schemaBuilderReadWrapper = (s: SchemaBuilder<RW>) => s
+    schemaBuilderReadMeta = (s: SchemaBuilder<RW>) => s
         .addNumber("lastCreatedAt", { description: "Most recent creation date" })
         .addNumber("lastUpdatedAt", { description: "Most recent update date" })
 
-    public async read(next, query?: {}, options?: {}): Promise<{ lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }> {
-        let readWrapper = (await next(query, options)) as { lastCreatedAt: number, lastUpdatedAt: number, data: { createdAt: number, updatedAt: number }[] }
+    public async read(next, query?: {}, options?: {}): Promise<{ meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }> {
+        let result = (await next(query, options)) as { meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }
         let lastCreatedAt = null;
         let lastUpdatedAt = null;
-        readWrapper.data.forEach(result => {
-            if (result.createdAt && (!lastCreatedAt || lastCreatedAt < result.createdAt)) {
-                lastCreatedAt = result.createdAt;
+        result.data.forEach(res => {
+            if (res.createdAt && (!lastCreatedAt || lastCreatedAt < res.createdAt)) {
+                lastCreatedAt = res.createdAt;
             }
-            if (result.updatedAt && (!lastUpdatedAt || lastUpdatedAt < result.updatedAt)) {
-                lastCreatedAt = result.updatedAt;
+            if (res.updatedAt && (!lastUpdatedAt || lastUpdatedAt < res.updatedAt)) {
+                lastCreatedAt = res.updatedAt;
             }
         });
 
         if (lastCreatedAt !== null) {
-            readWrapper.lastCreatedAt = lastCreatedAt;
+            result.meta.lastCreatedAt = lastCreatedAt;
         }
 
         if (lastUpdatedAt !== null) {
-            readWrapper.lastUpdatedAt = lastUpdatedAt;
+            result.meta.lastUpdatedAt = lastUpdatedAt;
         }
 
-        return readWrapper
+        return result;
     }
 
     public async create(next, resources: { createdAt: number }[], options?: {}) {

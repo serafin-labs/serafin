@@ -115,7 +115,7 @@ export class GraphQLTransport implements TransportInterface {
         let graphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, schemaName, () => true);
         jsonSchemaToGraphQL(pipeline.schemaBuilders.readOptions.schema, `${schemaName}ReadOptions`, this.api.isNotAnInternalOption, graphQLSchemas);
         jsonSchemaToGraphQL(pipeline.schemaBuilders.readQuery.schema, `${schemaName}ReadQuery`, () => true, graphQLSchemas);
-        jsonSchemaToGraphQL(pipeline.schemaBuilders.readWrapper.schema, `${schemaName}ReadWrapper`, () => true, graphQLSchemas);
+        jsonSchemaToGraphQL(pipeline.schemaBuilders.readMeta.schema, `${schemaName}ReadMeta`, () => true, graphQLSchemas);
 
         // get the schema of the model
         let modelSchema = graphQLSchemas[schemaName];
@@ -197,7 +197,7 @@ export class GraphQLTransport implements TransportInterface {
         }
 
         // extend the readData schemas as it only contains extra fields
-        let readDataSchema = graphQLSchemas[`${schemaName}ReadWrapper`];
+        let readDataSchema = graphQLSchemas[`${schemaName}ReadMeta`];
         let existingFieldsFunction = readDataSchema.fields
         readDataSchema.fields = () => {
             let existingFields = existingFieldsFunction();

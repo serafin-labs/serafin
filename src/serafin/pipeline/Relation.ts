@@ -9,11 +9,11 @@ import { IdentityInterface } from './IdentityInterface';
 /**
  * Represents a Relation for the given pipeline
  */
-export class PipelineRelation<T extends {} & IdentityInterface = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadWrapper = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
+export class PipelineRelation<T extends {} & IdentityInterface = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadMeta = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
     type?: 'one' | 'many';
 
     constructor(private holdingPipeline: PipelineAbstract<T>,
-        public name: N, public pipeline: () => PipelineAbstract<R & IdentityInterface, ReadQuery, ReadOptions, ReadWrapper>,
+        public name: N, public pipeline: () => PipelineAbstract<R & IdentityInterface, ReadQuery, ReadOptions, ReadMeta>,
         public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
         this.type = 'many';
         if (query['id']) {

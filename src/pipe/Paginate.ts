@@ -9,7 +9,7 @@ export class Paginate extends PipeAbstract implements PipeInterface {
         .addInteger("offset", { description: "Offset of the first resource to return" })
         .addInteger("page", { description: "Offset of the first page to read (one page represents 'count' resources)" })
         .addInteger("count", { description: "Number of resources to return" }).toOptionals()
-    schemaBuilderReadWrapperSchemaBuilder = (s) => SchemaBuilder.emptySchema().addNumber("count", { description: "Number of resources available" })
+    schemaBuilderReadMetaSchemaBuilder = (s) => SchemaBuilder.emptySchema().addNumber("count", { description: "Number of resources available" })
 
     public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<{} & { data: {}[] }> {
         let resources = await next(query, options);
@@ -35,6 +35,8 @@ export class Paginate extends PipeAbstract implements PipeInterface {
             }
         }
 
-        return { ...resources, count: resources.data.length };
+        return {
+            ...resources, meta: { count: resources.data.length }
+        };
     }
 }

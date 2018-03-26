@@ -62,7 +62,7 @@ export class OpenApi {
                                             }
                                         }
                                     },
-                                    { $ref: `#/components/schemas/${this.upperName}ReadWrapper` }
+                                    { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
                                 ]
                             }
                         }

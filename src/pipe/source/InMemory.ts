@@ -21,7 +21,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return resource;
     }
 
-    private async readInMemory(query: any): Promise<{ data: T[] }> {
+    private async readInMemory(query: any): Promise<{ data: T[], meta: {} }> {
         if (!query) {
             query = {};
         }
@@ -52,7 +52,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             return true;
         });
 
-        return { data: _.cloneDeep(resources) } as any;
+        return { data: _.cloneDeep(resources), meta: {} };
     }
 
     protected async _create(resources, options) {
@@ -68,7 +68,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             }
         });
 
-        return { data: createdResources };
+        return { data: createdResources, meta: {} };
     }
 
     protected _read(query, options) {
@@ -87,9 +87,9 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             // in case it wasn't assigned yet
             values["id"] = values["id"] || id;
             this.resources[id] = _.cloneDeep(values) as any;
-            return { data: values as any };
+            return { data: values as any, meta: {} };
         }
-        return { data: undefined };
+        return { data: undefined, meta: {} };
     }
 
     protected async _patch(query, values, options) {
@@ -106,7 +106,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             updatedResources.push(resource);
         });
 
-        return { data: updatedResources };
+        return { data: updatedResources, meta: {} };
     }
 
     protected async _delete(query, options) {
@@ -118,6 +118,6 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             deletedResources.push(resource);
         });
 
-        return { data: deletedResources };
+        return { data: deletedResources, meta: {} };
     }
 }

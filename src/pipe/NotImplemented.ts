@@ -12,10 +12,10 @@ export class NotImplemented extends PipeAbstract implements PipeInterface {
 
     schemaBuilderReadQuery = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery
     schemaBuilderReadOptionsSchemaBuilder = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readQuery
-    schemaBuilderReadWrapperSchemaBuilder = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readWrapper
+    schemaBuilderReadMetaSchemaBuilder = (s) => this.notImplementedMethods.indexOf("read") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.readMeta
     schemaBuilderCreateValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createValues
     schemaBuilderCreateOptionsSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createOptions
-    schemaBuilderCreateWrapperSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createWrapper
+    schemaBuilderCreateMetaSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createMeta
     schemaBuilderReplaceValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("replace") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.replaceValues
     schemaBuilderPatchQuerySchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchQuery
     schemaBuilderPatchValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchValues

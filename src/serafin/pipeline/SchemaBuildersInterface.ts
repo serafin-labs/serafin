@@ -1,23 +1,23 @@
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { IdentityInterface } from "./IdentityInterface";
 
-export interface SchemaBuildersInterface<M extends IdentityInterface = { id: string }, CV = {}, CO = {}, CW = {}, RQ = {}, RO = {}, RW = {},
-    UV = {}, UO = {}, UW = {}, PQ = {}, PV = {}, PO = {}, PW = {}, DQ = {}, DO = {}, DW = {}> {
+export interface SchemaBuildersInterface<M extends IdentityInterface = { id: string }, CV = {}, CO = {}, CM = {}, RQ = {}, RO = {}, RM = {},
+    UV = {}, UO = {}, UM = {}, PQ = {}, PV = {}, PO = {}, PM = {}, DQ = {}, DO = {}, DM = {}> {
     model?: SchemaBuilder<M>,
     createValues?: SchemaBuilder<CV>,
     createOptions?: SchemaBuilder<CO>,
-    createWrapper?: SchemaBuilder<CW>,
+    createMeta?: SchemaBuilder<CM>,
     readQuery?: SchemaBuilder<RQ>,
     readOptions?: SchemaBuilder<RO>,
-    readWrapper?: SchemaBuilder<RW>,
+    readMeta?: SchemaBuilder<RM>,
     replaceValues?: SchemaBuilder<UV>,
     replaceOptions?: SchemaBuilder<UO>,
-    replaceWrapper?: SchemaBuilder<UW>,
+    replaceMeta?: SchemaBuilder<UM>,
     patchQuery?: SchemaBuilder<PQ>,
     patchValues?: SchemaBuilder<PV>,
     patchOptions?: SchemaBuilder<PO>,
-    patchWrapper?: SchemaBuilder<PW>,
+    patchMeta?: SchemaBuilder<PM>,
     deleteQuery?: SchemaBuilder<DQ>,
     deleteOptions?: SchemaBuilder<DO>,
-    deleteWrapper?: SchemaBuilder<DW>
+    deleteMeta?: SchemaBuilder<DM>
 }

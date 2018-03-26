@@ -5,23 +5,23 @@ import { IdentityInterface } from "../IdentityInterface";
 // @description("test pipeline description")
 export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<T> {
     protected _create(resources: any[], options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'create' }] });
+        return Promise.resolve({ data: [{ id: '1', method: 'create' }], meta: {} });
     }
 
     protected _read(query?: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'read' }] });
+        return Promise.resolve({ data: [{ id: '1', method: 'read' }], meta: {} });
     }
 
     protected _replace(id: string, values: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'replace' }] });
+        return Promise.resolve({ data: [{ id: '1', method: 'replace' }], meta: {} });
     }
 
     protected _patch(query: any, values: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'patch' }] });
+        return Promise.resolve({ data: [{ id: '1', method: 'patch' }], meta: {} });
     }
 
     protected _delete(query: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'delete' }] });
+        return Promise.resolve({ data: [{ id: '1', method: 'delete' }], meta: {} });
     }
 }
 
@@ -54,7 +54,7 @@ export const schemaTestPipeline =
                 required: ['method']
             },
         createOptions: { type: 'object', additionalProperties: false },
-        createWrapper: { type: 'object', additionalProperties: false },
+        createMeta: { type: 'object', additionalProperties: false },
         readQuery:
             {
                 type: 'object',
@@ -79,7 +79,7 @@ export const schemaTestPipeline =
                     }
             },
         readOptions: { type: 'object', additionalProperties: false },
-        readWrapper: { type: 'object', additionalProperties: false },
+        readMeta: { type: 'object', additionalProperties: false },
         replaceValues:
             {
                 type: 'object',
@@ -88,7 +88,7 @@ export const schemaTestPipeline =
                 required: ['method']
             },
         replaceOptions: { type: 'object', additionalProperties: false },
-        replaceWrapper: { type: 'object', additionalProperties: false },
+        replaceMeta: { type: 'object', additionalProperties: false },
         patchQuery:
             {
                 type: 'object',
@@ -111,7 +111,7 @@ export const schemaTestPipeline =
                 properties: { method: { description: 'method', type: 'string' } }
             },
         patchOptions: { type: 'object', additionalProperties: false },
-        patchWrapper: { type: 'object', additionalProperties: false },
+        patchMeta: { type: 'object', additionalProperties: false },
         deleteQuery:
             {
                 type: 'object',
@@ -128,5 +128,5 @@ export const schemaTestPipeline =
                 required: ['id']
             },
         deleteOptions: { type: 'object', additionalProperties: false },
-        deleteWrapper: { type: 'object', additionalProperties: false }
+        deleteMeta: { type: 'object', additionalProperties: false }
     };

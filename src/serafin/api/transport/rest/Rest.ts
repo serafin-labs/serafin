@@ -62,12 +62,12 @@ export class RestTransport implements TransportInterface {
                 }
 
                 // run the query
-                pipeline.read(pipelineParams.query, pipelineParams.options).then(wrapper => {
+                pipeline.read(pipelineParams.query, pipelineParams.options).then(result => {
                     if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
                         let links = (new JsonHal(endpointPath, this.api, pipeline.relations)).links();
-                        wrapper["_links"] = links;
-                        if (wrapper.data) {
-                            wrapper.data = wrapper.data.map((result) => {
+                        result["_links"] = links;
+                        if (result.data) {
+                            result.data = result.data.map((result) => {
                                 if (result['id']) {
                                     result['_links'] = (new JsonHal(endpointPath + `/${result['id']}`, this.api, pipeline.relations)).links(result);
                                 }
@@ -76,7 +76,7 @@ export class RestTransport implements TransportInterface {
                         }
                     }
 
-                    res.status(200).json(wrapper);
+                    res.status(200).json(result);
                     res.end();
                 }).catch(error => {
                     this.handleError(Api.apiError(error, req), res, next)
@@ -94,12 +94,12 @@ export class RestTransport implements TransportInterface {
                 // run the query
                 pipeline.read({
                     id: id
-                }, pipelineParams.options).then(wrapper => {
-                    if (wrapper.data.length > 0) {
+                }, pipelineParams.options).then(result => {
+                    if (result.data.length > 0) {
                         if (req.headers['content-type'] && req.headers['content-type'] == 'application/hal+json') {
-                            wrapper.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(wrapper.data[0]);
+                            result.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, this.api, pipeline.relations)).links(result.data[0]);
                         }
-                        res.status(200).json(wrapper.data[0])
+                        res.status(200).json(result.data[0])
                     } else {
                         throw notFoundError(`${name}:${id}`)
                     }
