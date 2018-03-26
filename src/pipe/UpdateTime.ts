@@ -40,7 +40,7 @@ export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
         return next(resources, options);
     }
 
-    public async update(next, id: string, values: { updatedAt: number }, options?: {}) {
+    public async replace(next, id: string, values: { updatedAt: number }, options?: {}) {
         values.updatedAt = Date.now();
         return next(id, values, options);
     }

@@ -13,9 +13,9 @@ export class TestPipe<M, RQ, RO, RW, CV, CO, CW, UV, UO, UW, PQ, PV, PO, PW, DQ,
     schemaBuilderCreateOptions = (s: SchemaBuilder<CO>) => s.addString('testCreateOptionsString', { description: "testCreateOptionsString options description" });
     schemaBuilderCreateWrapper = (s: SchemaBuilder<CW>) => s.addString('testCreateWrapperString', { description: "testCreateWrapperString wrapper description" });
 
-    schemaBuilderUpdateValues = (s: SchemaBuilder<UV>) => s.addString('testUpdateValuesString', { description: "tesUpdateValuesString values description" });
-    schemaBuilderUpdateOptions = (s: SchemaBuilder<UO>) => s.addString('testUpdateOptionsString', { description: "testUpdateOptionsString options description" });
-    schemaBuilderUpdateWrapper = (s: SchemaBuilder<UW>) => s.addString('testUpdateWrapperString', { description: "testUpdateWrapperString wrapper description" });
+    schemaBuilderReplaceValues = (s: SchemaBuilder<UV>) => s.addString('testReplaceValuesString', { description: "testReplaceValuesString values description" });
+    schemaBuilderReplaceOptions = (s: SchemaBuilder<UO>) => s.addString('testReplaceOptionsString', { description: "testReplaceOptionsString options description" });
+    schemaBuilderReplaceWrapper = (s: SchemaBuilder<UW>) => s.addString('testReplaceWrapperString', { description: "testReplaceWrapperString wrapper description" });
 
     schemaBuilderPatchQuery = (s: SchemaBuilder<PQ>) => s.addString('testPatchQueryString', { description: "testPatchQueryString query description" });
     schemaBuilderPatchValues = (s: SchemaBuilder<PV>) => s.addString('testPatchValuesString', { description: "testPatchValuesString description" });
@@ -45,13 +45,13 @@ export class TestPipe<M, RQ, RO, RW, CV, CO, CW, UV, UO, UW, PQ, PV, PO, PW, DQ,
         return results;
     }
 
-    public async update(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any> {
+    public async replace(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any> {
         let results = await (next(id, values, options));
         if (results.data[0]) {
-            results.data[0].testOptionsString = options.testUpdateOptionsString;
-            results.data[0].testValuesString = values.testUpdateValuesString;
+            results.data[0].testOptionsString = options.testReplaceOptionsString;
+            results.data[0].testValuesString = values.testReplaceValuesString;
         }
-        results.testUpdateWrapperString = 'testUpdateWrapperValue';
+        results.testReplaceWrapperString = 'testReplaceWrapperValue';
         return results;
     }
 

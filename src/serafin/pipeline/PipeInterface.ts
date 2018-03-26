@@ -11,9 +11,9 @@ export interface PipeInterface<S extends SchemaBuildersInterface = any, M = any,
     schemaBuilderReadQuery?: (s: S["readQuery"]) => SchemaBuilder<RQ>
     schemaBuilderReadOptions?: (s: S["readOptions"]) => SchemaBuilder<RO>
     schemaBuilderReadWrapper?: (s: S["readWrapper"]) => SchemaBuilder<RW>
-    schemaBuilderUpdateValues?: (s: S["updateValues"]) => SchemaBuilder<UV>
-    schemaBuilderUpdateOptions?: (s: S["updateOptions"]) => SchemaBuilder<UO>
-    schemaBuilderUpdateWrapper?: (s: S["updateWrapper"]) => SchemaBuilder<UW>
+    schemaBuilderReplaceValues?: (s: S["replaceValues"]) => SchemaBuilder<UV>
+    schemaBuilderReplaceOptions?: (s: S["replaceOptions"]) => SchemaBuilder<UO>
+    schemaBuilderReplaceWrapper?: (s: S["replaceWrapper"]) => SchemaBuilder<UW>
     schemaBuilderPatchQuery?: (s: S["patchQuery"]) => SchemaBuilder<PQ>
     schemaBuilderPatchValues?: (s: S["patchValues"]) => SchemaBuilder<PV>
     schemaBuilderPatchOptions?: (s: S["patchOptions"]) => SchemaBuilder<PO>

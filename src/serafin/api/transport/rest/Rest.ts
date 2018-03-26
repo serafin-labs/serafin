@@ -44,7 +44,7 @@ export class RestTransport implements TransportInterface {
         // determine what are the available actions
         let canRead = !!pipeline.schemaBuilders.readQuery
         let canCreate = !!pipeline.schemaBuilders.createValues
-        let canUpdate = !!pipeline.schemaBuilders.updateValues
+        let canReplace = !!pipeline.schemaBuilders.replaceValues
         let canPatch = !!pipeline.schemaBuilders.patchValues
         let canDelete = !!pipeline.schemaBuilders.deleteQuery
 
@@ -164,11 +164,11 @@ export class RestTransport implements TransportInterface {
             openApi.addPatchDoc();
         }
 
-        if (canUpdate) {
+        if (canReplace) {
 
             // put an existing resource
             router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.updateOptions);
+                let pipelineParams = this.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.replaceOptions);
                 if (!pipelineParams) {
                     return
                 }
@@ -177,11 +177,11 @@ export class RestTransport implements TransportInterface {
                 var id = req.params.id
 
                 // run the query
-                pipeline.update(id, data, pipelineParams.options).then(updatedResource => {
-                    if (!updatedResource) {
+                pipeline.replace(id, data, pipelineParams.options).then(replacedResource => {
+                    if (!replacedResource) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
-                        res.status(200).json(updatedResource)
+                        res.status(200).json(replacedResource)
                     }
                     res.end()
                 }).catch(error => {
@@ -189,7 +189,7 @@ export class RestTransport implements TransportInterface {
                 });
             });
 
-            openApi.addUpdateDoc();
+            openApi.addReplaceDoc();
         }
 
         if (canDelete) {

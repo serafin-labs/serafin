@@ -12,8 +12,8 @@ export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<
         return Promise.resolve({ data: [{ id: '1', method: 'read' }] });
     }
 
-    protected _update(id: string, values: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'update' }] });
+    protected _replace(id: string, values: any, options?: any): Promise<any> {
+        return Promise.resolve({ data: [{ id: '1', method: 'replace' }] });
     }
 
     protected _patch(query: any, values: any, options?: any): Promise<any> {
@@ -80,15 +80,15 @@ export const schemaTestPipeline =
             },
         readOptions: { type: 'object', additionalProperties: false },
         readWrapper: { type: 'object', additionalProperties: false },
-        updateValues:
+        replaceValues:
             {
                 type: 'object',
                 additionalProperties: false,
                 properties: { method: { description: 'method', type: 'string' } },
                 required: ['method']
             },
-        updateOptions: { type: 'object', additionalProperties: false },
-        updateWrapper: { type: 'object', additionalProperties: false },
+        replaceOptions: { type: 'object', additionalProperties: false },
+        replaceWrapper: { type: 'object', additionalProperties: false },
         patchQuery:
             {
                 type: 'object',

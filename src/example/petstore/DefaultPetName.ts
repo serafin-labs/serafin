@@ -11,7 +11,7 @@ export class DefaultPetName extends PipeAbstract {
     }
 
     @description("Generate pet names for new Pets if they were not provided.")
-    protected async _create(next, resources: { name: string }[], options?: {}) {
+    async create(next, resources: { name: string }[], options?: {}) {
         resources.forEach(resource => {
             if (!resource.name) {
                 resource.name = this.generatePetName()
@@ -21,7 +21,7 @@ export class DefaultPetName extends PipeAbstract {
     }
 
     @description("Generate a new Pet name for the updated Pet if it was not provided.")
-    protected async _update(next, id: string, values: { name: string }, options?: {}) {
+    async update(next, id: string, values: { name: string }, options?: {}) {
         if (!values.name) {
             values.name = this.generatePetName()
         }

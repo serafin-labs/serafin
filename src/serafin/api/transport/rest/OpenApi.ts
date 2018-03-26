@@ -250,31 +250,31 @@ export class OpenApi {
         }
     }
 
-    addUpdateDoc() {
-        let updateOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.updateOptions.schema, this.api.openApi));
+    addReplaceDoc() {
+        let replaceOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.replaceOptions.schema, this.api.openApi));
 
         // put by id
         this.api.openApi.paths[this.resourcesPathWithId]["put"] = {
             description: `Put a ${this.upperName} using its id`,
             operationId: `put${this.upperName}`,
-            parameters: removeDuplicatedParameters(updateOptionsParameters).concat([{
+            parameters: removeDuplicatedParameters(replaceOptionsParameters).concat([{
                 in: "path",
                 name: "id",
                 schema: { type: "string" },
                 required: true
             }]),
             requestBody: {
-                description: `The ${this.upperName} to be updated.`,
+                description: `The ${this.upperName} to be replaced.`,
                 required: true,
                 content: {
                     "application/json": {
-                        schema: { $ref: `#/components/schemas/${this.upperName}UpdateValues` }
+                        schema: { $ref: `#/components/schemas/${this.upperName}ReplaceValues` }
                     }
                 }
             },
             responses: {
                 200: {
-                    description: `Updated ${this.upperName}`,
+                    description: `Replaced ${this.upperName}`,
                     content: {
                         "application/json": {
                             schema: { $ref: `#/components/schemas/${this.upperName}` }

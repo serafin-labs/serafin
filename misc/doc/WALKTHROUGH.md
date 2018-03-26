@@ -92,7 +92,7 @@ The ```petSchemaBuilder``` directly affects the generic types of the pipeline.
 
 - `read`
 - `create`
-- `update`
+- `replace`
 - `patch` which support merge patch algorithm as defined in RFC 7396
 - `delete`
 

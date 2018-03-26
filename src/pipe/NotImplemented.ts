@@ -6,7 +6,7 @@ import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Force given actions to be unavailable")
 export class NotImplemented extends PipeAbstract implements PipeInterface {
-    constructor(private notImplementedMethods: ("create" | "update" | "patch" | "delete" | "read")[]) {
+    constructor(private notImplementedMethods: ("create" | "replace" | "patch" | "delete" | "read")[]) {
         super();
     }
 
@@ -16,7 +16,7 @@ export class NotImplemented extends PipeAbstract implements PipeInterface {
     schemaBuilderCreateValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createValues
     schemaBuilderCreateOptionsSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createOptions
     schemaBuilderCreateWrapperSchemaBuilder = (s) => this.notImplementedMethods.indexOf("create") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.createWrapper
-    schemaBuilderUpdateValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("update") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.updateValues
+    schemaBuilderReplaceValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("replace") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.replaceValues
     schemaBuilderPatchQuerySchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchQuery
     schemaBuilderPatchValuesSchemaBuilder = (s) => this.notImplementedMethods.indexOf("patch") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.patchValues
     schemaBuilderDdeleteQuerySchemaBuilder = (s) => this.notImplementedMethods.indexOf("delete") !== -1 ? SchemaBuilder.emptySchema() : this.pipeline.schemaBuilders.deleteQuery
@@ -35,9 +35,9 @@ export class NotImplemented extends PipeAbstract implements PipeInterface {
         return next(query, options)
     }
 
-    public async update(next, id, values, options?) {
-        if (this.notImplementedMethods.indexOf("update") !== -1) {
-            throw notImplementedError("update", Object.getPrototypeOf(this).constructor.name);
+    public async replace(next, id, values, options?) {
+        if (this.notImplementedMethods.indexOf("replace") !== -1) {
+            throw notImplementedError("replace", Object.getPrototypeOf(this).constructor.name);
         }
         return next(id, values, options)
     }

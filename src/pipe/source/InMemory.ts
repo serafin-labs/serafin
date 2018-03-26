@@ -75,7 +75,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return this.readInMemory(query)
     }
 
-    protected async _update(id, values, options) {
+    protected async _replace(id, values, options) {
         var resources = await this.readInMemory({
             id: id
         });

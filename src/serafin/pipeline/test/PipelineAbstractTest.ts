@@ -81,9 +81,9 @@ describe('PipelineAbstract', function () {
                 readQuery: super.getSchemaBuilders().readQuery.addString("additionalQuery"),
                 readOptions: super.getSchemaBuilders().readOptions.addString("additionalOption"),
                 readWrapper: super.getSchemaBuilders().readWrapper.addString("additionalWrapper"),
-                updateValues: super.getSchemaBuilders().updateValues,
-                updateOptions: super.getSchemaBuilders().updateOptions.addString("additionalOption"),
-                updateWrapper: super.getSchemaBuilders().updateWrapper.addString("additionalWrapper"),
+                replaceValues: super.getSchemaBuilders().replaceValues,
+                replaceOptions: super.getSchemaBuilders().replaceOptions.addString("additionalOption"),
+                replaceWrapper: super.getSchemaBuilders().replaceWrapper.addString("additionalWrapper"),
                 patchQuery: super.getSchemaBuilders().patchQuery.addString("additionalQuery"),
                 patchValues: super.getSchemaBuilders().patchValues,
                 patchOptions: super.getSchemaBuilders().patchOptions.addString("additionalOption"),
@@ -105,9 +105,9 @@ describe('PipelineAbstract', function () {
             p.schemaBuilders.readQuery instanceof SchemaBuilder && p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
             p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
             p.schemaBuilders.readWrapper instanceof SchemaBuilder && p.schemaBuilders.readWrapper.schema.properties.additionalWrapper.type == 'string' &&
-            p.schemaBuilders.updateValues instanceof SchemaBuilder &&
-            p.schemaBuilders.updateOptions instanceof SchemaBuilder && p.schemaBuilders.updateOptions.schema.properties.additionalOption.type == 'string' &&
-            p.schemaBuilders.updateWrapper instanceof SchemaBuilder && p.schemaBuilders.updateWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.replaceValues instanceof SchemaBuilder &&
+            p.schemaBuilders.replaceOptions instanceof SchemaBuilder && p.schemaBuilders.replaceOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.replaceWrapper instanceof SchemaBuilder && p.schemaBuilders.replaceWrapper.schema.properties.additionalWrapper.type == 'string' &&
             p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
             p.schemaBuilders.patchValues instanceof SchemaBuilder &&
             p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
@@ -128,9 +128,9 @@ describe('PipelineAbstract', function () {
                 readQuery: s.readQuery.addString("additionalQuery"),
                 readOptions: s.readOptions.addString("additionalOption"),
                 readWrapper: s.readWrapper.addString("additionalWrapper"),
-                updateValues: s.updateValues.addString("additionalValue"),
-                updateOptions: s.updateOptions.addString("additionalOption"),
-                updateWrapper: s.updateWrapper.addString("additionalWrapper"),
+                replaceValues: s.replaceValues.addString("additionalValue"),
+                replaceOptions: s.replaceOptions.addString("additionalOption"),
+                replaceWrapper: s.replaceWrapper.addString("additionalWrapper"),
                 patchQuery: s.patchQuery.addString("additionalQuery"),
                 patchValues: s.patchValues.addString("additionalValue"),
                 patchOptions: s.patchOptions.addString("additionalOption"),
@@ -147,9 +147,9 @@ describe('PipelineAbstract', function () {
             p.schemaBuilders.readQuery instanceof SchemaBuilder && p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
             p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
             p.schemaBuilders.readWrapper instanceof SchemaBuilder && p.schemaBuilders.readWrapper.schema.properties.additionalWrapper.type == 'string' &&
-            p.schemaBuilders.updateValues instanceof SchemaBuilder && p.schemaBuilders.updateValues.schema.properties.additionalValue.type == 'string' &&
-            p.schemaBuilders.updateOptions instanceof SchemaBuilder && p.schemaBuilders.updateOptions.schema.properties.additionalOption.type == 'string' &&
-            p.schemaBuilders.updateWrapper instanceof SchemaBuilder && p.schemaBuilders.updateWrapper.schema.properties.additionalWrapper.type == 'string' &&
+            p.schemaBuilders.replaceValues instanceof SchemaBuilder && p.schemaBuilders.replaceValues.schema.properties.additionalValue.type == 'string' &&
+            p.schemaBuilders.replaceOptions instanceof SchemaBuilder && p.schemaBuilders.replaceOptions.schema.properties.additionalOption.type == 'string' &&
+            p.schemaBuilders.replaceWrapper instanceof SchemaBuilder && p.schemaBuilders.replaceWrapper.schema.properties.additionalWrapper.type == 'string' &&
             p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
             p.schemaBuilders.patchValues instanceof SchemaBuilder && p.schemaBuilders.patchValues.schema.properties.additionalValue.type == 'string' &&
             p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
@@ -167,8 +167,8 @@ describe('PipelineAbstract', function () {
         it(`should call properly the read method`, function () {
             return expect(testPipeline().read({})).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }] });
         });
-        it(`should call properly the update method`, function () {
-            return expect(testPipeline().update('1', { method: 'update' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'update' }] });
+        it(`should call properly the replace method`, function () {
+            return expect(testPipeline().replace('1', { method: 'replace' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'replace' }] });
         });
         it(`should call properly the patch method`, function () {
             return expect(testPipeline().patch({ id: '1' }, { method: 'patch' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'patch' }] });
@@ -184,8 +184,8 @@ describe('PipelineAbstract', function () {
         it.skip(`should fail calling the read method`, function () {
             return expect(testPipeline().read({ q: 'read' } as any, { opt: 'read' } as any)).to.be.rejected;
         });
-        it(`should fail calling the update method`, function () {
-            return expect(testPipeline().update('1', { val: 'update' } as any)).to.be.rejected;
+        it(`should fail calling the replace method`, function () {
+            return expect(testPipeline().replace('1', { val: 'replace' } as any)).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
             return expect(testPipeline().patch({ val: '1' } as any, { val: 'patch' } as any)).to.be.rejected;
@@ -202,8 +202,8 @@ describe('PipelineAbstract', function () {
         it(`should fail calling the read method`, function () {
             return expect(testEmptyPipeline().read({})).to.be.rejected;
         });
-        it(`should fail calling the update method`, function () {
-            return expect(testEmptyPipeline().update('1', { 'method': 'test' })).to.be.rejected;
+        it(`should fail calling the replace method`, function () {
+            return expect(testEmptyPipeline().replace('1', { 'method': 'test' })).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
             return expect(testEmptyPipeline().patch({ id: '1' }, {})).to.be.rejected;
@@ -220,8 +220,8 @@ describe('PipelineAbstract', function () {
         it(`should fail calling the read method`, function () {
             return expect(testEmptyPipeline().pipe(new TestPipe() as any).read({})).to.be.rejected;
         });
-        it(`should fail calling the update method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).update('1', { 'method': 'test' })).to.be.rejected;
+        it(`should fail calling the replace method`, function () {
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).replace('1', { 'method': 'test' })).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
             return expect(testEmptyPipeline().pipe(new TestPipe() as any).patch({ id: '1' }, { id: '1' })).to.be.rejected;
@@ -240,9 +240,9 @@ describe('PipelineAbstract', function () {
             return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString: 'test' })).to.eventually.deep.equal(
                 { testReadWrapperString: 'testReadWrapperValue', data: [{ id: '1', method: 'read', testQueryString: 'test', testOptionsString: 'test' }] });
         });
-        it(`should call properly the update method`, function () {
-            return expect(testPipeline().pipe(new TestPipe()).update('1', { method: 'update', testUpdateValuesString: 'test' }, { testUpdateOptionsString: 'test' })).to.eventually.deep.equal(
-                { testUpdateWrapperString: 'testUpdateWrapperValue', data: [{ id: '1', method: 'update', testOptionsString: 'test', testValuesString: 'test' }] });
+        it(`should call properly the replace method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).replace('1', { method: 'replace', testReplaceValuesString: 'test' }, { testReplaceOptionsString: 'test' })).to.eventually.deep.equal(
+                { testReplaceWrapperString: 'testReplaceWrapperValue', data: [{ id: '1', method: 'replace', testOptionsString: 'test', testValuesString: 'test' }] });
         });
         it(`should call properly the patch method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).patch({ id: '1', testPatchQueryString: 'test' }, { method: 'patch', testPatchValuesString: 'test' }, { testPatchOptionsString: 'test' })).to.eventually.deep.equal(
@@ -259,8 +259,8 @@ describe('PipelineAbstract', function () {
         it(`should fail calling the read method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString2: 'test' } as any)).to.be.rejected;
         });
-        it(`should fail calling the update method`, function () {
-            return expect(testPipeline().pipe(new TestPipe()).update('1', { method: 'update', testUpdateValuesString2: 'test' } as any, { testUpdateOptionsString: 'test' })).to.be.rejected;
+        it(`should fail calling the replace method`, function () {
+            return expect(testPipeline().pipe(new TestPipe()).replace('1', { method: 'replace', testReplaceValuesString2: 'test' } as any, { testReplaceOptionsString: 'test' })).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).patch({ id: '1', testPatchQueryString: 'test' }, { method: 'patch', testPatchValuesString2: 'test' } as any, { testPatchOptionsString: 'test' })).to.be.rejected;

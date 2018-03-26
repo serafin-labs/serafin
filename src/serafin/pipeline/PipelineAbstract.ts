@@ -9,12 +9,12 @@ import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { PipeInterface } from "./PipeInterface";
 
 export type Wrapper<T, U> = { data: T[] } & U
-export type PipelineMethods = "create" | "read" | "update" | "patch" | "delete";
+export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
 export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = PipelineAbstract<M, null>["defaultSchemaType"]> {
     // public relations: { [key: string]: PipelineRelation } = {};
     // public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
-    public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'update', 'patch', 'delete'];
+    public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
 
     constructor(public modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
         if (schemaBuilders == null) {
@@ -51,9 +51,9 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
             readOptions: SchemaBuilder.emptySchema(),
             readWrapper: SchemaBuilder.emptySchema(),
-            updateValues: modelSchemaBuilder.clone().omitProperties(["id"]),
-            updateOptions: SchemaBuilder.emptySchema(),
-            updateWrapper: SchemaBuilder.emptySchema(),
+            replaceValues: modelSchemaBuilder.clone().omitProperties(["id"]),
+            replaceOptions: SchemaBuilder.emptySchema(),
+            replaceWrapper: SchemaBuilder.emptySchema(),
             patchQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
             patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals(),
             patchOptions: SchemaBuilder.emptySchema(),
@@ -71,9 +71,9 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         RQ = this["schemaBuilders"]["readQuery"]["T"],
         RO = this["schemaBuilders"]["readOptions"]["T"],
         RW = this["schemaBuilders"]["readWrapper"]["T"],
-        UV = this["schemaBuilders"]["updateValues"]["T"],
-        UO = this["schemaBuilders"]["updateOptions"]["T"],
-        UW = this["schemaBuilders"]["updateWrapper"]["T"],
+        UV = this["schemaBuilders"]["replaceValues"]["T"],
+        UO = this["schemaBuilders"]["replaceOptions"]["T"],
+        UW = this["schemaBuilders"]["replaceWrapper"]["T"],
         PQ = this["schemaBuilders"]["patchQuery"]["T"],
         PV = this["schemaBuilders"]["patchValues"]["T"],
         PO = this["schemaBuilders"]["patchOptions"]["T"],
@@ -127,7 +127,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     //     this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
     //     return this as PipelineAbstract<T, ReadOptions, ReadWrapper,
     //         CreateOptions, CreateWrapper,
-    //         UpdateOptions, UpdateWrapper,
+    //         ReplaceOptions, ReplaceWrapper,
     //         PatchOptions, PatchWrapper,
     //         DeleteOptions, DeleteWrapper,
     //         Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}>;
@@ -181,26 +181,26 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     }
 
     /**
-     * Update replace an existing resource with the given values.
-     * Because it replaces the resource, only one can be updated at a time.
-     * If you need to update many resources in a single query, please use patch instead
+     * Replace replaces an existing resource with the given values.
+     * Because it replaces the resource, only one can be replaced at a time.
+     * If you need to replace many resources in a single query, please use patch instead
      * 
      * @param id 
      * @param values 
      * @param options 
      */
-    @final async update(id: string, values: this["schemaBuilders"]["updateValues"]["T"], options?: this["schemaBuilders"]["updateOptions"]["T"])
-        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["updateWrapper"]["T"]>> {
-        this.handleValidate('update', () => {
-            this.schemaBuilders.updateValues.validate(values || {});
-            this.schemaBuilders.updateOptions.validate(options || {});
+    @final async replace(id: string, values: this["schemaBuilders"]["replaceValues"]["T"], options?: this["schemaBuilders"]["replaceOptions"]["T"])
+        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceWrapper"]["T"]>> {
+        this.handleValidate('replace', () => {
+            this.schemaBuilders.replaceValues.validate(values || {});
+            this.schemaBuilders.replaceOptions.validate(options || {});
         });
 
-        return this._update(id, values, options);
+        return this._replace(id, values, options);
     }
 
-    protected _update(id, values, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["updateWrapper"]["T"]>> {
-        throw notImplementedError("update", Object.getPrototypeOf(this).constructor.name);
+    protected _replace(id, values, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceWrapper"]["T"]>> {
+        throw notImplementedError("replace", Object.getPrototypeOf(this).constructor.name);
     }
 
     /**
