@@ -48,15 +48,15 @@ async function main() {
 
     let authorPipeline = (new PipeSourceInMemory(authorSchemaBuilder))
         .pipe(new Paginate())
-    // .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
-    // .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
+        .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
+        .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
     let categoryPipeline = new PipeSourceInMemory(categorySchemaBuilder);
 
     let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
-    // .addRelation('author', () => authorPipeline, { id: ':authorId' })
-    // .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
+        .addRelation('author', () => authorPipeline, { id: ':authorId' })
+        .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
 
     bookPipelineRef = bookPipeline
 

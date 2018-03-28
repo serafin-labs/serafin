@@ -51,11 +51,11 @@ async function main() {
 
     let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder))
         .pipe(new Paginate())
-    // .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
+        .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
 
     let categoryPipeline = categoryPipelineBase
-    // .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
-    // .addRelation('items', () => itemPipeline, { categoryId: ':id' });
+        .addRelation('subCategories', () => categoryPipelineBase, { parentCategory: ':id' })
+        .addRelation('items', () => itemPipeline, { categoryId: ':id' });
 
     api.use(categoryPipeline, "category", "categories");
     api.use(itemPipeline, "item");

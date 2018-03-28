@@ -7,12 +7,13 @@ import { IdentityInterface } from "./IdentityInterface";
 import { PIPELINE, PipeAbstract } from "./PipeAbstract";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { PipeInterface } from "./PipeInterface";
+import { PipelineRelation } from "./Relation";
 
 export type Wrapper<T, U> = { data: T[] } & { meta: U }
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
-export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = PipelineAbstract<M, null>["defaultSchemaType"]> {
-    // public relations: { [key: string]: PipelineRelation } = {};
+export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = PipelineAbstract<M, null>["defaultSchemaType"], R extends { [key: string]: PipelineRelation } = {}> {
+    public relations: R = {} as any;
     // public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
 
@@ -38,7 +39,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
 
     alterSchemaBuilders<newS extends SchemaBuildersInterface>(func: (sch: this["schemaBuilders"]) => newS) {
         this.schemaBuilders = Object.assign(this.schemaBuilders, func(this.schemaBuilders)) as any;
-        return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>>;
+        return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>, R>;
     }
 
     private defaultSchemaType = (false as true) && this.defaultSchema(null);
@@ -108,7 +109,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             }
         }
 
-        return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>>;
+        return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>, R>;
     }
 
 
@@ -118,20 +119,14 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * 
      * @param relation 
      */
-    // public addRelation<N extends keyof any, R extends IdentityInterface, RReadQuery, RReadOptions, RReadWrapper,
-    //     K1 extends keyof RReadQuery = null, K2 extends keyof RReadOptions = null>
+    public addRelation<NameKey extends keyof any, RelationModel extends IdentityInterface, RelationReadQuery, RelationReadOptions, RelationReadMeta,
+        QueryKeys extends keyof RelationReadQuery = null, OptionsKeys extends keyof RelationReadOptions = null>
+        (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>>,
+        query: {[key in QueryKeys]: any }, options?: {[key in OptionsKeys]: any }) {
 
-    //     (name: N, pipeline: () => PipelineAbstract<R, RReadQuery, RReadOptions, RReadWrapper>,
-    //     query: {[key in K1]: any }, options?: {[key in K2]: any }) {
-
-    //     this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
-    //     return this as PipelineAbstract<T, ReadOptions, ReadWrapper,
-    //         CreateOptions, CreateWrapper,
-    //         ReplaceOptions, ReplaceWrapper,
-    //         PatchOptions, PatchWrapper,
-    //         DeleteOptions, DeleteWrapper,
-    //         Relations & {[key in N]: PipelineRelation<T, N, R, RReadQuery, RReadOptions, RReadWrapper, K1, K2>}>;
-    // }
+        this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
+        return this as any as PipelineAbstract<M, S, R & {[key in NameKey]: PipelineRelation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys>}>;
+    }
 
     /**
      * Get a readable description of what this pipeline does

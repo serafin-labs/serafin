@@ -5,16 +5,17 @@ import { QueryTemplate } from './QueryTemplate';
 import { Merge } from '@serafin/schema-builder';
 import { Omit } from "@serafin/schema-builder"
 import { IdentityInterface } from './IdentityInterface';
+import { SchemaBuildersInterface } from './SchemaBuildersInterface';
 
 /**
  * Represents a Relation for the given pipeline
  */
-export class PipelineRelation<T extends {} & IdentityInterface = any, N extends keyof any = any, R = any, ReadQuery = any, ReadOptions = any, ReadMeta = any, K1 extends keyof ReadQuery = null, K2 extends keyof ReadOptions = null> {
+export class PipelineRelation<M extends IdentityInterface = any, NameKey extends keyof any = any, R extends IdentityInterface = any, ReadQuery = any, ReadOptions = any, ReadMeta = any, QueryKeys extends keyof ReadQuery = null, OptionsKeys extends keyof ReadOptions = null> {
     type?: 'one' | 'many';
 
-    constructor(private holdingPipeline: PipelineAbstract<T>,
-        public name: N, public pipeline: () => PipelineAbstract<R & IdentityInterface, ReadQuery, ReadOptions, ReadMeta>,
-        public query: {[key in K1]: any}, public options?: {[key in K2]: any}) {
+    constructor(private holdingPipeline: PipelineAbstract<M>,
+        public name: NameKey, public pipeline: () => PipelineAbstract<R, SchemaBuildersInterface<R, {}, {}, {}, ReadQuery, ReadOptions, ReadMeta>>,
+        public query: {[key in QueryKeys]: any}, public options?: {[key in OptionsKeys]: any}) {
         this.type = 'many';
         if (query['id']) {
             let queryValue = query['id'];
@@ -28,7 +29,7 @@ export class PipelineRelation<T extends {} & IdentityInterface = any, N extends 
         }
     }
 
-    async fetch(resource: T, query?: Omit<ReadQuery, K1>, options?: Omit<ReadOptions, K2>) {
+    async fetch(resource: M, query?: Omit<ReadQuery, QueryKeys>, options?: Omit<ReadOptions, OptionsKeys>) {
         let pipeline = this.pipeline()
         let mergedQuery = query || QueryTemplate.hydrate(this.query, resource) as any
         if (query) {
@@ -41,17 +42,17 @@ export class PipelineRelation<T extends {} & IdentityInterface = any, N extends 
         return pipeline.read(mergedQuery, mergedOptions);
     }
 
-    async assignToResource(resource: T, query?: Omit<ReadQuery, K1>, options?: Omit<ReadOptions, K2>) {
+    async assignToResource(resource: M, query?: Omit<ReadQuery, QueryKeys>, options?: Omit<ReadOptions, OptionsKeys>) {
         let result = await this.fetch(resource, query, options)
         if (this.type === "one") {
             resource[this.name as string] = result.data[0]
         } else {
             resource[this.name as string] = result.data
         }
-        return resource as T & {[k in N]: R[] | R}
+        return resource as M & {[k in NameKey]: R[] | R}
     }
 
-    async assignToResources(resources: T[], query?: Omit<ReadQuery, K1>, options?: Omit<ReadOptions, K2>) {
+    async assignToResources(resources: M[], query?: Omit<ReadQuery, QueryKeys>, options?: Omit<ReadOptions, OptionsKeys>) {
         return Promise.all(resources.map(resource => this.assignToResource(resource, query, options)))
     }
 }
