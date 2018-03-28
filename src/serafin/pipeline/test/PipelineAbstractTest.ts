@@ -6,35 +6,9 @@ import { TestPipe } from "./TestPipe";
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { PipelineAbstract } from "../PipelineAbstract";
 import { IdentityInterface } from "../IdentityInterface";
+import { PipelineRelation } from "..";
 
 chai.use(require("chai-as-promised"))
-
-// describe('Pipelines', function () {
-//         });
-//         it('should pipe with another pipeline', function () {
-//             let p1 = new TestPipe()
-//             let p2 = new TestPipe()
-//             let p = p1.pipe(p2)
-//             expect(p1["parent"]).to.be.undefined
-//             expect(p2["parent"]).to.be.eql(p1)
-//         });
-
-//         it('should add relations', function () {
-//             let p2 = new TestPipeline()
-//             let p1 = new TestPipeline().addRelation("test", () => p2, {})
-//             expect(p1.relations).to.exist
-//             expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
-//             expect(Object.keys(p1.relations).length).to.eql(1)
-//         });
-
-//         it('should inherit relations', function () {
-//             let p1 = new TestPipeline().addRelation("test", () => p2, {})
-//             let p2 = new TestPipeline()
-//             let p = p1.pipe(p2);
-//             expect(p.relations).to.exist
-//             expect(p.relations.test).to.be.an.instanceof(PipelineRelation)
-//         });
-
 
 const testPipeline = () => new TestPipeline(SchemaBuilder.emptySchema()
     .addString("id", { description: "id" })
@@ -233,6 +207,8 @@ describe('PipelineAbstract', function () {
 
     describe('Pipeline with a pipe', function () {
         it(`should call properly the create method`, function () {
+            let truc = testPipeline().pipe(new TestPipe());
+
             return expect(testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString: 'value' }], { testCreateOptionsString: 'test' })).to.eventually.deep.equal(
                 { meta: { testCreateMetaString: 'testCreateMetaValue' }, data: [{ id: '1', method: 'create', testString: 'test' }] });
         });
@@ -271,4 +247,22 @@ describe('PipelineAbstract', function () {
 
     });
 
+    describe('Relations', function () {
+        it('should add relations', function () {
+            let p2 = testPipeline()
+            let p1 = testPipeline().addRelation("test", () => p2, {})
+            expect(p1.relations).to.exist
+            expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
+            expect(Object.keys(p1.relations).length).to.eql(1)
+        });
+
+        it('should inherit relations', function () {
+            let p2 = testPipeline()
+            let p1 = testPipeline().addRelation("test", () => p2, {}).pipe(new TestPipe);
+            expect(p1.relations).to.exist
+            expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
+        });
+    });
 });
+
+
