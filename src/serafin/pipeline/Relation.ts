@@ -19,13 +19,14 @@ export class PipelineRelation<M extends IdentityInterface = any, NameKey extends
         this.type = 'many';
         if (query['id']) {
             // The only case for which we can assume the relation is a type "one" relation is
-            // when the value referred by "id" is not an array nor a templated value (string beginning by :),
+            // when the query refers to "id", is not an array nor a templated value (string beginning by :),
             // or is a templated value that doesn't reference an array
             let queryValue = query['id'];
             if (!Array.isArray(queryValue) && (
                 typeof queryValue !== 'string' ||
                 queryValue.charAt(0) != ':' ||
-                holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array'
+                (holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)] &&
+                    holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array')
             )) {
                 this.type = 'one';
             }
