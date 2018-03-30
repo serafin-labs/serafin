@@ -59,7 +59,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals(),
             patchOptions: SchemaBuilder.emptySchema(),
             patchMeta: SchemaBuilder.emptySchema(),
-            deleteQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
+            deleteQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
             deleteOptions: SchemaBuilder.emptySchema(),
             deleteMeta: SchemaBuilder.emptySchema(),
         }
@@ -122,10 +122,10 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     public addRelation<NameKey extends keyof any, RelationModel extends IdentityInterface, RelationReadQuery, RelationReadOptions, RelationReadMeta,
         QueryKeys extends keyof RelationReadQuery = null, OptionsKeys extends keyof RelationReadOptions = null>
         (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>>,
-        query: {[key in QueryKeys]: any }, options?: {[key in OptionsKeys]: any }) {
+        query: { [key in QueryKeys]: any }, options?: { [key in OptionsKeys]: any }) {
 
         this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
-        return this as any as PipelineAbstract<M, S, R & {[key in NameKey]: PipelineRelation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys>}>;
+        return this as any as PipelineAbstract<M, S, R & { [key in NameKey]: PipelineRelation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys> }>;
     }
 
     /**

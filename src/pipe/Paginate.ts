@@ -5,13 +5,12 @@ import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Provides pagination over the read results")
 export class Paginate extends PipeAbstract implements PipeInterface {
-    schemaBuilderReadOptions = (s) => SchemaBuilder.emptySchema()
-        .addInteger("offset", { description: "Offset of the first resource to return" })
+    schemaBuilderReadOptions = <T>(s: SchemaBuilder<T>) => s.addInteger("offset", { description: "Offset of the first resource to return" })
         .addInteger("page", { description: "Offset of the first page to read (one page represents 'count' resources)" })
         .addInteger("count", { description: "Number of resources to return" }).toOptionals()
-    schemaBuilderReadMetaSchemaBuilder = (s) => SchemaBuilder.emptySchema().addNumber("count", { description: "Number of resources available" })
+    schemaBuilderReadMeta = <T>(s: SchemaBuilder<T>) => s.addNumber("count", { description: "Number of resources available" })
 
-    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<{} & { data: {}[] }> {
+    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<{ meta: { count: number } } & { data: {}[] }> {
         let resources = await next(query, options);
         let offset = 0;
 

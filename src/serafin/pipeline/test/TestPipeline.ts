@@ -33,14 +33,10 @@ export const schemaTestPipeline =
                 additionalProperties: false,
                 properties:
                     {
-                        id:
-                            {
-                                oneOf:
-                                    [{ description: 'id', type: 'string' },
-                                    { type: 'array', items: { description: 'id', type: 'string' } }]
-                            }
+                        id: { description: 'id', type: 'string' },
+                        method: { description: 'method', type: 'string' }
                     },
-                required: ['id']
+                required: ['id', 'method']
             },
         createValues:
             {

@@ -23,9 +23,9 @@ export class OpenApi {
         this.upperName = _.upperFirst(name);
         this.upperPluralName = _.upperFirst(pluralName);
 
-        for (let schemaBuilderName of PipelineAbstract.schemaBuilderNames) {
+        for (let schemaBuilderName in pipeline.schemaBuilders) {
             let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
-            let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline[schemaBuilderName].schema));
+            let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
             schema.title = schemaName;
             this.api.openApi.components.schemas[schemaName] = schema
         }
@@ -52,18 +52,14 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                allOf: [
-                                    {
-                                        type: 'object',
-                                        properties: {
-                                            data: {
-                                                type: 'array',
-                                                items: { "$ref": `#/components/schemas/${this.upperName}` },
-                                            }
-                                        }
+                                type: 'object',
+                                properties: {
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
-                                ]
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
+                                }
                             }
                         }
                     }
@@ -102,7 +98,16 @@ export class OpenApi {
                     description: `${this.upperPluralName} corresponding to the provided id`,
                     content: {
                         "application/json": {
-                            schema: { $ref: `#/components/schemas/${this.upperName}` }
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                    },
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
+                                }
+                            }
                         }
                     }
                 },
@@ -157,7 +162,11 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                $ref: `#/components/schemas/${this.upperName}`
+                                type: 'object',
+                                properties: {
+                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    meta: { $ref: `#/components/schemas/${this.upperName}CreateMeta` }
+                                }
                             }
                         }
                     }
@@ -218,7 +227,13 @@ export class OpenApi {
                     description: `Updated ${this.upperName}`,
                     content: {
                         "application/json": {
-                            schema: { $ref: `#/components/schemas/${this.upperName}` }
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    meta: { $ref: `#/components/schemas/${this.upperName}PatchMeta` }
+                                }
+                            }
                         }
                     }
                 },
@@ -277,7 +292,13 @@ export class OpenApi {
                     description: `Replaced ${this.upperName}`,
                     content: {
                         "application/json": {
-                            schema: { $ref: `#/components/schemas/${this.upperName}` }
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReplaceMeta` }
+                                }
+                            }
                         }
                     }
                 },
@@ -328,7 +349,13 @@ export class OpenApi {
                     description: `Deleted ${this.upperName}`,
                     content: {
                         "application/json": {
-                            schema: { $ref: `#/components/schemas/${this.upperName}` }
+                            schema: {
+                                type: 'object',
+                                properties: {
+                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    meta: { $ref: `#/components/schemas/${this.upperName}DeleteMeta` }
+                                }
+                            }
                         }
                     }
                 },
