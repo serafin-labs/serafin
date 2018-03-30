@@ -30,7 +30,7 @@ export class QueryTemplate {
     }
 
     static escape(value) {
-        if (value === 'string' && value.substring(0, 2) === '\:') {
+        if (typeof value === 'string' && value.substring(0, 2) === "\\:") {
             return value.substring(1);
         }
 

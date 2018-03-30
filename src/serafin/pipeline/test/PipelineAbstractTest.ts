@@ -207,12 +207,16 @@ describe('PipelineAbstract', function () {
 
     describe('Pipeline with a pipe', function () {
         it(`should call properly the create method`, function () {
-            let truc = testPipeline().pipe(new TestPipe());
-
             return expect(testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString: 'value' }], { testCreateOptionsString: 'test' })).to.eventually.deep.equal(
                 { meta: { testCreateMetaString: 'testCreateMetaValue' }, data: [{ id: '1', method: 'create', testString: 'test' }] });
         });
         it(`should call properly the read method`, function () {
+
+            // let truc = testPipeline().pipe(new TestPipe());
+
+            // let b1 = testPipeline().pipe(new TestPipe()).pipe(new TestPipe()).remapReadOptions({ renamedtestReadOptionsString: "testReadOptionsString" });
+            // let truc = testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString: 'value' }], { testCreateOptionsString: 'test' });
+
             return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString: 'test' })).to.eventually.deep.equal(
                 { meta: { testReadMetaString: 'testReadMetaValue' }, data: [{ id: '1', method: 'read', testQueryString: 'test', testOptionsString: 'test' }] });
         });
@@ -262,7 +266,42 @@ describe('PipelineAbstract', function () {
             expect(p1.relations).to.exist
             expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
         });
+
+        it('should support templated relations', function () {
+            let p2 = testPipeline();
+            let p1 = testPipeline().addRelation("p2", () => p2, { "id": ":id" });
+            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
+        });
+
+        it('should support templated relations with a piped pipeline', function () {
+            let p2 = testPipeline()
+                .pipe(new TestPipe);
+            let p1 = testPipeline().addRelation("p2", () => p2, { testReadQueryString: ":method" }, { testReadOptionsString: "test" });
+            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "read", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
+        });
+
+        it('should support escaping query parameters when it begins with ":"', function () {
+            let p2 = testPipeline()
+                .pipe(new TestPipe);
+            let p1 = testPipeline().addRelation("p2", () => p2, { id: "1", testReadQueryString: "\\:method" }, { testReadOptionsString: "test" });
+            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: ":method", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
+        });
+
+        it('should support adding query and option parameters when fetching a relation', function () {
+            let p2 = testPipeline()
+                .pipe(new TestPipe);
+            let p1 = testPipeline().addRelation("p2", () => p2, { id: "1" }, { testReadOptionsString: "testOption" });
+            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" }, { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
+                .to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "testQuery", testOptionsString: "testOption2" }], meta: { testReadMetaString: "testReadMetaValue" } });
+        });
+
     });
+
+
 });
 
 
