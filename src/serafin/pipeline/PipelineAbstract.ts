@@ -12,7 +12,7 @@ import { PipelineRelation } from "./Relation";
 export type Wrapper<T, U> = { data: T[] } & { meta: U }
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
-export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = PipelineAbstract<M, null>["defaultSchemaType"], R extends { [key: string]: PipelineRelation } = {}> {
+export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>, R extends { [key: string]: PipelineRelation } = {}> {
     public relations: R = {} as any;
     // public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
@@ -42,7 +42,6 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>, R>;
     }
 
-    private defaultSchemaType = (false as true) && this.defaultSchema(null);
     private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
         return {
             model: modelSchemaBuilder,
