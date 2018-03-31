@@ -196,18 +196,19 @@ export class GraphQLTransport implements TransportInterface {
             }
         }
 
-        // extend the readData schemas as it only contains extra fields
+        // define the result schema
         let readDataSchema = graphQLSchemas[`${schemaName}ReadMeta`];
-        let existingFieldsFunction = readDataSchema.fields
-        readDataSchema.fields = () => {
-            let existingFields = existingFieldsFunction();
-            existingFields.data = { type: new graphql.GraphQLList(modelSchema.schema) };
-            return existingFields
-        }
+        let resultSchema = new graphql.GraphQLObjectType({
+            name: `${schemaName}ReadResult`,
+            fields: {
+                data: { type: new graphql.GraphQLList(modelSchema.schema) },
+                meta: { type: readDataSchema.schema }
+            }
+        })
 
         // create the main query function for this pipeline
         this.graphQlSchemaQueries[pluralName] = {
-            type: readDataSchema.schema,
+            type: resultSchema,
             args: {
                 query: {
                     type: graphQLSchemas[`${schemaName}ReadQuery`].schema
