@@ -273,8 +273,8 @@ describe('PipelineAbstract', function () {
             let p2 = new TestPipeline(SchemaBuilder.emptySchema()
                 .addString("id", { description: "id" })
                 .addArray("test", SchemaBuilder.emptySchema().addString('hop')))
-            let p1 = testPipeline().addRelation("p2", () => p2, { test: ["hop"] });
-            expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
+            let p1 = testPipeline().addRelation("p2", () => p2, { test: [{ hop: "la" }] });
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
         });
 
         it('should determine the nature (one/many) of a relation', function () {
