@@ -67,12 +67,12 @@ async function main() {
     ]);
 
     await categoryPipeline.create([
-        { name: 'adventure' },
-        { name: 'introspection' },
-        { name: 'relaxation' },
-        { name: 'religion' },
-        { name: 'must-have' },
-        { name: 'comedy' }
+        { id: '1', name: 'adventure' },
+        { id: '2', name: 'introspection' },
+        { id: '3', name: 'relaxation' },
+        { id: '4', name: 'religion' },
+        { id: '5', name: 'must-have' },
+        { id: '6', name: 'comedy' }
     ]);
 
     await bookPipeline.create([

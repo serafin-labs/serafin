@@ -135,7 +135,7 @@ export class GraphQLTransport implements TransportInterface {
                     // get the existing fields of the unerlying function
                     let existingFields = existingFieldsFunction();
                     // resolve the pipeline reference
-                    let pipeline = relation.pipeline()
+                    let pipeline: PipelineAbstract<any> = relation.pipeline()
                     // find the model graphql type of this relation
                     let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
                     if (!relationType) {
@@ -165,18 +165,22 @@ export class GraphQLTransport implements TransportInterface {
                         // obtain query and options schemas for this relation 
                         let queryFilter = (param: string) => !(param in relation.query)
                         let optionsFilter = (param: string) => this.api.isNotAnInternalOption(param) && (!relation.options || !(param in relation.options))
-                        let relationGraphQlSchemas = jsonSchemaToGraphQL(pipeline.readOptionsSchemaBuilder.schema, `${relationSchemaName}ReadOptions`, optionsFilter);
-                        jsonSchemaToGraphQL(pipeline.readQuerySchemaBuilder.schema, `${relationSchemaName}ReadQuery`, queryFilter, relationGraphQlSchemas);
+                        let relationGraphQlSchemas = jsonSchemaToGraphQL(pipeline.schemaBuilders.readOptions.schema, `${relationSchemaName}ReadOptions`, optionsFilter);
+                        jsonSchemaToGraphQL(pipeline.schemaBuilders.readQuery.schema, `${relationSchemaName}ReadQuery`, queryFilter, relationGraphQlSchemas);
+                        let args = {} as any;
+                        if (relationGraphQlSchemas[`${relationSchemaName}ReadQuery`]) {
+                            args.query = {
+                                type: relationGraphQlSchemas[`${relationSchemaName}ReadQuery`].schema
+                            }
+                        }
+                        if (relationGraphQlSchemas[`${relationSchemaName}ReadOptions`]) {
+                            args.options = {
+                                type: relationGraphQlSchemas[`${relationSchemaName}ReadOptions`].schema
+                            }
+                        }
                         existingFields[relation.name] = {
                             type: new graphql.GraphQLList(relationType.schema),
-                            args: {
-                                query: {
-                                    type: relationGraphQlSchemas[`${relationSchemaName}ReadQuery`].schema
-                                },
-                                options: {
-                                    type: relationGraphQlSchemas[`${relationSchemaName}ReadOptions`].schema
-                                }
-                            },
+                            args: args,
                             resolve: async (entity, params, request) => {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
@@ -198,25 +202,28 @@ export class GraphQLTransport implements TransportInterface {
 
         // define the result schema
         let readDataSchema = graphQLSchemas[`${schemaName}ReadMeta`];
-        let resultSchema = new graphql.GraphQLObjectType({
+        let resultSchemaConfig = {
             name: `${schemaName}ReadResult`,
             fields: {
-                data: { type: new graphql.GraphQLList(modelSchema.schema) },
-                meta: { type: readDataSchema.schema }
-            }
-        })
+                data: { type: new graphql.GraphQLList(modelSchema.schema) }
+            } as any
+        }
+        if (readDataSchema) {
+            resultSchemaConfig.fields.meta = { type: readDataSchema.schema }
+        }
+        let resultSchema = new graphql.GraphQLObjectType(resultSchemaConfig)
 
         // create the main query function for this pipeline
+        let args = {} as any;
+        if (graphQLSchemas[`${schemaName}ReadQuery`]) {
+            args.query = { type: graphQLSchemas[`${schemaName}ReadQuery`].schema }
+        }
+        if (graphQLSchemas[`${schemaName}ReadOptions`]) {
+            args.options = { type: graphQLSchemas[`${schemaName}ReadOptions`].schema }
+        }
         this.graphQlSchemaQueries[pluralName] = {
             type: resultSchema,
-            args: {
-                query: {
-                    type: graphQLSchemas[`${schemaName}ReadQuery`].schema
-                },
-                options: {
-                    type: graphQLSchemas[`${schemaName}ReadOptions`].schema
-                }
-            }
+            args: args
         };
     }
 

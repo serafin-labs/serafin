@@ -47,29 +47,34 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, pr
         if (schema.type === "object" || (!schema.hasOwnProperty("type") && schema.properties)) {
             // filter internal options, so they don't appear in the schema
             let properties = _.pickBy(schema.properties, (v, n) => propertiesFilter(n));
-            // map all properties to their graphql equivalent
-            let fields = _.mapValues(properties, (propertySchema, propertyName) => {
-                return {
-                    type: _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
+            if (Object.keys(properties).length === 0) {
+                // if the object is empty return null
+                result = null
+            } else {
+                // map all properties to their graphql equivalent
+                let fields = _.mapValues(properties, (propertySchema, propertyName) => {
+                    return {
+                        type: _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
+                    }
+                });
+                // create the resulting object
+                // here we keep fields as a function to be able to extend it before it is used
+                let schemaObject = {
+                    schema: !isInputType ? new graphql.GraphQLObjectType({
+                        name: name || schema.title,
+                        description: schema.description,
+                        fields: () => schemaObject.fields()
+                    }) : new graphql.GraphQLInputObjectType({
+                        name: name || schema.title,
+                        description: schema.description,
+                        fields: () => schemaObject.fields()
+                    }),
+                    fields: () => fields
                 }
-            });
-            // create the resulting object
-            // here we keep fields as a function to be able to extend it before it is used
-            let schemaObject = {
-                schema: !isInputType ? new graphql.GraphQLObjectType({
-                    name: name || schema.title,
-                    description: schema.description,
-                    fields: () => schemaObject.fields()
-                }) : new graphql.GraphQLInputObjectType({
-                    name: name || schema.title,
-                    description: schema.description,
-                    fields: () => schemaObject.fields()
-                }),
-                fields: () => fields
-            }
-            schemaByNames[name] = schemaObject; // keep a reference to reuse it
+                schemaByNames[name] = schemaObject; // keep a reference to reuse it
 
-            result = schemaObject.schema
+                result = schemaObject.schema
+            }
         } else if (schema.type === "array") {
             // convert 'array' to GraphQLList
             if (Array.isArray(schema.items)) {
