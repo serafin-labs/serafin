@@ -82,6 +82,9 @@ async function main() {
 
     setTimeout(async () => {
 
+        let next = await itemPipeline.relations.next.fetch({ id: "1", name: "Drywall screw", price: 0.1, "categoryId": "3" });
+
+
         // 10% items price increase
         await Promise.all(
             _.map((await itemPipeline.read()).data, (item) =>

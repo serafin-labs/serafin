@@ -2,7 +2,7 @@ import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 export interface PipeInterface<S extends SchemaBuildersInterface = any, M = any, CV= any, CO= any, CM= any,
-    RQ= any, RO= any, RM= any, UV= any, UO= any, UM= any, PQ= any, PV= any, PO= any, PM= any, DQ= any, DO= any, DM= any> {
+    RQ= any, RO= any, RM= any, UV= any, UO= any, UM= any, PQ= any, PV= any, PO= any, PM= any, DQ= any, DO= any, DM= any, PR= {}> {
 
     schemaBuilderModel?: (s: S["model"]) => SchemaBuilder<M>
     schemaBuilderCreateValues?: (s: S["createValues"]) => SchemaBuilder<CV>
@@ -21,4 +21,6 @@ export interface PipeInterface<S extends SchemaBuildersInterface = any, M = any,
     schemaBuilderDeleteQuery?: (s: S["deleteQuery"]) => SchemaBuilder<DQ>
     schemaBuilderDeleteOptions?: (s: S["deleteOptions"]) => SchemaBuilder<DO>
     schemaBuilderDeleteMeta?: (s: S["deleteMeta"]) => SchemaBuilder<DM>
+
+    relations?: PR
 }

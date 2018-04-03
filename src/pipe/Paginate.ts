@@ -1,6 +1,6 @@
 import * as _ from 'lodash'
 import { SchemaBuilder } from '@serafin/schema-builder';
-import { PipeAbstract } from '../serafin/pipeline'
+import { PipeAbstract, PipelineRelation } from '../serafin/pipeline'
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Provides pagination over the read results")
@@ -22,13 +22,13 @@ export class Paginate extends PipeAbstract implements PipeInterface {
             }
 
             if (options.count) {
-                // if (offset + options.count < resources.data.length) {
-                //     Link.assign(resources, 'next', this, query, { ...options, ...{ offset: offset + options.count } }, 'many');
-                // }
+                if (offset + options.count < resources.data.length) {
+                    this.pipeline.addRelation('next', () => this.pipeline, query, { ...options, ...{ offset: offset + options.count } });
+                }
 
-                // if (offset - options.count >= 0) {
-                //     Link.assign(resources, 'prev', this, query, { ...options, ...{ offset: Math.max(offset - options.count, 0) } }, 'many');
-                // }
+                if (offset - options.count >= 0) {
+                    this.pipeline.addRelation('prev', () => this.pipeline, query, { ...options, ...{ offset: Math.max(offset - options.count, 0) } });
+                }
 
                 resources.data = resources.data.slice(offset, offset + options.count);
             }
@@ -38,4 +38,6 @@ export class Paginate extends PipeAbstract implements PipeInterface {
             ...resources, meta: { count: resources.data.length }
         };
     }
+
+    relations: { 'next': PipelineRelation, 'previous': PipelineRelation }
 }

@@ -80,8 +80,9 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         PM = this["schemaBuilders"]["patchMeta"]["T"],
         DQ = this["schemaBuilders"]["deleteQuery"]["T"],
         DO = this["schemaBuilders"]["deleteOptions"]["T"],
-        DM = this["schemaBuilders"]["deleteMeta"]["T"]>
-        (pipe: PipeInterface<this["schemaBuilders"], MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>) {
+        DM = this["schemaBuilders"]["deleteMeta"]["T"],
+        PR = {}>
+        (pipe: PipeInterface<this["schemaBuilders"], MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, PR>) {
 
         // Pipeline association
         if (pipe[PIPELINE]) {
@@ -108,7 +109,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             }
         }
 
-        return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>, R>;
+        return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>, R & PR>;
     }
 
 
