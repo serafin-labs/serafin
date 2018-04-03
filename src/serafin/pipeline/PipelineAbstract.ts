@@ -12,9 +12,9 @@ import { PipelineRelation } from "./Relation";
 export type Wrapper<T, U> = { data: T[] } & { meta: U }
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
-export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>, R extends { [key: string]: PipelineRelation } = {}> {
+export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>,
+    R extends { [key: string]: PipelineRelation } = { 'self': PipelineRelation<M, 'self', M> }> {
     public relations: R = {} as any;
-    // public static schemaBuilderNames: SchemaBuilderNames[] = ["modelSchemaBuilder", "readQuerySchemaBuilder", "readOptionsSchemaBuilder", "readWrapperSchemaBuilder", "createValuesSchemaBuilder", "createOptionsSchemaBuilder", "createWrapperSchemaBuilder", "updateValuesSchemaBuilder", "updateOptionsSchemaBuilder", "updateWrapperSchemaBuilder", "patchQuerySchemaBuilder", "patchValuesSchemaBuilder", "patchOptionsSchemaBuilder", "patchWrapperSchemaBuilder", "deleteQuerySchemaBuilder", "deleteOptionsSchemaBuilder", "deleteWrapperSchemaBuilder"];
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
 
     constructor(public modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
@@ -28,6 +28,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
                 return (thisMethod.call(this, ...args));
             };
         }
+
+        this.addRelation('self', () => this as any, { id: ':id' } as any);
     }
 
     /**
