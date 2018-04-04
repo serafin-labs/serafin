@@ -1,6 +1,6 @@
 import * as _ from "lodash";
 import * as util from "util";
-import { SchemaBuilder, Overwrite } from "@serafin/schema-builder";
+import { SchemaBuilder, Overwrite, DeepPartialArray, DeepPartial, DeepPartialObject } from "@serafin/schema-builder";
 import { notImplementedError, serafinError } from "../error/Error";
 import { final } from "./FinalDecorator";
 import { IdentityInterface } from "./IdentityInterface";
@@ -44,7 +44,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>, R>;
     }
 
-    private defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
+    protected defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
         return {
             model: modelSchemaBuilder,
             createValues: modelSchemaBuilder.clone().setOptionalProperties(["id"]),

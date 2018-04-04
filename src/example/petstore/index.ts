@@ -1,4 +1,3 @@
-import { fail } from 'assert';
 import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { petSchemaBuilder } from './model/Pet';

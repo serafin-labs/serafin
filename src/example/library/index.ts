@@ -1,4 +1,3 @@
-import { fail } from 'assert';
 import * as VError from 'VError';
 import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
@@ -7,7 +6,6 @@ import { authorSchemaBuilder } from './model/Author';
 import { categorySchemaBuilder } from './model/Category';
 import * as bodyParser from 'body-parser';
 import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
-import { Key } from 'readline';
 
 async function main() {
     let app = express();
