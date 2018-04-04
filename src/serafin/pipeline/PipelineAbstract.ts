@@ -2,7 +2,7 @@ import * as _ from "lodash";
 import * as util from "util";
 import { SchemaBuilder, Overwrite } from "@serafin/schema-builder";
 import { notImplementedError, serafinError } from "../error/Error";
-import { final } from "./Decorator/Final";
+import { final } from "./FinalDecorator";
 import { IdentityInterface } from "./IdentityInterface";
 import { PIPELINE, PipeAbstract } from "./PipeAbstract";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";

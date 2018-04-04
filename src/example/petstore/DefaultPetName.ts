@@ -1,4 +1,4 @@
-import { PipeAbstract, description } from '../../serafin/pipeline';
+import { PipeAbstract } from '../../serafin/pipeline';
 import { PipeInterface } from '../../serafin/pipeline/PipeInterface';
 import { SchemaBuilder } from '@serafin/schema-builder';
 

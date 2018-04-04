@@ -1,6 +1,3 @@
-// decorator
-export { description } from "./decorator/Description"
-
 // schema
 export { PipelineRelation } from "./Relation"
 export { IdentityInterface } from './IdentityInterface'
