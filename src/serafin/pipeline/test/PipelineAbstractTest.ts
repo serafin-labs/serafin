@@ -252,7 +252,7 @@ describe('PipelineAbstract', function () {
             let p1 = testPipeline().addRelation("test", () => p2, {})
             expect(p1.relations).to.exist
             expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
-            expect(Object.keys(p1.relations).length).to.eql(1)
+            expect(Object.keys(p1.relations).length).to.eql(2)
         });
 
         it('should inherit relations', function () {
