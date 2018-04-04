@@ -15,6 +15,7 @@
     "type": "git",
     "url": "https://github.com/serafin-framework/serafin"
   },
+  "main": "lib/index.js",
   "dependencies": {
     "@serafin/open-api": "git+ssh://git@github.com/serafin-labs/open-api.git",
     "@serafin/schema-builder": "^0.1.3",
