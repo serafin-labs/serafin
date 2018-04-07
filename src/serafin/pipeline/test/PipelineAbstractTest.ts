@@ -137,19 +137,19 @@ describe('PipelineAbstract', function () {
 
     describe('Pipeline methods', function () {
         it(`should call properly the create method`, function () {
-            return expect(testPipeline().create([{ 'method': 'create' }])).to.eventually.deep.equal({ data: [{ id: '1', method: 'create' }], meta: {} });
+            return expect(testPipeline().create([{ 'method': 'create' }])).to.eventually.deep.equal({ data: [{ id: '1', method: 'create' }], meta: {}, links: {} });
         });
         it(`should call properly the read method`, function () {
-            return expect(testPipeline().read({})).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
+            return expect(testPipeline().read({})).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {}, links: {} });
         });
         it(`should call properly the replace method`, function () {
-            return expect(testPipeline().replace('1', { method: 'replace' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'replace' }], meta: {} });
+            return expect(testPipeline().replace('1', { method: 'replace' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'replace' }], meta: {}, links: {} });
         });
         it(`should call properly the patch method`, function () {
-            return expect(testPipeline().patch({ id: '1' }, { method: 'patch' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'patch' }], meta: {} });
+            return expect(testPipeline().patch({ id: '1' }, { method: 'patch' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'patch' }], meta: {}, links: {} });
         });
         it(`should call properly the delete method`, function () {
-            return expect(testPipeline().delete({ id: '1' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'delete' }], meta: {} })
+            return expect(testPipeline().delete({ id: '1' })).to.eventually.deep.equal({ data: [{ id: '1', method: 'delete' }], meta: {}, links: {} })
         });
 
         it(`should fail calling the create method`, function () {
@@ -209,23 +209,23 @@ describe('PipelineAbstract', function () {
     describe('Pipeline with a pipe', function () {
         it(`should call properly the create method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).create([{ method: 'create', testCreateValuesString: 'value' }], { testCreateOptionsString: 'test' })).to.eventually.deep.equal(
-                { meta: { testCreateMetaString: 'testCreateMetaValue' }, data: [{ id: '1', method: 'create', testString: 'test' }] });
+                { meta: { testCreateMetaString: 'testCreateMetaValue' }, data: [{ id: '1', method: 'create', testString: 'test' }], links: {} });
         });
         it(`should call properly the read method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).read({ testReadQueryString: 'test' }, { testReadOptionsString: 'test' })).to.eventually.deep.equal(
-                { meta: { testReadMetaString: 'testReadMetaValue' }, data: [{ id: '1', method: 'read', testQueryString: 'test', testOptionsString: 'test' }] });
+                { meta: { testReadMetaString: 'testReadMetaValue' }, data: [{ id: '1', method: 'read', testQueryString: 'test', testOptionsString: 'test' }], links: {} });
         });
         it(`should call properly the replace method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).replace('1', { method: 'replace', testReplaceValuesString: 'test' }, { testReplaceOptionsString: 'test' })).to.eventually.deep.equal(
-                { meta: { testReplaceMetaString: 'testReplaceMetaValue' }, data: [{ id: '1', method: 'replace', testOptionsString: 'test', testValuesString: 'test' }] });
+                { meta: { testReplaceMetaString: 'testReplaceMetaValue' }, data: [{ id: '1', method: 'replace', testOptionsString: 'test', testValuesString: 'test' }], links: {} });
         });
         it(`should call properly the patch method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).patch({ id: '1', testPatchQueryString: 'test' }, { method: 'patch', testPatchValuesString: 'test' }, { testPatchOptionsString: 'test' })).to.eventually.deep.equal(
-                { meta: { testPatchMetaString: 'testPatchMetaValue' }, data: [{ id: '1', method: 'patch', testValuesString: 'test', testQueryString: 'test', testOptionsString: 'test' }] });
+                { meta: { testPatchMetaString: 'testPatchMetaValue' }, data: [{ id: '1', method: 'patch', testValuesString: 'test', testQueryString: 'test', testOptionsString: 'test' }], links: {} });
         });
         it(`should call properly the delete method`, function () {
             return expect(testPipeline().pipe(new TestPipe()).delete({ id: '1', testDeleteQueryString: 'test' }, { testDeleteOptionsString: 'test' })).to.eventually.deep.equal(
-                { meta: { testDeleteMetaString: 'testDeleteMetaValue' }, data: [{ id: '1', method: 'delete', testOptionsString: 'test', testQueryString: 'test' }] });
+                { meta: { testDeleteMetaString: 'testDeleteMetaValue' }, data: [{ id: '1', method: 'delete', testOptionsString: 'test', testQueryString: 'test' }], links: {} });
         });
 
         it(`should fail calling the create method`, function () {
@@ -266,7 +266,7 @@ describe('PipelineAbstract', function () {
             let p2 = testPipeline();
             let p1 = testPipeline().addRelation("p2", () => p2, { "id": ":id" });
             expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
-            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {}, links: {} });
         });
 
         it('should associate properly the remote pipeline properties and allow arrays', function () {
@@ -274,7 +274,7 @@ describe('PipelineAbstract', function () {
                 .addString("id", { description: "id" })
                 .addArray("test", SchemaBuilder.emptySchema().addString('hop')))
             let p1 = testPipeline().addRelation("p2", () => p2, { test: [{ hop: "la" }] });
-            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {}, links: {} });
         });
 
         it('should determine the nature (one/many) of a relation', function () {
@@ -315,7 +315,7 @@ describe('PipelineAbstract', function () {
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { testReadQueryString: ":method" }, { testReadOptionsString: "test" });
             expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
-            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "read", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "read", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" }, links: {} });
         });
 
         it('should support escaping query parameters when it begins with ":"', function () {
@@ -323,7 +323,7 @@ describe('PipelineAbstract', function () {
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1", testReadQueryString: "\\:method" }, { testReadOptionsString: "test" });
             expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
-            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: ":method", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
+            return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: ":method", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" }, links: {} });
         });
 
         it('should support adding query and option parameters when fetching a relation', function () {
@@ -332,7 +332,7 @@ describe('PipelineAbstract', function () {
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1" }, { testReadOptionsString: "testOption" });
             expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" }, { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
-                .to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "testQuery", testOptionsString: "testOption2" }], meta: { testReadMetaString: "testReadMetaValue" } });
+                .to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "testQuery", testOptionsString: "testOption2" }], meta: { testReadMetaString: "testReadMetaValue" }, links: {} });
         });
 
         it('should return separately the templated and non-templated parts of a relation query', function () {

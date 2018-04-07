@@ -8,8 +8,8 @@ import { PIPELINE, PipeAbstract } from "./PipeAbstract";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { PipeInterface } from "./PipeInterface";
 import { PipelineRelation } from "./Relation";
+import { PipelineResults } from "./PipelineResults";
 
-export type Wrapper<T, U> = { data: T[] } & { meta: U }
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
 export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>,
@@ -105,8 +105,13 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         for (let method of PipelineAbstract.CRUDMethods) {
             if (typeof pipe[method] == 'function') {
                 let next = this[`_${method}`];
-                this[`_${method}`] = (...args) => {
-                    return (pipe[method].call(pipe, next, ...args));
+                const ctorName = this.constructor.name;
+                this[`_${method}`] = async (...args) => {
+                    try {
+                        return await (pipe[method].call(pipe, next, ...args));
+                    } catch (err) {
+                        throw serafinError('pipelineError', `Error in ${ctorName}::${method} : ${err}`, { pipeline: ctorName, method: method, args: args })
+                    }
                 };
             }
         }
@@ -144,7 +149,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: this["schemaBuilders"]["createValues"]["T"][], options?: this["schemaBuilders"]["createOptions"]["T"])
-        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
+        : Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
         this.handleValidate('create', () => {
             this.schemaBuilders.createValues.validateList(resources);
             this.schemaBuilders.createOptions.validate(options || {} as any);
@@ -152,7 +157,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this._create(resources, this.prepareOptionsMapping(options, "create"));
     }
 
-    protected _create(resources, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
+    protected _create(resources, options): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
         throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -163,7 +168,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: this["schemaBuilders"]["readQuery"]["T"], options?: this["schemaBuilders"]["readOptions"]["T"])
-        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
+        : Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
 
         this.handleValidate('read', () => {
             this.schemaBuilders.readQuery.validate(query || {});
@@ -173,7 +178,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this._read(query, this.prepareOptionsMapping(options, "read"));
     }
 
-    protected _read(query, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
+    protected _read(query, options): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -187,7 +192,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param options 
      */
     @final async replace(id: string, values: this["schemaBuilders"]["replaceValues"]["T"], options?: this["schemaBuilders"]["replaceOptions"]["T"])
-        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
+        : Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
         this.handleValidate('replace', () => {
             this.schemaBuilders.replaceValues.validate(values || {});
             this.schemaBuilders.replaceOptions.validate(options || {});
@@ -196,7 +201,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this._replace(id, values, options);
     }
 
-    protected _replace(id, values, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
+    protected _replace(id, values, options): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
         throw notImplementedError("replace", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -210,7 +215,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param options 
      */
     @final async patch(query: this["schemaBuilders"]["patchQuery"]["T"], values: this["schemaBuilders"]["patchValues"]["T"],
-        options?: this["schemaBuilders"]["patchOptions"]["T"]): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
+        options?: this["schemaBuilders"]["patchOptions"]["T"]): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
         this.handleValidate('patch', () => {
             this.schemaBuilders.patchQuery.validate(query);
             this.schemaBuilders.patchValues.validate(values || {});
@@ -219,7 +224,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this._patch(query, values, this.prepareOptionsMapping(options, "patch"));
     }
 
-    protected _patch(query, values, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
+    protected _patch(query, values, options): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
         throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -229,7 +234,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: this["schemaBuilders"]["deleteQuery"]["T"], options?: this["schemaBuilders"]["deleteOptions"]["T"])
-        : Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
+        : Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
         this.handleValidate('delete', () => {
             this.schemaBuilders.deleteQuery.validate(query);
             this.schemaBuilders.deleteOptions.validate(options || {});
@@ -237,7 +242,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this._delete(query, this.prepareOptionsMapping(options, "delete"));
     }
 
-    protected _delete(query, options): Promise<Wrapper<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
+    protected _delete(query, options): Promise<PipelineResults<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name);
     }
 
@@ -256,7 +261,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      * @param opt 
      * @param renamedOpt 
      */
-    // public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): Pipeline<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadWrapper, CreateValues, CreateOptions, CreateWrapper, UpdateValues, UpdateOptions, UpdateWrapper, PatchQuery, PatchValues, PatchOptions, PatchWrapper, DeleteQuery, DeleteOptions, DeleteWrapper> {
+    // public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): Pipeline<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadPipelineResults, CreateValues, CreateOptions, CreatePipelineResults, UpdateValues, UpdateOptions, UpdatePipelineResults, PatchQuery, PatchValues, PatchOptions, PatchPipelineResults, DeleteQuery, DeleteOptions, DeletePipelineResults> {
     //     return this.remapOptions("read", opt, renamedOpt)
     // }
 
