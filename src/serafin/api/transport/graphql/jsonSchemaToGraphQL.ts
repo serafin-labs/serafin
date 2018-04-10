@@ -53,8 +53,9 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, pr
             } else {
                 // map all properties to their graphql equivalent
                 let fields = _.mapValues(properties, (propertySchema, propertyName) => {
+                    let type = _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
                     return {
-                        type: _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
+                        type: type ? type : GraphQLJSON
                     }
                 });
                 // create the resulting object
