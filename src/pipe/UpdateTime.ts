@@ -1,12 +1,22 @@
-import { PipeAbstract } from '../serafin/pipeline'
+import { PipeAbstract, IdentityInterface } from '../serafin/pipeline'
 import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Adds creation and update timestamps to the resources")
-export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
-    schemaBuilderReadMeta = (s: SchemaBuilder<RW>) => s
+export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstract implements PipeInterface {
+
+    schemaBuilderModel = (s: SchemaBuilder<M>) => s
+        .addNumber("createdAt", { description: "Creation date" })
+        .addNumber("updatedAt", { description: "Last Modification date" });
+
+    schemaBuilderReadQuery = (s: SchemaBuilder<RQ>) => s
+        .addOptionalNumber("createdAt", { description: "Creation date" })
+        .addOptionalNumber("updatedAt", { description: "Last Modification date" })
+        .transformPropertiesToArray(["createdAt", "updatedAt"]);
+
+    schemaBuilderReadMeta = (s: SchemaBuilder<RM>) => s
         .addNumber("lastCreatedAt", { description: "Most recent creation date" })
-        .addNumber("lastUpdatedAt", { description: "Most recent update date" })
+        .addNumber("lastUpdatedAt", { description: "Most recent update date" });
 
     public async read(next, query?: {}, options?: {}): Promise<{ meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }> {
         let result = (await next(query, options)) as { meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }
