@@ -16,11 +16,10 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     R extends { [key: string]: PipelineRelation } = { 'self': PipelineRelation<M, 'self', M> }> {
     public relations: R = {} as any;
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
+    public schemaBuilders: S;
 
-    constructor(public modelSchemaBuilder: SchemaBuilder<M>, public schemaBuilders: S = null) {
-        if (schemaBuilders == null) {
-            this.schemaBuilders = this.defaultSchema(modelSchemaBuilder) as any;
-        }
+    constructor(public modelSchemaBuilder: SchemaBuilder<M>) {
+        this.schemaBuilders = this.defaultSchema(modelSchemaBuilder) as any;
 
         for (let method of PipelineAbstract.CRUDMethods) {
             let thisMethod = this[`_${method}`];
