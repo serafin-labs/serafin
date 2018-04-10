@@ -1,2 +1,3 @@
-export { jsonMergePatch } from "./jsonMergePatch"
-export { throughJsonSchema } from "./throughJsonSchema"
+export * from "./jsonMergePatch"
+export * from "./throughJsonSchema"
+export * from "./typeGuards"

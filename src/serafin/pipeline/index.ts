@@ -1,7 +1,13 @@
 // schema
-export { PipelineRelation } from "./Relation"
-export { IdentityInterface } from './IdentityInterface'
+export * from "./Relation"
+export * from './IdentityInterface'
 
 // pipeline
-export { PipeAbstract } from "./PipeAbstract"
-export { PipelineAbstract } from "./PipelineAbstract"
+export * from "./PipeAbstract"
+export * from "./PipelineAbstract"
+export * from "./PipeInterface"
+export * from "./QueryTemplate"
+export * from "./SchemaBuildersInterface"
+
+// decorator
+export * from "./FinalDecorator"
