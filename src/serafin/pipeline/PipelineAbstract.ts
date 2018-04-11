@@ -18,7 +18,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
     public schemaBuilders: S;
 
-    constructor(public modelSchemaBuilder: SchemaBuilder<M>) {
+    constructor(modelSchemaBuilder: SchemaBuilder<M>) {
         this.schemaBuilders = this.defaultSchema(modelSchemaBuilder) as any;
 
         for (let method of PipelineAbstract.CRUDMethods) {
@@ -36,6 +36,10 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     protected getSchemaBuilders(): S {
         return this.schemaBuilders;
+    }
+
+    public get modelSchemaBuilder(): SchemaBuilder<M> {
+        return this.schemaBuilders.model as any
     }
 
     alterSchemaBuilders<newS extends SchemaBuildersInterface>(func: (sch: this["schemaBuilders"]) => newS) {
@@ -122,7 +126,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     public addRelation<NameKey extends keyof any, RelationModel extends IdentityInterface, RelationReadQuery, RelationReadOptions, RelationReadMeta,
         QueryKeys extends keyof RelationReadQuery = null, OptionsKeys extends keyof RelationReadOptions = null>
-        (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>>,
+        (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>, any>,
         query: { [key in QueryKeys]: any }, options?: { [key in OptionsKeys]: any }) {
 
         this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
@@ -291,5 +295,13 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         //     }
         // }
         return options;
+    }
+
+    clone(): PipelineAbstract<M, S, R> {
+        return _.cloneDeepWith(this, (value: any, key: number | string | undefined, object: this | undefined, stack: any) => {
+            if (key === "relations") {
+                return _.clone(value)
+            }
+        })
     }
 }
