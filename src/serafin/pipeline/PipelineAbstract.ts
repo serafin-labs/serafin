@@ -24,10 +24,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         }
 
         for (let method of PipelineAbstract.CRUDMethods) {
-            let thisMethod = this[`_${method}`];
-            this[`_${method}`] = (...args) => {
-                return (thisMethod.call(this, ...args));
-            };
+            this[`_${method}`] = this[`_${method}`].bind(this);
         }
 
         this.addRelation('self', () => this as any, { id: ':id' } as any);
