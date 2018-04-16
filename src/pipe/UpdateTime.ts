@@ -1,7 +1,7 @@
 import { PipeAbstract } from '../serafin/pipeline'
 import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
-import { PipelineResults } from '../serafin/pipeline/PipelineResults';
+import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
 
 // @description("Adds creation and update timestamps to the resources")
 export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
@@ -9,8 +9,8 @@ export class UpdateTime<RW> extends PipeAbstract implements PipeInterface {
         .addNumber("lastCreatedAt", { description: "Most recent creation date" })
         .addNumber("lastUpdatedAt", { description: "Most recent update date" })
 
-    public async read(next, query?: {}, options?: {}): Promise<PipelineResults<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>> {
-        let results = (await next(query, options)) as PipelineResults<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>;
+    public async read(next, query?: {}, options?: {}): Promise<ResultsInterface<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>> {
+        let results = (await next(query, options)) as ResultsInterface<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>;
         let lastCreatedAt = null;
         let lastUpdatedAt = null;
         results.data.forEach(res => {

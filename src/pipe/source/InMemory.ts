@@ -6,7 +6,7 @@ import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 import { Omit, DeepPartial } from '@serafin/schema-builder';
-import { PipelineResults } from '../../serafin/pipeline/PipelineResults';
+import { ResultsInterface } from '../../serafin/pipeline/ResultsInterface';
 
 // @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbstract<T> {
@@ -22,7 +22,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return resource;
     }
 
-    private async readInMemory(query: any): Promise<PipelineResults<T>> {
+    private async readInMemory(query: any): Promise<ResultsInterface<T>> {
         if (!query) {
             query = {};
         }
@@ -53,10 +53,10 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             return true;
         });
 
-        return new PipelineResults(_.cloneDeep(resources));
+        return { data: (_.cloneDeep(resources)), meta: {} };
     }
 
-    protected async _create(resources, options): Promise<PipelineResults<T>> {
+    protected async _create(resources, options): Promise<ResultsInterface<T>> {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -69,14 +69,14 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             }
         });
 
-        return new PipelineResults(createdResources);
+        return { data: createdResources, meta: {} };
     }
 
-    protected _read(query, options): Promise<PipelineResults<T>> {
+    protected _read(query, options): Promise<ResultsInterface<T>> {
         return this.readInMemory(query)
     }
 
-    protected async _replace(id, values, options): Promise<PipelineResults<T>> {
+    protected async _replace(id, values, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory({
             id: id
         });
@@ -88,13 +88,13 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             // in case it wasn't assigned yet
             values["id"] = values["id"] || id;
             this.resources[id] = _.cloneDeep(values) as any;
-            return new PipelineResults(values);
+            return { data: values, meta: {} };
         }
 
         throw notFoundError(id);
     }
 
-    protected async _patch(query, values, options): Promise<PipelineResults<T>> {
+    protected async _patch(query, values, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
@@ -108,10 +108,10 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             updatedResources.push(resource);
         });
 
-        return new PipelineResults(updatedResources);
+        return { data: updatedResources, meta: {} };
     }
 
-    protected async _delete(query, options): Promise<PipelineResults<T>> {
+    protected async _delete(query, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 
@@ -120,6 +120,6 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             deletedResources.push(resource);
         });
 
-        return new PipelineResults(deletedResources);
+        return { data: deletedResources, meta: {} };
     }
 }

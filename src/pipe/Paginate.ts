@@ -2,16 +2,16 @@ import * as _ from 'lodash'
 import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeAbstract, PipelineRelation } from '../serafin/pipeline'
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
-import { PipelineResults } from '../serafin/pipeline/PipelineResults';
+import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
 
 // @description("Provides pagination over the read results")
-export class Paginate extends PipeAbstract implements PipeInterface {
+export class Paginate<TEST> extends PipeAbstract implements PipeInterface {
     schemaBuilderReadOptions = <T>(s: SchemaBuilder<T>) => s.addInteger("offset", { description: "Offset of the first resource to return" })
         .addInteger("page", { description: "Offset of the first page to read (one page represents 'count' resources)" })
         .addInteger("count", { description: "Number of resources to return" }).toOptionals()
     schemaBuilderReadMeta = <T>(s: SchemaBuilder<T>) => s.addNumber("count", { description: "Number of resources available" })
 
-    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<PipelineResults<{}, { total: number }>> {
+    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<ResultsInterface<{}, { total: number }>> {
         let resources = await next(query, options);
         let offset = 0;
 
