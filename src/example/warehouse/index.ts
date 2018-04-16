@@ -27,8 +27,8 @@ async function main() {
         "openapi": "3.0.0",
         "info": {
             "version": "1.0.0",
-            "title": "Sample Petstore Api",
-            "description": "Sample Petstore Api",
+            "title": "Sample warehouse Api",
+            "description": "A sample focusing on resources relations",
             "termsOfService": "None",
             "license": {
                 "name": "MIT"
@@ -107,7 +107,7 @@ async function main() {
 
         // let updatedItems = itemPipeline.do().read().patch((item) => item.price = (item.price * 110 / 100)).getData();
 
-        // let browseCategories2 =  async (parentCategory: string = undefined, prefix: string = "") => { 
+        // let browseCategories2 =  async (parentCategory: string = undefined, prefix: string = "") => {
         //     let categoryResult = categoryPipeline.do().read({ parentCategory: undefined });
         //     _.forEach(categoryResult.fetchLinks('item').getData(), (item) => {
         //         console.log(`${prefix}${categoryResult.one().name}: ${item.one().name} ($${item.one().price})`);
