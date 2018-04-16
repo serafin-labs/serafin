@@ -6,23 +6,23 @@ import { ResultsInterface } from "../ResultsInterface";
 // @description("test pipeline description")
 export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<T> {
     protected async _create(resources: any[], options?: any): Promise<ResultsInterface<any>> {
-        return new ResultsInterface([{ id: '1', method: 'create' }]);
+        return { data: [{ id: '1', method: 'create' }], meta: {} };
     }
 
     protected async _read(query?: any, options?: any): Promise<ResultsInterface<any>> {
-        return new ResultsInterface([{ id: '1', method: 'read' }]);
+        return { data: [{ id: '1', method: 'read' }], meta: {} };
     }
 
     protected async _replace(id: string, values: any, options?: any): Promise<ResultsInterface<any>> {
-        return new ResultsInterface([{ id: '1', method: 'replace' }]);
+        return { data: [{ id: '1', method: 'replace' }], meta: {} };
     }
 
     protected async _patch(query: any, values: any, options?: any): Promise<ResultsInterface<any>> {
-        return new ResultsInterface([{ id: '1', method: 'patch' }]);
+        return { data: [{ id: '1', method: 'patch' }], meta: {} };
     }
 
     protected async _delete(query: any, options?: any): Promise<ResultsInterface<any>> {
-        return new ResultsInterface([{ id: '1', method: 'delete' }]);
+        return { data: [{ id: '1', method: 'delete' }], meta: {} };
     }
 }
 
