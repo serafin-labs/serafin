@@ -24,10 +24,12 @@ export class OpenApi {
         this.upperPluralName = _.upperFirst(pluralName);
 
         for (let schemaBuilderName in pipeline.schemaBuilders) {
-            let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
-            let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
-            schema.title = schemaName;
-            this.api.openApi.components.schemas[schemaName] = schema
+            if (pipeline.schemaBuilders[schemaBuilderName]) {
+                let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
+                let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
+                schema.title = schemaName;
+                this.api.openApi.components.schemas[schemaName] = schema
+            }
         }
         flattenSchemas(this.api.openApi.components.schemas);
 

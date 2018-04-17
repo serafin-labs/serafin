@@ -48,9 +48,15 @@ export class RestTransport implements TransportInterface {
         let canPatch = !!pipeline.schemaBuilders.patchValues
         let canDelete = !!pipeline.schemaBuilders.deleteQuery
 
-        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.readOptions.schema);
-        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.patchOptions.schema);
-        this.testOptionsAndQueryConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.deleteOptions.schema);
+        if (canRead) {
+            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.readOptions.schema);
+        }
+        if (canPatch) {
+            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.patchOptions.schema);
+        }
+        if (canDelete) {
+            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.deleteOptions.schema);
+        }
 
         // create the routes for this endpoint
         if (canRead) {
