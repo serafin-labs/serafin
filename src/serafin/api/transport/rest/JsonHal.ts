@@ -62,7 +62,7 @@ export class JsonHal {
     }
 
     private createTemplatedLink(rel: PipelineRelation): object {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline);
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             let idUrl = "";
             let url = "?";
