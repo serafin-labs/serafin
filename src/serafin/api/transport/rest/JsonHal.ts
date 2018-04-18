@@ -9,7 +9,7 @@ export class JsonHal {
     }
 
     links(resource: object = null) {
-        let links = { self: { href: this.selfUrl } };
+        let links = {};
 
         if (this.relations) {
             for (let relName in this.relations) {
@@ -31,8 +31,9 @@ export class JsonHal {
     }
 
     private createNonTemplatedLink(rel: PipelineRelation, resource: object) {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline);
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
+            console.log(rel.pipeline)
             let url = "";
             let query = QueryTemplate.hydrate(rel.query, resource);
 
@@ -61,7 +62,7 @@ export class JsonHal {
     }
 
     private createTemplatedLink(rel: PipelineRelation): object {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline);
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             let idUrl = "";
             let url = "?";

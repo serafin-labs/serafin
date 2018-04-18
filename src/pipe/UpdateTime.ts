@@ -1,6 +1,7 @@
 import { PipeAbstract, IdentityInterface } from '../serafin/pipeline'
 import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
+import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
 
 // @description("Adds creation and update timestamps to the resources")
 export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstract implements PipeInterface {
@@ -18,11 +19,11 @@ export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstrac
         .addNumber("lastCreatedAt", { description: "Most recent creation date" })
         .addNumber("lastUpdatedAt", { description: "Most recent update date" });
 
-    public async read(next, query?: {}, options?: {}): Promise<{ meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }> {
-        let result = (await next(query, options)) as { meta: { lastCreatedAt: number, lastUpdatedAt: number }, data: { createdAt: number, updatedAt: number }[] }
+    public async read(next, query?: {}, options?: {}): Promise<ResultsInterface<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>> {
+        let results = (await next(query, options)) as ResultsInterface<{ createdAt: number, updatedAt: number }, { lastCreatedAt: number, lastUpdatedAt: number }>;
         let lastCreatedAt = null;
         let lastUpdatedAt = null;
-        result.data.forEach(res => {
+        results.data.forEach(res => {
             if (res.createdAt && (!lastCreatedAt || lastCreatedAt < res.createdAt)) {
                 lastCreatedAt = res.createdAt;
             }
@@ -32,14 +33,14 @@ export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstrac
         });
 
         if (lastCreatedAt !== null) {
-            result.meta.lastCreatedAt = lastCreatedAt;
+            results.meta.lastCreatedAt = lastCreatedAt;
         }
 
         if (lastUpdatedAt !== null) {
-            result.meta.lastUpdatedAt = lastUpdatedAt;
+            results.meta.lastUpdatedAt = lastUpdatedAt;
         }
 
-        return result;
+        return results;
     }
 
     public async create(next, resources: { createdAt: number }[], options?: {}) {

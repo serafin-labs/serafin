@@ -27,8 +27,8 @@ async function main() {
         "openapi": "3.0.0",
         "info": {
             "version": "1.0.0",
-            "title": "Sample Petstore Api",
-            "description": "Sample Petstore Api",
+            "title": "Sample warehouse Api",
+            "description": "A sample focusing on resources relations",
             "termsOfService": "None",
             "license": {
                 "name": "MIT"
@@ -81,35 +81,39 @@ async function main() {
     ]);
 
     setTimeout(async () => {
-
-        let next = await itemPipeline.relations.next.fetch({ id: "1", name: "Drywall screw", price: 0.1, "categoryId": "3" });
-
+        // let next = await itemPipeline.relations.next.fetch({ id: "1", name: "Drywall screw", price: 0.1, "categoryId": "3" });
 
         // 10% items price increase
         await Promise.all(
             _.map((await itemPipeline.read()).data, (item) =>
                 itemPipeline.patch({ id: item.id }, { price: (item.price * 110 / 100) }))
         );
-        console.log(await itemPipeline.read());
 
-        let browseCategories = async (parentCategory: string = undefined, prefix: string = "") => {
-            return _.map((await categoryPipeline.read({ parentCategory: parentCategory })).data, async (category) => {
-                await Promise.all(_.map((await itemPipeline.read({ categoryId: category.id })).data, (item) => {
-                    console.log(`${prefix}${category.name}: ${item.name} ($${item.price})`);
-                }));
-                return await browseCategories(category.id, category.name + ">");
-            });
-        };
-        /*
-        let updatedItems = itemPipeline.do().read().patch((item) => item.price = (item.price * 110 / 100)).getData();
-        
-        let browseCategories2 =  async (parentCategory: string = undefined, prefix: string = "") => { 
-            let categoryResult = categoryPipeline.do().read({ parentCategory: undefined });
-            _.forEach(categoryResult.fetchLinks('item').getData(), (item) => {
-                console.log(`${prefix}${categoryResult.one().name}: ${item.one().name} ($${item.one().price})`);
-            });
-            return await browseCategories2(categoryResult.one().id, categoryResult.one().name + ">");
-        }*/
+
+        let truc = await itemPipeline.read({}, { offset: 2, count: 2 });
+        console.log(truc);
+
+
+        // let bidule = await itemPipeline.relations.self.fetchLink(truc['links']['prev']['query'], truc['links']['prev']['options']);
+        // console.log(true);
+        // let browseCategories = async (parentCategory: string = undefined, prefix: string = "") => {
+        //     return _.map((await categoryPipeline.read({ parentCategory: parentCategory })).data, async (category) => {
+        //         await Promise.all(_.map((await itemPipeline.read({ categoryId: category.id })).data, (item) => {
+        //             console.log(`${prefix}${category.name}: ${item.name} ($${item.price})`);
+        //         }));
+        //         return await browseCategories(category.id, category.name + ">");
+        //     });
+        // };
+
+        // let updatedItems = itemPipeline.do().read().patch((item) => item.price = (item.price * 110 / 100)).getData();
+
+        // let browseCategories2 =  async (parentCategory: string = undefined, prefix: string = "") => {
+        //     let categoryResult = categoryPipeline.do().read({ parentCategory: undefined });
+        //     _.forEach(categoryResult.fetchLinks('item').getData(), (item) => {
+        //         console.log(`${prefix}${categoryResult.one().name}: ${item.one().name} ($${item.one().price})`);
+        //     });
+        //     return await browseCategories2(categoryResult.one().id, categoryResult.one().name + ">");
+        // }
     }, 1000);
 
     // start the server

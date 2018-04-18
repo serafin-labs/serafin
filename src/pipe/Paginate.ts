@@ -2,6 +2,7 @@ import * as _ from 'lodash'
 import { SchemaBuilder } from '@serafin/schema-builder';
 import { PipeAbstract, PipelineRelation } from '../serafin/pipeline'
 import { PipeInterface } from '../serafin/pipeline/PipeInterface';
+import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
 
 // @description("Provides pagination over the read results")
 export class Paginate<RO, RM> extends PipeAbstract implements PipeInterface {
@@ -10,34 +11,30 @@ export class Paginate<RO, RM> extends PipeAbstract implements PipeInterface {
         .addInteger("count", { description: "Number of resources to return" }).toOptionals()
     schemaBuilderReadMeta = (s: SchemaBuilder<RM>) => s.addNumber("count", { description: "Number of resources available" })
 
-    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<{ meta: { count: number } } & { data: {}[] }> {
+    public async read(next, query?: {}, options?: { offset?: number, page?: number, count?: number }): Promise<ResultsInterface<{}, { total: number }>> {
         let resources = await next(query, options);
         let offset = 0;
 
         if (options) {
-            if (options.offset) {
-                offset = options.offset;
-            } else if ("page" in options && options.count) {
-                offset = options.count * options.page;
-            }
+            //     if (options.offset) {
+            //         offset = options.offset;
+            //     } else if ("page" in options && options.count) {
+            //         offset = options.count * options.page;
+            //     }
 
             if (options.count) {
-                if (offset + options.count < resources.data.length) {
-                    this.pipeline.addRelation('next', () => this.pipeline, query, { ...options, ...{ offset: offset + options.count } });
-                }
+                //         if (offset + options.count < resources.data.length) {
+                //             resources = { ...resources, links: { next: { rel: 'self', query: query, options: { count: options.count, offset: offset + options.count } } } }
+                //         }
+                //     }
 
-                if (offset - options.count >= 0) {
-                    this.pipeline.addRelation('prev', () => this.pipeline, query, { ...options, ...{ offset: Math.max(offset - options.count, 0) } });
-                }
-
+                //     if (offset - options.count >= 0) {
+                //         resources = { ...resources, links: { prev: { rel: 'self', query: query, options: { count: options.count, offset: Math.max(offset - options.count, 0) } } } }
                 resources.data = resources.data.slice(offset, offset + options.count);
             }
         }
 
-        return {
-            ...resources, meta: { count: resources.data.length }
-        };
+        resources.meta.total = resources.data.length
+        return resources;
     }
-
-    relations: { 'next': PipelineRelation, 'previous': PipelineRelation }
 }

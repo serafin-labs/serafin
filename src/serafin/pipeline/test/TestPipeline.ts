@@ -1,27 +1,28 @@
 import { PipelineAbstract, PipeAbstract, PipelineRelation } from ".."
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { IdentityInterface } from "../IdentityInterface";
+import { ResultsInterface } from "../ResultsInterface";
 
 // @description("test pipeline description")
 export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<T> {
-    protected _create(resources: any[], options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'create' }], meta: {} });
+    protected async _create(resources: any[], options?: any): Promise<ResultsInterface<any>> {
+        return { data: [{ id: '1', method: 'create' }], meta: {} };
     }
 
-    protected _read(query?: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'read' }], meta: {} });
+    protected async _read(query?: any, options?: any): Promise<ResultsInterface<any>> {
+        return { data: [{ id: '1', method: 'read' }], meta: {} };
     }
 
-    protected _replace(id: string, values: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'replace' }], meta: {} });
+    protected async _replace(id: string, values: any, options?: any): Promise<ResultsInterface<any>> {
+        return { data: [{ id: '1', method: 'replace' }], meta: {} };
     }
 
-    protected _patch(query: any, values: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'patch' }], meta: {} });
+    protected async _patch(query: any, values: any, options?: any): Promise<ResultsInterface<any>> {
+        return { data: [{ id: '1', method: 'patch' }], meta: {} };
     }
 
-    protected _delete(query: any, options?: any): Promise<any> {
-        return Promise.resolve({ data: [{ id: '1', method: 'delete' }], meta: {} });
+    protected async _delete(query: any, options?: any): Promise<ResultsInterface<any>> {
+        return { data: [{ id: '1', method: 'delete' }], meta: {} };
     }
 }
 

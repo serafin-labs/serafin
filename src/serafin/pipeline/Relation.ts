@@ -6,6 +6,7 @@ import { Merge } from '@serafin/schema-builder';
 import { Omit } from "@serafin/schema-builder"
 import { IdentityInterface } from './IdentityInterface';
 import { SchemaBuildersInterface } from './SchemaBuildersInterface';
+import { ResultsInterface } from './ResultsInterface';
 
 /**
  * Represents a Relation for the given pipeline

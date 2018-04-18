@@ -1,11 +1,12 @@
 import * as VError from 'verror';
-import { conflictError } from "../../serafin/error/Error"
+import { conflictError, serafinError, notFoundError } from "../../serafin/error/Error"
 import { PipelineAbstract, IdentityInterface } from '../../serafin/pipeline';
 
 import { jsonMergePatch } from '../../serafin/util/jsonMergePatch';
 import * as _ from 'lodash'
 import * as uuid from "node-uuid"
 import { Omit, DeepPartial } from '@serafin/schema-builder';
+import { ResultsInterface } from '../../serafin/pipeline/ResultsInterface';
 
 // @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbstract<T> {
@@ -21,7 +22,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return resource;
     }
 
-    private async readInMemory(query: any): Promise<{ data: T[], meta: {} }> {
+    private async readInMemory(query: any): Promise<ResultsInterface<T>> {
         if (!query) {
             query = {};
         }
@@ -52,10 +53,10 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             return true;
         });
 
-        return { data: _.cloneDeep(resources), meta: {} };
+        return { data: (_.cloneDeep(resources)), meta: {} };
     }
 
-    protected async _create(resources, options) {
+    protected async _create(resources, options): Promise<ResultsInterface<T>> {
         let createdResources: T[] = [];
         resources.forEach(resource => {
             let identifiedResource = this.toIdentifiedResource(resource);
@@ -71,11 +72,11 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: createdResources, meta: {} };
     }
 
-    protected _read(query, options) {
+    protected _read(query, options): Promise<ResultsInterface<T>> {
         return this.readInMemory(query)
     }
 
-    protected async _replace(id, values, options) {
+    protected async _replace(id, values, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory({
             id: id
         });
@@ -87,12 +88,13 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
             // in case it wasn't assigned yet
             values["id"] = values["id"] || id;
             this.resources[id] = _.cloneDeep(values) as any;
-            return { data: values as any, meta: {} };
+            return { data: values, meta: {} };
         }
-        return { data: undefined, meta: {} };
+
+        throw notFoundError(id);
     }
 
-    protected async _patch(query, values, options) {
+    protected async _patch(query, values, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory(query);
         let updatedResources: T[] = [];
 
@@ -109,7 +111,7 @@ export class PipeSourceInMemory<T extends IdentityInterface> extends PipelineAbs
         return { data: updatedResources, meta: {} };
     }
 
-    protected async _delete(query, options) {
+    protected async _delete(query, options): Promise<ResultsInterface<T>> {
         var resources = await this.readInMemory(query);
         let deletedResources: T[] = [];
 
