@@ -3,7 +3,7 @@ import { SchemaBuilder } from "@serafin/schema-builder";
 import { PipeInterface } from "../PipeInterface";
 
 export class TestPipe<M, RQ, RO, RM, CV, CO, CM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM> extends PipeAbstract implements PipeInterface {
-    schemaBuilderModel = (s: SchemaBuilder<M>) => s.addOptionalString('testModelString', { description: "testModelString description" });
+    schemaBuilderModel = (s: SchemaBuilder<M>) => s.addString('testModelString', { description: "testModelString description" }, false);
 
     schemaBuilderReadQuery = (s: SchemaBuilder<RQ>) => s.addString('testReadQueryString', { description: "testReadQueryString query description" });
     schemaBuilderReadOptions = (s: SchemaBuilder<RO>) => s.addString('testReadOptionsString', { description: "testReadOptionString options description" });
