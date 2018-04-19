@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "sourceMap": true,
+        "declaration": true,
+        "declarationDir": ".",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "target": "esnext",
+        "experimentalDecorators": true
+    }
+}
