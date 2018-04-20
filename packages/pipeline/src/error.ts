@@ -11,7 +11,7 @@ export function error(name: string, message: string, info?: any, cause?: any) {
     if (info) {
         opt.info = info;
     };
-    return new VError(opt, message);
+    return new VError(opt, "%s", message);
 }
 
 export const NotFoundErrorName = "SerafinNotFoundError";
