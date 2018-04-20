@@ -1,8 +1,6 @@
 import * as _ from 'lodash'
-import { PipeAbstract } from '../serafin/pipeline'
-import { notImplementedError } from "../serafin/error/Error"
+import { PipeAbstract, PipeInterface, notImplementedError } from "@serafin/pipeline"
 import { SchemaBuilder } from '@serafin/schema-builder';
-import { PipeInterface } from '../serafin/pipeline/PipeInterface';
 
 // @description("Force given actions to be unavailable")
 export class NotImplemented extends PipeAbstract implements PipeInterface {

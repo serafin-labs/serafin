@@ -1,10 +1,11 @@
 import * as _ from 'lodash';
 import * as jsonpointer from 'jsonpointer';
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
+import { PipelineAbstract } from "@serafin/pipeline"
 
 import { Api } from "../../Api"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils";
-import { PipelineAbstract, throughJsonSchema } from '../../../../';
+import { throughJsonSchema } from '../../../../';
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {

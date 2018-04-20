@@ -1,11 +1,11 @@
 import * as _ from 'lodash';
-import * as express from 'express';
 import { Api } from '../../../../index';
-import { QueryTemplate } from '../../../pipeline/QueryTemplate';
-import { PipelineRelation } from '../../../pipeline/Relation';
+import { QueryTemplate, Relation } from '@serafin/pipeline';
+import { SchemaBuilder } from '@serafin/schema-builder';
 
 export class JsonHal {
-    constructor(private selfUrl, private api: Api, private relations: { [k: string]: PipelineRelation }) {
+    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation }) {
+
     }
 
     links(resource: object = null) {
@@ -30,7 +30,7 @@ export class JsonHal {
         return links;
     }
 
-    private createNonTemplatedLink(rel: PipelineRelation, resource: object) {
+    private createNonTemplatedLink(rel: Relation, resource: object) {
         let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             console.log(rel.pipeline)
@@ -61,7 +61,7 @@ export class JsonHal {
         return null;
     }
 
-    private createTemplatedLink(rel: PipelineRelation): object {
+    private createTemplatedLink(rel: Relation): object {
         let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             let idUrl = "";

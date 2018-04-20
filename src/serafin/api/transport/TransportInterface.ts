@@ -1,8 +1,8 @@
-import { PipelineAbstract } from "../../pipeline/PipelineAbstract"
+import { PipelineAbstract } from "@serafin/pipeline"
 import { Api } from "../Api"
 
 /**
- * Transport represent a way to expose pipelines to an external interface. 
+ * Transport represent a way to expose pipelines to an external interface.
  * It can be REST HTTP services, web sockets, graphql queries, etc.
  */
 export interface TransportInterface {

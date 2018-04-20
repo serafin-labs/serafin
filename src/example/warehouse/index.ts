@@ -1,11 +1,13 @@
 import { fail } from 'assert';
 import * as _ from 'lodash';
 import * as express from 'express';
+import { PipelineSourceInMemory } from '@serafin/pipeline';
+
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { categorySchemaBuilder } from './model/Category';
 import { itemSchemaBuilder } from './model/Item';
 import * as bodyParser from 'body-parser';
-import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
+import { Paginate, UpdateTime } from '../../pipe';
 import { setTimeout } from 'timers';
 
 async function main() {
@@ -46,10 +48,10 @@ async function main() {
             schema: true
         }));
 
-    let categoryPipelineBase = (new PipeSourceInMemory(categorySchemaBuilder))
+    let categoryPipelineBase = (new PipelineSourceInMemory(categorySchemaBuilder))
         .pipe(new Paginate());
 
-    let itemPipeline = (new PipeSourceInMemory(itemSchemaBuilder))
+    let itemPipeline = (new PipelineSourceInMemory(itemSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
 

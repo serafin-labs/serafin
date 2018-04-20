@@ -3,11 +3,11 @@ import * as _ from 'lodash';
 import * as VError from 'verror';
 import * as ExpressGraphQL from 'express-graphql'
 import * as graphql from "graphql"
+import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
+
 import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
 import { TransportInterface } from "../TransportInterface"
-import { PipelineAbstract } from "../../../pipeline"
 import { Api } from "../../Api"
-import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
 import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
 
 export interface GraphQLOptions {
@@ -57,8 +57,8 @@ export class GraphQLTransport implements TransportInterface {
 
     /**
      * Attach this transport to the Api
-     * 
-     * @param api 
+     *
+     * @param api
      */
     init(api: Api) {
         this.api = api;
@@ -80,10 +80,10 @@ export class GraphQLTransport implements TransportInterface {
 
     /**
      * Use the given pipeline.
-     * 
-     * @param pipeline 
-     * @param name 
-     * @param pluralName 
+     *
+     * @param pipeline
+     * @param name
+     * @param pluralName
      */
     use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string) {
         let relations = pipeline.relations;
@@ -162,7 +162,7 @@ export class GraphQLTransport implements TransportInterface {
                             }
                         }
                     } else {
-                        // obtain query and options schemas for this relation 
+                        // obtain query and options schemas for this relation
                         let queryFilter = (param: string) => !(param in relation.query)
                         let optionsFilter = (param: string) => this.api.isNotAnInternalOption(param) && (!relation.options || !(param in relation.options))
                         let relationGraphQlSchemas = jsonSchemaToGraphQL(pipeline.schemaBuilders.readOptions.schema, `${relationSchemaName}ReadOptions`, optionsFilter);

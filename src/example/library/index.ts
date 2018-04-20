@@ -1,11 +1,13 @@
 import * as VError from 'VError';
 import * as express from 'express';
+import * as bodyParser from 'body-parser';
+import { PipelineSourceInMemory } from '@serafin/pipeline';
+
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { bookSchemaBuilder } from './model/Book';
 import { authorSchemaBuilder } from './model/Author';
 import { categorySchemaBuilder } from './model/Category';
-import * as bodyParser from 'body-parser';
-import { PipeSourceInMemory, Paginate, UpdateTime } from '../../pipe';
+import { Paginate, UpdateTime } from '../../pipe';
 
 async function main() {
     let app = express();
@@ -44,14 +46,14 @@ async function main() {
 
     let bookPipelineRef;
 
-    let authorPipeline = (new PipeSourceInMemory(authorSchemaBuilder))
+    let authorPipeline = (new PipelineSourceInMemory(authorSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
         .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new PipeSourceInMemory(categorySchemaBuilder);
+    let categoryPipeline = new PipelineSourceInMemory(categorySchemaBuilder);
 
-    let bookPipeline = (new PipeSourceInMemory(bookSchemaBuilder))
+    let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('author', () => authorPipeline, { id: ':authorId' })
         .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
@@ -87,40 +89,40 @@ async function main() {
     //     { title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", authorId: '2', categoryIds: ['5', '4', '2'] },
     // ]);
 
-
-    let [cAdventure, cIntrospection, cRelaxation, cReligion, cMustHave, cComedy] = (await categoryPipeline.create([
-        { name: 'adventure' },
-        { name: 'introspection' },
-        { name: 'relaxation' },
-        { name: 'religion' },
-        { name: 'must-have' },
-        { name: 'comedy' }
-    ])).data;
-
-    await authorPipeline.do.create([{ firstName: 'Jules', lastName: 'Vernes' }]).first.createRelated('book', [
-        { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", categoryIds: [cAdventure.id] },
-        { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", categoryIds: [cAdventure.id] },
-        { title: 'Clovis Dardentor', summary: "A comedic novel", categoryIds: [cComedy.id] }
-    ]);
-
-    await authorPipeline.do.create([{ firstName: 'Nico & Seb' }, { id: '3', firstName: 'Nicolas Degardin' }]).first
-        .createRelated('book', [{ title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }]).first
-        .readRelated('author').first
-        .createRelated('book', [{ title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }]).first
-        .readRelated('author').first
-        .createRelated('book', [{ title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }])
-        ;
-
-    await bookPipeline.create(
-        [{ title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categoryIds: [cIntrospection.id, cMustHave.id] }]);
-
-    console.log(await authorPipeline.read({ firstName: 'Jules' }));
-    console.log(await bookPipeline.read({}, { count: 5 }));
-
-    api.use(bookPipeline, "book");
-    api.use(authorPipeline, "author");
-    api.use(categoryPipeline, "category", "categories");
-
+    /*
+        let [cAdventure, cIntrospection, cRelaxation, cReligion, cMustHave, cComedy] = (await categoryPipeline.create([
+            { name: 'adventure' },
+            { name: 'introspection' },
+            { name: 'relaxation' },
+            { name: 'religion' },
+            { name: 'must-have' },
+            { name: 'comedy' }
+        ])).data;
+    
+        await authorPipeline.do.create([{ firstName: 'Jules', lastName: 'Vernes' }]).first.createRelated('book', [
+            { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", categoryIds: [cAdventure.id] },
+            { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", categoryIds: [cAdventure.id] },
+            { title: 'Clovis Dardentor', summary: "A comedic novel", categoryIds: [cComedy.id] }
+        ]);
+    
+        await authorPipeline.do.create([{ firstName: 'Nico & Seb' }, { id: '3', firstName: 'Nicolas Degardin' }]).first
+            .createRelated('book', [{ title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }]).first
+            .readRelated('author').first
+            .createRelated('book', [{ title: 'Serafin: the Framework from the Abyss', summary: "The second part from the legendary trilogy of the framework that revolutionated the universe", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }]).first
+            .readRelated('author').first
+            .createRelated('book', [{ title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }])
+            ;
+    
+        await bookPipeline.create(
+            [{ title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categoryIds: [cIntrospection.id, cMustHave.id] }]);
+    
+        console.log(await authorPipeline.read({ firstName: 'Jules' }));
+        console.log(await bookPipeline.read({}, { count: 5 }));
+    
+        api.use(bookPipeline, "book");
+        api.use(authorPipeline, "author");
+        api.use(categoryPipeline, "category", "categories");
+    */
     // start the server
     let server = app.listen(process.env.PORT || 80, (error: any) => {
         if (error) {

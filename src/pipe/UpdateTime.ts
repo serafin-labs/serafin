@@ -1,7 +1,5 @@
-import { PipeAbstract, IdentityInterface } from '../serafin/pipeline'
 import { SchemaBuilder } from '@serafin/schema-builder';
-import { PipeInterface } from '../serafin/pipeline/PipeInterface';
-import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
+import { PipeAbstract, PipeInterface, IdentityInterface, ResultsInterface } from "@serafin/pipeline"
 
 // @description("Adds creation and update timestamps to the resources")
 export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstract implements PipeInterface {
@@ -11,8 +9,8 @@ export class UpdateTime<M extends IdentityInterface, RQ, RM> extends PipeAbstrac
         .addNumber("updatedAt", { description: "Last Modification date" });
 
     schemaBuilderReadQuery = (s: SchemaBuilder<RQ>) => s
-        .addOptionalNumber("createdAt", { description: "Creation date" })
-        .addOptionalNumber("updatedAt", { description: "Last Modification date" })
+        .addNumber("createdAt", { description: "Creation date" }, false)
+        .addNumber("updatedAt", { description: "Last Modification date" }, false)
         .transformPropertiesToArray(["createdAt", "updatedAt"]);
 
     schemaBuilderReadMeta = (s: SchemaBuilder<RM>) => s

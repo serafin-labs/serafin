@@ -1,5 +1,4 @@
-import { PipeAbstract } from '../../serafin/pipeline';
-import { PipeInterface } from '../../serafin/pipeline/PipeInterface';
+import { PipeAbstract, PipeInterface } from '@serafin/pipeline';
 import { SchemaBuilder } from '@serafin/schema-builder';
 
 export class DefaultPetName extends PipeAbstract implements PipeInterface {

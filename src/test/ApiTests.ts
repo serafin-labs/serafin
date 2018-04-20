@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import * as chai from "chai";
 import * as express from "express"
-import { Api, RestTransport, PipelineAbstract } from "../";
 import { ParameterObject } from "@serafin/open-api";
+import { PipelineAbstract } from "@serafin/pipeline";
+import { Api, RestTransport } from "../";
 
 chai.use(require("chai-http"))
 chai.use(require("chai-as-promised"))

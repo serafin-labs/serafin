@@ -2,9 +2,8 @@ import * as express from 'express';
 import * as _ from 'lodash';
 import * as VError from 'verror';
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
-import { PipelineAbstract } from "../pipeline"
+import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
 import { throughJsonSchema } from "../util/throughJsonSchema"
-import { validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../error/Error"
 import { TransportInterface } from "./transport/TransportInterface";
 
 /**
@@ -76,8 +75,8 @@ export class Api {
 
     /**
      * Add the given transport to this api.
-     * 
-     * @param transport 
+     *
+     * @param transport
      */
     configure(transport: TransportInterface): this {
         transport.init(this);
@@ -87,7 +86,7 @@ export class Api {
 
     /**
      * Expose a pipeline on this API. The pipeline is passed to the underlying transports.
-     * 
+     *
      * @param pipeline The pipeline to expose on the API
      * @param name The singular name of the underlying resource.
      * @param pluralName The plural name the underlying resource. If not provided, it defaults to `${name}s`
@@ -102,9 +101,9 @@ export class Api {
 
     /**
      * Create an error object that contains info about the request context
-     * 
-     * @param cause 
-     * @param req 
+     *
+     * @param cause
+     * @param req
      */
     static apiError(cause: any, req: express.Request) {
         return new VError({

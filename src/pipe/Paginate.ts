@@ -1,8 +1,6 @@
 import * as _ from 'lodash'
 import { SchemaBuilder } from '@serafin/schema-builder';
-import { PipeAbstract, PipelineRelation } from '../serafin/pipeline'
-import { PipeInterface } from '../serafin/pipeline/PipeInterface';
-import { ResultsInterface } from '../serafin/pipeline/ResultsInterface';
+import { PipeAbstract, PipeInterface, ResultsInterface } from "@serafin/pipeline"
 
 // @description("Provides pagination over the read results")
 export class Paginate<RO, RM> extends PipeAbstract implements PipeInterface {

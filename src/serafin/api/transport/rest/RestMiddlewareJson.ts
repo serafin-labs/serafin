@@ -1,9 +1,9 @@
 import * as express from 'express';
 import * as _ from 'lodash';
 import { OpenApi } from './OpenApi';
-import { PipelineAbstract, PipelineRelation, Api } from '../../../..';
+import { PipelineAbstract, Relation, notFoundError } from '@serafin/pipeline'
+import { Api } from '../../../..';
 import { RestTransport } from './rest'
-import { notFoundError } from '../../../error/Error';
 import { JsonHal } from './JsonHal';
 
 export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstract<any, any>,

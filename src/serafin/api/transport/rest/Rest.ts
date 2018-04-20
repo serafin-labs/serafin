@@ -1,15 +1,14 @@
 import * as express from 'express';
 import * as _ from 'lodash';
-import * as VError from 'verror';
+import { VError } from 'verror';
+import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
 import { JSONSchema, metaSchema } from "@serafin/open-api"
+import { SchemaBuilder } from '@serafin/schema-builder';
+
 import { TransportInterface } from "../TransportInterface"
-import { PipelineAbstract } from "../../../pipeline/PipelineAbstract"
 import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
-import { serafinError, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "../../../error/Error"
-import { SchemaBuilder } from '@serafin/schema-builder';
 import { restMiddlewareJson, restRootMiddlewareJson } from './RestMiddlewareJson';
-import { restMiddlewareJsonApi, restRootMiddlewareJsonApi } from './RestMiddlewareJsonApi';
 
 export interface RestOptions {
     /**
@@ -27,7 +26,6 @@ export class RestTransport implements TransportInterface {
     init(api: Api) {
         this.api = api;
         this.api.application.use(this.api.basePath, restRootMiddlewareJson(this.api));
-        this.api.application.use(this.api.basePath, restRootMiddlewareJsonApi(this.api));
     }
 
     /**
@@ -44,19 +42,20 @@ export class RestTransport implements TransportInterface {
 
         let openApi = new OpenApi(this.api, pipeline, resourcesPath, name, pluralName);
 
-        if (canRead) {
+        let availableMethods = RestTransport.availableMethods(pipeline);
+
+        if (availableMethods.canRead) {
             this.testOptionsAndQueryConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.readOptions.schema);
         }
-        if (canPatch) {
+        if (availableMethods.canPatch) {
             this.testOptionsAndQueryConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.patchOptions.schema);
         }
-        if (canDelete) {
+        if (availableMethods.canDelete) {
             this.testOptionsAndQueryConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.deleteOptions.schema);
         }
 
         // attach the routers to the express app
         this.api.application.use(endpointPath, restMiddlewareJson(this, pipeline, openApi, endpointPath, resourcesPath, name));
-        this.api.application.use(endpointPath, restMiddlewareJsonApi(this, pipeline, openApi, endpointPath, resourcesPath, name));
 
     }
 
@@ -104,7 +103,7 @@ export class RestTransport implements TransportInterface {
         if (optionsSchema && querySchema) {
             let intersection = _.intersection(Object.keys(optionsSchema.properties || {}), Object.keys(querySchema.properties || {}));
             if (intersection.length > 0) {
-                throw serafinError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
+                throw new VError('SerafinRestParamsNameConflict', `Name conflict between options and query (${intersection.toString()})`,
                     { conflict: intersection, optionsSchema: optionsSchema, querySchema: querySchema });
             }
         }
