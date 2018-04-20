@@ -44,7 +44,29 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>, R>;
     }
 
-    protected defaultSchema(modelSchemaBuilder: SchemaBuilder<M>) {
+    protected defaultSchema(modelSchemaBuilder: SchemaBuilder<M>): {
+        model: SchemaBuilder<M>;
+        createValues: SchemaBuilder<{ [P in keyof (Partial<Pick<M, "id">> & Pick<M, Exclude<keyof M, "id">>)]: (Partial<Pick<M, "id">> & Pick<M, Exclude<keyof M, "id">>)[P]; }>;
+        createOptions: SchemaBuilder<{}>;
+        createMeta: SchemaBuilder<{}>;
+        readQuery: SchemaBuilder<{ [P in keyof M | Exclude<keyof M, keyof M>]?: { [P in keyof M | Exclude<keyof M, keyof M>]: (Pick<M, Exclude<keyof M, keyof M>> & { [P in keyof M]: M[P] extends any[] ? M[P] : M[P] | M[P][]; })[P]; }[P]; }>;
+        readOptions: SchemaBuilder<{}>;
+        readMeta: SchemaBuilder<{}>;
+        replaceValues: SchemaBuilder<{ [P in keyof Pick<M, Exclude<keyof M, "id">>]: Pick<M, Exclude<keyof M, "id">>[P]; }>;
+        replaceOptions: SchemaBuilder<{}>;
+        replaceMeta: SchemaBuilder<{}>;
+        patchQuery: SchemaBuilder<{
+            id: M["id"] extends any[] ? M["id"] : M["id"] | M["id"][];
+        }>;
+        patchValues: SchemaBuilder<DeepPartialObject<{ [P in Exclude<keyof M, "id">]: Pick<M, Exclude<keyof M, "id">>[P]; }>>;
+        patchOptions: SchemaBuilder<{}>;
+        patchMeta: SchemaBuilder<{}>;
+        deleteQuery: SchemaBuilder<{
+            id: M["id"] extends any[] ? M["id"] : M["id"] | M["id"][];
+        }>;
+        deleteOptions: SchemaBuilder<{}>;
+        deleteMeta: SchemaBuilder<{}>;
+    } {
         return {
             model: modelSchemaBuilder,
             createValues: modelSchemaBuilder.clone().setOptionalProperties(["id"]),
