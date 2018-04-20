@@ -1,19 +1,19 @@
 import * as _ from "lodash";
 import * as util from "util";
 import { SchemaBuilder, Overwrite, DeepPartialArray, DeepPartial, DeepPartialObject } from "@serafin/schema-builder";
-import { notImplementedError, serafinError } from "./Error";
+import { notImplementedError, error } from "./error";
 import { final } from "./FinalDecorator";
 import { IdentityInterface } from "./IdentityInterface";
 import { PIPELINE, PipeAbstract } from "./PipeAbstract";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { PipeInterface } from "./PipeInterface";
-import { PipelineRelation } from "./Relation";
+import { Relation } from "./Relation";
 import { ResultsInterface } from "./ResultsInterface";
 
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
 export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>,
-    R extends { [key: string]: PipelineRelation } = { 'self': PipelineRelation<M, 'self', M> }> {
+    R extends { [key: string]: Relation } = { 'self': Relation<M, 'self', M> }> {
     public relations: R = {} as any;
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
     public schemaBuilders: S;
@@ -110,7 +110,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
                     try {
                         return await (pipe[method].call(pipe, next, ...args));
                     } catch (err) {
-                        throw serafinError('pipelineError', `Error in ${ctorName}::${method} : ${err}`, { pipeline: ctorName, method: method, args: args })
+                        throw error('pipelineError', `Error in ${ctorName}::${method} : ${err}`, { pipeline: ctorName, method: method, args: args })
                     }
                 };
             }
@@ -130,8 +130,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>, any>,
         query: { [key in QueryKeys]: any }, options?: { [key in OptionsKeys]: any }) {
 
-        this.relations[name as string] = new PipelineRelation(this as any, name, pipeline, query, options)
-        return this as any as PipelineAbstract<M, S, R & { [key in NameKey]: PipelineRelation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys> }>;
+        this.relations[name as string] = new Relation(this as any, name, pipeline, query, options)
+        return this as any as PipelineAbstract<M, S, R & { [key in NameKey]: Relation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys> }>;
     }
 
     /**
@@ -249,7 +249,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         try {
             validate();
         } catch (error) {
-            throw serafinError('SerafinValidationError', `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
+            throw error('SerafinValidationError', `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
                 { constructor: Object.getPrototypeOf(this).constructor.name, method: method }, error);
         }
     }

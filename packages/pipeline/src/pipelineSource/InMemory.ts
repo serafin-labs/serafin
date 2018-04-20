@@ -1,7 +1,8 @@
 import * as VError from 'verror';
 import { Omit, DeepPartial } from '@serafin/schema-builder';
-import { conflictError, serafinError, notFoundError } from "../Error"
-import { PipelineAbstract, IdentityInterface } from '../index';
+import { conflictError, error, notFoundError } from "../error";
+import { PipelineAbstract } from "../PipelineAbstract";
+import { IdentityInterface } from '../IdentityInterface';
 
 import { jsonMergePatch } from './jsonMergePatch';
 import * as _ from 'lodash'

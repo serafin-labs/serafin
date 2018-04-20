@@ -44,7 +44,7 @@ var configuration = {
         path: path.resolve(__dirname, 'lib')
     },
     plugins: [
-        new CleanWebpackPlugin(["lib/*.js", "lib/*.js.map", "lib/coverage/*"]),
+        new CleanWebpackPlugin(["lib/*"]),
         ...(isProduction ? [] : [new WebpackShellPlugin({ onBuildExit: ['npm test'] })])
     ]
 };

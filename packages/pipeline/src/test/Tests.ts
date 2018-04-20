@@ -8,7 +8,7 @@ import { PipeAbstract } from "../PipeAbstract";
 import { TestPipeline, schemaTestPipeline } from "./TestPipeline";
 import { PipelineAbstract } from "../PipelineAbstract";
 import { IdentityInterface } from "../IdentityInterface";
-import { PipelineRelation } from "../Relation";
+import { Relation } from "../Relation";
 import { QueryTemplate } from "../QueryTemplate";
 
 chai.use(require("chai-as-promised"))
@@ -267,7 +267,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
             let p1 = testPipeline().addRelation("test", () => p2, {})
             expect(p1.relations).to.exist
-            expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
+            expect(p1.relations.test).to.be.an.instanceof(Relation)
             expect(Object.keys(p1.relations).length).to.eql(2)
         });
 
@@ -275,13 +275,13 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
             let p1 = testPipeline().addRelation("test", () => p2, {}).pipe(new TestPipe);
             expect(p1.relations).to.exist
-            expect(p1.relations.test).to.be.an.instanceof(PipelineRelation)
+            expect(p1.relations.test).to.be.an.instanceof(Relation)
         });
 
         it('should support templated relations', function () {
             let p2 = testPipeline();
             let p1 = testPipeline().addRelation("p2", () => p2, { "id": ":id" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
         });
 
@@ -322,7 +322,7 @@ describe('Pipelines', function () {
         it('should fail for templated relations referring to a non existing property', function () {
             let p2 = testPipeline();
             let p1 = testPipeline().addRelation("p2", () => p2, { "id": ":blabliblou" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.be.rejected;
         });
 
@@ -330,7 +330,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { testReadQueryString: ":method" }, { testReadOptionsString: "test" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "read", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
         });
 
@@ -338,7 +338,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1", testReadQueryString: "\\:method" }, { testReadOptionsString: "test" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: ":method", testOptionsString: "test" }], meta: { testReadMetaString: "testReadMetaValue" } });
         });
 
@@ -346,7 +346,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1" }, { testReadOptionsString: "testOption" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" }, { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
                 .to.eventually.deep.equal({ data: [{ id: '1', method: 'read', testQueryString: "testQuery", testOptionsString: "testOption2" }], meta: { testReadMetaString: "testReadMetaValue" } });
         });
@@ -361,7 +361,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1" }, { testReadOptionsString: "testOption" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.assignToResource({ id: "1", method: "read" }, { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
                 .to.eventually.deep.equal(
                     {
@@ -375,7 +375,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { id: "1" }, { testReadOptionsString: "testOption" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.assignToResources([{ id: "1", method: "read" }, { id: "2", method: "read" }], { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
                 .to.eventually.deep.equal([
                     {
@@ -394,7 +394,7 @@ describe('Pipelines', function () {
             let p2 = testPipeline()
                 .pipe(new TestPipe);
             let p1 = testPipeline().addRelation("p2", () => p2, { method: ":method" });
-            expect(p1.relations.p2).to.be.an.instanceof(PipelineRelation);
+            expect(p1.relations.p2).to.be.an.instanceof(Relation);
             return expect(p1.relations.p2.assignToResources([{ id: "1", method: "read" }, { id: "2", method: "read" }], { testReadQueryString: "testQuery" }, { testReadOptionsString: "testOption2" }))
                 .to.eventually.deep.equal([
                     {

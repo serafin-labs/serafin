@@ -1,6 +1,6 @@
 {
     "name": "@serafin/pipeline",
-    "version": "1.0.1",
+    "version": "0.1.0",
     "description": "CRUD data access library with a functional approach",
     "contributors": [
         {
@@ -26,16 +26,16 @@
     },
     "dependencies": {
         "@serafin/schema-builder": "^0.4.1",
-        "@types/chai-as-promised": "^7.1.0",
-        "@types/node-uuid": "0.0.28",
+        "@types/verror": "^1.10.3",
         "chai-as-promised": "^7.1.1",
         "node-uuid": "^1.4.8"
     },
     "devDependencies": {
         "@types/chai": "^4.0.10",
+        "@types/chai-as-promised": "^7.1.0",
         "@types/mocha": "^2.2.45",
         "@types/node": "^6.0.52",
-        "@types/verror": "^1.10.3",
+        "@types/node-uuid": "0.0.28",
         "chai": "^4.1.2",
         "clean-webpack-plugin": "^0.1.19",
         "istanbul": "^0.4.5",

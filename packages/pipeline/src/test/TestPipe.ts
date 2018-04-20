@@ -1,4 +1,4 @@
-import { PipelineAbstract, PipeAbstract, PipelineRelation } from ".."
+import { PipelineAbstract, PipeAbstract, Relation } from ".."
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { PipeInterface } from "../PipeInterface";
 

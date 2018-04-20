@@ -1,14 +1,11 @@
-// schema
 export * from "./Relation"
 export * from './IdentityInterface'
-
-// pipeline
+export * from './ResultsInterface'
 export * from "./PipeAbstract"
 export * from "./PipelineAbstract"
 export * from "./PipeInterface"
 export * from "./QueryTemplate"
 export * from "./SchemaBuildersInterface"
-export * from "./Error"
-
-// decorator
+export * from "./error"
 export * from "./FinalDecorator"
+export * from "./pipelineSource/InMemory"

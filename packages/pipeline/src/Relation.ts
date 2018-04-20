@@ -1,6 +1,6 @@
 import * as _ from 'lodash'
 import { PipelineAbstract } from "./PipelineAbstract"
-import { validationError } from "./Error"
+import { validationError } from "./error"
 import { QueryTemplate } from './QueryTemplate';
 import { Merge } from '@serafin/schema-builder';
 import { Omit } from "@serafin/schema-builder"
@@ -11,7 +11,7 @@ import { ResultsInterface } from './ResultsInterface';
 /**
  * Represents a Relation for the given pipeline
  */
-export class PipelineRelation<M extends IdentityInterface = any, NameKey extends keyof any = any, R extends IdentityInterface = any, ReadQuery = any, ReadOptions = any, ReadMeta = any, QueryKeys extends keyof ReadQuery = null, OptionsKeys extends keyof ReadOptions = null> {
+export class Relation<M extends IdentityInterface = any, NameKey extends keyof any = any, R extends IdentityInterface = any, ReadQuery = any, ReadOptions = any, ReadMeta = any, QueryKeys extends keyof ReadQuery = null, OptionsKeys extends keyof ReadOptions = null> {
     type?: 'one' | 'many';
 
     constructor(private holdingPipeline: PipelineAbstract<M>,
