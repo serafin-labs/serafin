@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "sourceMap": true,
+        "declaration": true,
+        "declarationDir": ".",
+        "module": "esnext",
+        "moduleResolution": "node",
+        "target": "es6",
+        "experimentalDecorators": true
+    },
+    "files": [
+        "./src/test/tests.ts"
+    ],
+    "include": [
+        "./src/**/*.ts"
+    ]
+}

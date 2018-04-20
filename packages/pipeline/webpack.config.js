@@ -1,23 +1,25 @@
 const path = require('path');
 const webpack = require('webpack');
-const CleanWebpackPlugin = require('clean-webpack-plugin')
+const CleanWebpackPlugin = require('clean-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
 const WebpackShellPlugin = require('webpack-shell-plugin');
 
 // detect production/development mode
-console.log(`Building for ${process.env.NODE_ENV}`);
-const isProduction = process.env.NODE_ENV === "production"
+const options = {
+    isProduction: process.env.NODE_ENV === "production",
+    isTest: process.env.BUILD_TYPE === "test"
+};
 
+console.log(`Building for production:${options.isProduction} test:${options.isTest}`);
 
-var configuration = {
-    entry: {
-        index: "./src/index.ts",
-        test: "./src/test/Tests.ts"
+module.exports = {
+    entry: (options.isTest) ? { "test": "./src/test/tests.ts" } : { "index": "./src/index.ts" },
+    resolve: {
+        extensions: ['.ts', '.tsx', '.js', '.jsx']
     },
     target: "node",
     externals: [nodeExternals()],
     devtool: 'nosources-source-map',
-    watch: !isProduction,
     watchOptions: {
         poll: 1000,
         ignored: /node_modules|lib/
@@ -26,16 +28,18 @@ var configuration = {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: 'ts-loader',
-                exclude: /node_modules/
+                use: {
+                    loader: 'ts-loader',
+                    options: {
+                        configFile: (options.isTest) ? 'tsconfig.test.json' : 'tsconfig.json'
+                    }
+                },
+                exclude: /node_modules/,
             }
         ]
     },
     optimization: {
         minimize: false
-    },
-    resolve: {
-        extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"]
     },
     output: {
         filename: '[name].js',
@@ -44,9 +48,7 @@ var configuration = {
         path: path.resolve(__dirname, 'lib')
     },
     plugins: [
-        new CleanWebpackPlugin(["lib/*"]),
-        ...(isProduction ? [] : [new WebpackShellPlugin({ onBuildExit: ['npm test'] })])
+        ...(options.isTest && !options.isProduction ? [new WebpackShellPlugin({ onBuildExit: ['npm test'] })] : []),
+        ...(options.isProduction ? [new CleanWebpackPlugin(["lib"])] : []),
     ]
 };
-
-module.exports = configuration

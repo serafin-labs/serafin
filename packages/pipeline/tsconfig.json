@@ -10,5 +10,11 @@
             "es2015"
         ],
         "experimentalDecorators": true
-    }
+    },
+    "files": [
+        "./src/index.ts"
+    ],
+    "include": [
+        "./src/**/*.ts"
+    ]
 }
