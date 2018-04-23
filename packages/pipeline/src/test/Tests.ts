@@ -107,48 +107,6 @@ describe('Pipelines', function () {
                 p.schemaBuilders.deleteMeta instanceof SchemaBuilder && p.schemaBuilders.deleteMeta.schema.properties.additionalMeta.type == 'string'
             ).to.be.true;
         });
-
-        it(`should alter schema builders`, function () {
-            let p = testPipeline()
-                .alterSchemaBuilders((s) => ({
-                    model: s.model,
-                    createValues: s.createValues.addString("additionalValue"),
-                    createOptions: s.createOptions.addString("additionalOption"),
-                    createMeta: s.createMeta.addString("additionalMeta"),
-                    readQuery: s.readQuery.addString("additionalQuery"),
-                    readOptions: s.readOptions.addString("additionalOption"),
-                    readMeta: s.readMeta.addString("additionalMeta"),
-                    replaceValues: s.replaceValues.addString("additionalValue"),
-                    replaceOptions: s.replaceOptions.addString("additionalOption"),
-                    replaceMeta: s.replaceMeta.addString("additionalMeta"),
-                    patchQuery: s.patchQuery.addString("additionalQuery"),
-                    patchValues: s.patchValues.addString("additionalValue"),
-                    patchOptions: s.patchOptions.addString("additionalOption"),
-                    patchMeta: s.patchMeta.addString("additionalMeta"),
-                    deleteQuery: s.deleteQuery.addString("additionalQuery"),
-                    deleteOptions: s.deleteOptions.addString("additionalOption"),
-                    deleteMeta: s.deleteMeta.addString("additionalMeta")
-                }));
-
-            expect(p.schemaBuilders.model instanceof SchemaBuilder &&
-                p.schemaBuilders.createValues instanceof SchemaBuilder && p.schemaBuilders.createValues.schema.properties.additionalValue.type == 'string' &&
-                p.schemaBuilders.createOptions instanceof SchemaBuilder && p.schemaBuilders.createOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.createMeta instanceof SchemaBuilder && p.schemaBuilders.createMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.readQuery instanceof SchemaBuilder && p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.readMeta instanceof SchemaBuilder && p.schemaBuilders.readMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.replaceValues instanceof SchemaBuilder && p.schemaBuilders.replaceValues.schema.properties.additionalValue.type == 'string' &&
-                p.schemaBuilders.replaceOptions instanceof SchemaBuilder && p.schemaBuilders.replaceOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.replaceMeta instanceof SchemaBuilder && p.schemaBuilders.replaceMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.patchValues instanceof SchemaBuilder && p.schemaBuilders.patchValues.schema.properties.additionalValue.type == 'string' &&
-                p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.patchMeta instanceof SchemaBuilder && p.schemaBuilders.patchMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.deleteQuery instanceof SchemaBuilder && p.schemaBuilders.deleteQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.deleteOptions instanceof SchemaBuilder && p.schemaBuilders.deleteOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.deleteMeta instanceof SchemaBuilder && p.schemaBuilders.deleteMeta.schema.properties.additionalMeta.type == 'string'
-            ).to.be.true;
-        });
     });
 
     describe('Pipeline methods', function () {

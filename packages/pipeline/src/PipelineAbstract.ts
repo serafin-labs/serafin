@@ -39,11 +39,6 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         return this.schemaBuilders.model as any
     }
 
-    alterSchemaBuilders<newS extends SchemaBuildersInterface>(func: (sch: this["schemaBuilders"]) => newS) {
-        this.schemaBuilders = Object.assign(this.schemaBuilders, func(this.schemaBuilders)) as any;
-        return this as any as PipelineAbstract<newS["model"]["T"], Overwrite<this["schemaBuilders"], newS>, R>;
-    }
-
     protected defaultSchema(modelSchemaBuilder: SchemaBuilder<M>): {
         model: SchemaBuilder<M>;
         createValues: SchemaBuilder<{ [P in keyof (Partial<Pick<M, "id">> & Pick<M, Exclude<keyof M, "id">>)]: (Partial<Pick<M, "id">> & Pick<M, Exclude<keyof M, "id">>)[P]; }>;
