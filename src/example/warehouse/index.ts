@@ -1,7 +1,7 @@
 import { fail } from 'assert';
 import * as _ from 'lodash';
 import * as express from 'express';
-import { PipelineSourceInMemory } from '@serafin/pipeline';
+import { PipelineInMemory } from '../../pipeline/InMemory';
 
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { categorySchemaBuilder } from './model/Category';
@@ -48,10 +48,10 @@ async function main() {
             schema: true
         }));
 
-    let categoryPipelineBase = (new PipelineSourceInMemory(categorySchemaBuilder))
+    let categoryPipelineBase = (new PipelineInMemory(categorySchemaBuilder))
         .pipe(new Paginate());
 
-    let itemPipeline = (new PipelineSourceInMemory(itemSchemaBuilder))
+    let itemPipeline = (new PipelineInMemory(itemSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('category', () => categoryPipelineBase, { id: ':categoryId' });
 

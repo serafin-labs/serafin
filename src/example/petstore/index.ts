@@ -1,4 +1,4 @@
-import { PipelineSourceInMemory } from '@serafin/pipeline';
+import { PipelineInMemory } from '../../pipeline/InMemory';
 import * as express from 'express';
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { petSchemaBuilder } from './model/Pet';
@@ -46,7 +46,7 @@ async function main() {
             schema: true
         }));
 
-    let petPipeline = (new PipelineSourceInMemory(petSchemaBuilder)) // Initialize an InMemory Pipepeline Source with the model schema
+    let petPipeline = (new PipelineInMemory(petSchemaBuilder)) // Initialize an InMemory Pipepeline Source with the model schema
         .pipe(new DefaultPetName("Snowball"))
         .pipe(new Paginate()) // we don't have any offset/limit pagination implemented in the PipelineSourceInMemory, let's add it with a pipe
 

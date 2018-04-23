@@ -1,7 +1,7 @@
 import * as VError from 'VError';
 import * as express from 'express';
 import * as bodyParser from 'body-parser';
-import { PipelineSourceInMemory } from '@serafin/pipeline';
+import { PipelineInMemory } from '../../pipeline/InMemory';
 
 import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
 import { bookSchemaBuilder } from './model/Book';
@@ -46,14 +46,14 @@ async function main() {
 
     let bookPipelineRef;
 
-    let authorPipeline = (new PipelineSourceInMemory(authorSchemaBuilder))
+    let authorPipeline = (new PipelineInMemory(authorSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('book', () => bookPipelineRef, { authorId: ':id' })
         .addRelation('adventureBooks', () => bookPipelineRef, { authorId: ':id', categoryIds: ['1'] });
 
-    let categoryPipeline = new PipelineSourceInMemory(categorySchemaBuilder);
+    let categoryPipeline = new PipelineInMemory(categorySchemaBuilder);
 
-    let bookPipeline = (new PipelineSourceInMemory(bookSchemaBuilder))
+    let bookPipeline = (new PipelineInMemory(bookSchemaBuilder))
         .pipe(new Paginate())
         .addRelation('author', () => authorPipeline, { id: ':authorId' })
         .addRelation('category', () => categoryPipeline, { id: ':categoryIds' });
@@ -98,13 +98,13 @@ async function main() {
             { name: 'must-have' },
             { name: 'comedy' }
         ])).data;
-    
+
         await authorPipeline.do.create([{ firstName: 'Jules', lastName: 'Vernes' }]).first.createRelated('book', [
             { title: '20.000 Leagues under the Sea', summary: "A story involving a clownfish and maybe some submarine", categoryIds: [cAdventure.id] },
             { title: 'The Mysterious Island', summary: "A story about, well, a mysterious island", categoryIds: [cAdventure.id] },
             { title: 'Clovis Dardentor', summary: "A comedic novel", categoryIds: [cComedy.id] }
         ]);
-    
+
         await authorPipeline.do.create([{ firstName: 'Nico & Seb' }, { id: '3', firstName: 'Nicolas Degardin' }]).first
             .createRelated('book', [{ title: 'Serafin: the Dark Secret', summary: "The first part from then epic trilogy of the framework that cured the world", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }]).first
             .readRelated('author').first
@@ -112,13 +112,13 @@ async function main() {
             .readRelated('author').first
             .createRelated('book', [{ title: 'Serafin: Origins', summary: "The third part which is in fact before the first part from the divine trilogy of the framework that gave a sense to your pitiful mortal life", categoryIds: [cIntrospection.id, cReligion.id, cMustHave.id] }])
             ;
-    
+
         await bookPipeline.create(
             [{ title: 'How to be like me', summary: "A guide to become someone better", authorId: '3', categoryIds: [cIntrospection.id, cMustHave.id] }]);
-    
+
         console.log(await authorPipeline.read({ firstName: 'Jules' }));
         console.log(await bookPipeline.read({}, { count: 5 }));
-    
+
         api.use(bookPipeline, "book");
         api.use(authorPipeline, "author");
         api.use(categoryPipeline, "category", "categories");
