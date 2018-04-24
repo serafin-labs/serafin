@@ -3,7 +3,7 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 import { PipelineInMemory } from '../../pipeline/InMemory';
 
-import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
+import { Api, RestTransport, GraphQLTransport } from '@serafin/api';
 import { bookSchemaBuilder } from './model/Book';
 import { authorSchemaBuilder } from './model/Author';
 import { categorySchemaBuilder } from './model/Category';

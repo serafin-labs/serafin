@@ -3,7 +3,7 @@ import * as _ from 'lodash';
 import * as express from 'express';
 import { PipelineInMemory } from '../../pipeline/InMemory';
 
-import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
+import { Api, RestTransport, GraphQLTransport } from '@serafin/api';
 import { categorySchemaBuilder } from './model/Category';
 import { itemSchemaBuilder } from './model/Item';
 import * as bodyParser from 'body-parser';

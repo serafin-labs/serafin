@@ -1,6 +1,6 @@
 import { PipelineInMemory } from '../../pipeline/InMemory';
 import * as express from 'express';
-import { Api, RestTransport, GraphQLTransport } from '../../serafin/api';
+import { Api, RestTransport, GraphQLTransport } from '@serafin/api';
 import { petSchemaBuilder } from './model/Pet';
 import * as bodyParser from 'body-parser';
 import { Paginate, UpdateTime } from '../../pipe';

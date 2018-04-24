@@ -2,7 +2,7 @@ import * as express from 'express';
 import * as bodyParser from 'body-parser';
 
 import { PipelineInMemory } from '../../pipeline/InMemory';
-import { Api, RestTransport } from '../../serafin/api';
+import { Api, RestTransport } from '@serafin/api';
 import { SchemaBuilder } from '@serafin/schema-builder';
 
 // express initialization

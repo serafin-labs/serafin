@@ -4,7 +4,7 @@ import * as uuid from "node-uuid"
 import { Omit, DeepPartial } from '@serafin/schema-builder';
 import { PipelineAbstract, IdentityInterface, conflictError, error, notFoundError, ResultsInterface } from "@serafin/pipeline";
 
-import { jsonMergePatch } from '../serafin/util/jsonMergePatch';
+import { jsonMergePatch } from './jsonMergePatch';
 
 // @description("Loads and stores resources as objects into memory. Any data stored here will be lost when node process exits. Ideal for unit tests and prototyping.")
 export class PipelineInMemory<T extends IdentityInterface> extends PipelineAbstract<T> {

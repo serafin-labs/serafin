@@ -4,7 +4,7 @@ import * as _ from 'lodash';
  * Modify the given object with the given patch.
  * The algorithm used is the one described for patch merge in the following RFC : @see https://tools.ietf.org/html/rfc7396.
  * /!\ This function mutate object.
- * 
+ *
  * @param target The source object. The patch is applied to this object
  * @param patch The patch to be applied
  */
