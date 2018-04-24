@@ -2,7 +2,7 @@ import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "@
 import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 
-import { throughJsonSchema } from "./util/throughJsonSchema"
+import { throughJsonSchema } from "./throughJsonSchema"
 
 /**
  * Go through the given schema and remove properties not supported by Open API

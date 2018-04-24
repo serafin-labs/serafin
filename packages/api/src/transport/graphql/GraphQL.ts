@@ -8,7 +8,7 @@ import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, 
 import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
 import { TransportInterface } from "../TransportInterface"
 import { Api } from "../../Api"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils"
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils"
 
 export interface GraphQLOptions {
     /**

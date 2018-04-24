@@ -4,7 +4,7 @@ import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "@serafin/pipeline"
 
 import { Api } from "../../Api"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../openApiUtils";
+import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils";
 import { throughJsonSchema } from '../../util/throughJsonSchema';
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
