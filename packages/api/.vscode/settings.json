@@ -1,0 +1,18 @@
+{
+    "typescript.tsdk": "./node_modules/typescript/lib",
+    "files.exclude": {
+        "**/.git": false,
+        "**/.svn": false,
+        "**/.hg": false,
+        "**/CVS": false,
+        "**/.DS_Store": false,
+        ".history": false,
+        "lib": false,
+        "node_modules": false
+    },
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showGutterCoverage": false,
+    "coverage-gutters.showRulerCoverage": true,
+    "coverage-gutters.altSfCompare": true,
+    "coverage-gutters.lcovname": "lib/coverage/lcov.info"
+}
