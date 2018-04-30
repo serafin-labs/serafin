@@ -265,9 +265,9 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     private handleValidate(method: string, validate: () => void) {
         try {
             validate();
-        } catch (error) {
+        } catch (e) {
             throw error('SerafinValidationError', `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
-                { constructor: Object.getPrototypeOf(this).constructor.name, method: method }, error);
+                { constructor: Object.getPrototypeOf(this).constructor.name, method: method }, e);
         }
     }
 
