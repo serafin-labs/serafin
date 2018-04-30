@@ -49,6 +49,6 @@ module.exports = {
     },
     plugins: [
         ...(options.isTest && !options.isProduction ? [new WebpackShellPlugin({ onBuildExit: ['npm test'] })] : []),
-        ...(options.isProduction ? [new CleanWebpackPlugin(["lib"])] : []),
+        ...(!options.isTest && options.isProduction ? [new CleanWebpackPlugin(["lib"])] : []),
     ]
 };

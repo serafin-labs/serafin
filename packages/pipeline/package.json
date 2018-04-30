@@ -57,6 +57,6 @@
         "watch-dev": "NODE_ENV=development BUILD_TYPE=test node_modules/.bin/webpack --mode development --watch",
         "build": "NODE_ENV=production webpack --mode production",
         "build-test": "NODE_ENV=production BUILD_TYPE=test webpack --display=errors-only --mode production",
-        "prepublishOnly": "npm install && npm run-script build-test && npm test && npm run-script build"
+        "prepublishOnly": "npm install && npm run-script build && npm run-script build-test && npm test"
     }
 }
