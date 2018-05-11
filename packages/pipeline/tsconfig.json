@@ -2,7 +2,7 @@
     "compilerOptions": {
         "sourceMap": true,
         "declaration": true,
-        "declarationDir": ".",
+        "declarationDir": "./lib",
         "module": "esnext",
         "moduleResolution": "node",
         "target": "es5",
@@ -12,9 +12,10 @@
         "experimentalDecorators": true
     },
     "files": [
-        "./src/index.ts"
+        "./src/index.ts",
     ],
-    "include": [
-        "./src/**/*.ts"
+    "exclude": [
+        "./node_modules",
+        "./lib"
     ]
 }

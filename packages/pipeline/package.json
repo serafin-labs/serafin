@@ -36,13 +36,13 @@
         "@types/mocha": "^2.2.45",
         "@types/node": "^6.0.52",
         "@types/node-uuid": "0.0.28",
+        "awesome-typescript-loader": "^5.0.0",
         "chai": "^4.1.2",
         "clean-webpack-plugin": "^0.1.19",
         "istanbul": "^0.4.5",
         "mocha": "^4.1.0",
         "nodemon": "^1.17.3",
         "remap-istanbul": "^0.11.0",
-        "ts-loader": "^4.2.0",
         "typescript": "^2.8.1",
         "webpack": "^4.6.0",
         "webpack-cli": "^2.0.14",
@@ -54,9 +54,8 @@
         "debug": "node_modules/.bin/mocha -R spec ./lib/test.js --inspect-brk=[::]:9229",
         "predev": "npm install",
         "dev": "npm run-script watch-dev",
-        "watch-dev": "NODE_ENV=development BUILD_TYPE=test node_modules/.bin/webpack --mode development --watch",
-        "build": "NODE_ENV=production webpack --mode production",
-        "build-test": "NODE_ENV=production BUILD_TYPE=test webpack --display=errors-only --mode production",
+        "watch-dev": "node_modules/.bin/webpack --mode development --watch",
+        "build": "webpack --mode production",
         "prepublishOnly": "npm install && npm run-script build && npm run-script build-test && npm test"
     }
 }
