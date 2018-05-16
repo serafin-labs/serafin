@@ -114,6 +114,6 @@ export class Api {
                 method: req.method,
                 ip: req.ip
             }
-        }, `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`)
+        }, '%s', `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`)
     }
 }
