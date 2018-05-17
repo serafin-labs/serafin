@@ -11,9 +11,11 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
     openApi: OpenApi, endpointPath: string, resourcesPath: string, name: string) => {
     let router: express.Router = express.Router();
     router.use((req, res, next) => {
-        if (req.get('Content-Type') !== undefined && req.get('Content-Type') != "application/json"
-            && req.get('Content-Type') != "application/hal+json") {
-            return next('router');
+        if (req.method !== "OPTIONS") {
+            let acceptHeader = req.get('Accept') || "";
+            if (acceptHeader.search('application/json') === -1 && acceptHeader.search('application/hal+json') === -1) {
+                return next('router');
+            }
         }
         next();
     });
@@ -31,7 +33,8 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
 
             // run the query
             pipeline.read(pipelineParams.query, pipelineParams.options).then(result => {
-                if (req.get('Content-Type') !== undefined && req.get('Content-Type') == 'application/hal+json') {
+                let acceptHeader = req.get('Accept') || "";
+                if (acceptHeader.search('application/hal+json') === -1) {
                     let links = (new JsonHal(endpointPath, rest.api, pipeline.relations)).links();
                     result["_links"] = links;
                     if (result.data) {
@@ -64,7 +67,8 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
                 id: id
             }, pipelineParams.options).then(result => {
                 if (result.data.length > 0) {
-                    if (req.get('Content-Type') !== undefined && req.get('Content-Type') == 'application/hal+json') {
+                    let acceptHeader = req.get('Accept') || "";
+                    if (acceptHeader.search('application/hal+json') === -1) {
                         result.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, rest.api, pipeline.relations)).links(result.data[0]);
                     }
                     res.status(200).json(result.data[0])
