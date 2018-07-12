@@ -5,6 +5,7 @@ import { ParameterObject } from "@serafin/open-api";
 import { PipelineAbstract } from "@serafin/pipeline";
 import { Api } from "../Api";
 import { RestTransport } from "../transport/rest/Rest"
+import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-http"))
 chai.use(require("chai-as-promised"))
@@ -50,16 +51,25 @@ describe('Api', function () {
         });
     });
 
-    it('should configure a transport', function () {
+    it('should configure a transport', function (done) {
         api.configure(new RestTransport)
-        expect(api).to.exist
+        let testPipeline = class extends PipelineAbstract<any> {
+        }
+        api.use(new testPipeline(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 })), "test")
+        let server = app.listen(process.env.PORT || 8089, (error: any) => {
+            if (error) {
+                server.close();
+                return done(error)
+            }
+            chai.request(app)
+                .get("/tests/badId")
+                .end((err, res) => {
+                    expect(res.status).to.eql(400)
+                    server.close();
+                    done();
+                });
+        })
     });
-
-    // it('should use a pipeline', function () {
-    //     let testPipeline = class extends PipelineAbstract { }
-    //     api.use(new testPipeline, "test")
-    //     expect(api).to.exist
-    // });
 
     it('should filter internal options', function () {
         let options = {

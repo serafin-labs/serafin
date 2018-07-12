@@ -13,7 +13,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
     router.use((req, res, next) => {
         if (req.method !== "OPTIONS") {
             let acceptHeader = req.get('Accept') || "";
-            if (acceptHeader.search('application/json') === -1 && acceptHeader.search('application/hal+json') === -1) {
+            if (acceptHeader && acceptHeader.search('application/json') === -1 && acceptHeader.search('application/hal+json') === -1) {
                 return next('router');
             }
         }
