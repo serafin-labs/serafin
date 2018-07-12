@@ -34,7 +34,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
             // run the query
             pipeline.read(pipelineParams.query, pipelineParams.options).then(result => {
                 let acceptHeader = req.get('Accept') || "";
-                if (acceptHeader.search('application/hal+json') === -1) {
+                if (acceptHeader.search('application/hal+json') !== -1) {
                     let links = (new JsonHal(endpointPath, rest.api, pipeline.relations)).links();
                     result["_links"] = links;
                     if (result.data) {
@@ -68,7 +68,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
             }, pipelineParams.options).then(result => {
                 if (result.data.length > 0) {
                     let acceptHeader = req.get('Accept') || "";
-                    if (acceptHeader.search('application/hal+json') === -1) {
+                    if (acceptHeader.search('application/hal+json') !== -1) {
                         result.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, rest.api, pipeline.relations)).links(result.data[0]);
                     }
                     res.status(200).json(result.data[0])
