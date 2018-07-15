@@ -1,4 +1,5 @@
 import { PipelineAbstract } from "./PipelineAbstract";
+import * as _ from "lodash";
 
 export const PIPELINE = Symbol("Pipeline");
 
@@ -17,5 +18,13 @@ export abstract class PipeAbstract {
         }
 
         return this[PIPELINE];
+    }
+
+    public clone(pipeline?: PipelineAbstract<any, any>) {
+        const clonedPipe = _.clone(this);
+        if (pipeline) {
+            this[PIPELINE] = pipeline
+        }
+        return clonedPipe
     }
 }

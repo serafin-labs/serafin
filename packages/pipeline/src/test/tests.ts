@@ -220,13 +220,23 @@ describe('Pipelines', function () {
 
     });
 
+    describe('Cloned pipeline', function () {
+        it('should be different', function () {
+            const pipeline = testPipeline()
+            const clonedPipeline = pipeline.clone().pipe(new TestPipe())
+            expect(pipeline).to.not.equals(clonedPipeline)
+            expect("testModelString" in pipeline.modelSchemaBuilder.schema.properties).to.be.false
+            expect("testModelString" in clonedPipeline.modelSchemaBuilder.schema.properties).to.be.true
+        })
+    })
+
     describe('Relations', function () {
         it('should add relations', function () {
             let p2 = testPipeline()
             let p1 = testPipeline().addRelation("test", () => p2, {})
             expect(p1.relations).to.exist
             expect(p1.relations.test).to.be.an.instanceof(Relation)
-            expect(Object.keys(p1.relations).length).to.eql(2)
+            expect(Object.keys(p1.relations).length).to.eql(1)
         });
 
         it('should inherit relations', function () {

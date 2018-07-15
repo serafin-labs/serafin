@@ -13,19 +13,15 @@ import { ResultsInterface } from "./ResultsInterface";
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
 export abstract class PipelineAbstract<M extends IdentityInterface, S extends SchemaBuildersInterface = ReturnType<PipelineAbstract<M, null>["defaultSchema"]>,
-    R extends { [key: string]: Relation } = { 'self': Relation<M, 'self', M> }> {
+    R extends { [key: string]: Relation } = {}> {
     public relations: R = {} as any;
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
     public schemaBuilders: S;
 
+    private pipes: PipeInterface[] = []
+
     constructor(modelSchemaBuilder: SchemaBuilder<M>) {
         this.schemaBuilders = this.defaultSchema(modelSchemaBuilder) as any;
-
-        for (let method of PipelineAbstract.CRUDMethods) {
-            this[`_${method}`] = this[`_${method}`].bind(this);
-        }
-
-        this.addRelation('self', () => this as any, { id: ':id' } as any);
     }
 
     /**
@@ -83,7 +79,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         }
     }
 
-    pipe<MODEL extends IdentityInterface = this["schemaBuilders"]["model"]["T"],
+    public pipe<MODEL extends IdentityInterface = this["schemaBuilders"]["model"]["T"],
         CV = this["schemaBuilders"]["createValues"]["T"],
         CO = this["schemaBuilders"]["createOptions"]["T"],
         CM = this["schemaBuilders"]["createMeta"]["T"],
@@ -118,22 +114,28 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             }
         });
 
-        // Methods chaining
-        for (let method of PipelineAbstract.CRUDMethods) {
-            if (typeof pipe[method] == 'function') {
-                let next = this[`_${method}`];
-                const ctorName = this.constructor.name;
-                this[`_${method}`] = async (...args) => {
-                    try {
-                        return await (pipe[method].call(pipe, next, ...args));
-                    } catch (err) {
-                        throw error('pipelineError', `Error in ${ctorName}::${method} : ${err}`, { pipeline: ctorName, method: method, args: args })
-                    }
-                };
-            }
+        // add pipe to the pipeline if it implements at least one of the CRUD methods
+        if ("read" in pipe || "create" in pipe || "replace" in pipe || "patch" in pipe || "delete" in pipe) {
+            this.pipes.push(pipe)
         }
 
         return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>, R & PR>;
+    }
+
+    /**
+     * Build a recursive function that will call all the pipes for a CRUD method
+     */
+    private pipeChain(method: PipelineMethods) {
+        var i = 0;
+        const callChain = async (...args) => {
+            while (i < this.pipes.length && !(method in this.pipes[i])) { ++i }
+            if (i >= this.pipes.length) {
+                return this[`_${method}`](...args)
+            } else {
+                return (this.pipes[i++] as any)[method](callChain, ...args)
+            }
+        }
+        return callChain
     }
 
     /**
@@ -170,7 +172,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             this.schemaBuilders.createValues.validateList(resources);
             this.schemaBuilders.createOptions.validate(options || {} as any);
         });
-        return this._create(resources, this.prepareOptionsMapping(options, "create"));
+
+        return this.pipeChain("create")(resources, options)
     }
 
     protected _create(resources, options): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
@@ -191,7 +194,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             this.schemaBuilders.readOptions.validate(options || {});
         });
 
-        return this._read(query, this.prepareOptionsMapping(options, "read"));
+        return this.pipeChain("read")(query, options)
     }
 
     protected _read(query, options): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
@@ -214,7 +217,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             this.schemaBuilders.replaceOptions.validate(options || {});
         });
 
-        return this._replace(id, values, options);
+        return this.pipeChain("replace")(id, values, options)
     }
 
     protected _replace(id, values, options): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
@@ -237,7 +240,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             this.schemaBuilders.patchValues.validate(values || {});
             this.schemaBuilders.patchOptions.validate(options || {});
         });
-        return this._patch(query, values, this.prepareOptionsMapping(options, "patch"));
+        return this.pipeChain("patch")(query, values, options)
     }
 
     protected _patch(query, values, options): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
@@ -255,7 +258,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             this.schemaBuilders.deleteQuery.validate(query);
             this.schemaBuilders.deleteOptions.validate(options || {});
         });
-        return this._delete(query, this.prepareOptionsMapping(options, "delete"));
+        return this.pipeChain("delete")(query, options)
     }
 
     protected _delete(query, options): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
@@ -271,54 +274,16 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
         }
     }
 
-    /**
-     * Remap a read options to change its name. To be used in case of conflict between two pipelines.
-     *
-     * @param opt
-     * @param renamedOpt
-     */
-    // public remapReadOption<K extends keyof ReadOptions, K2 extends keyof any>(opt: K, renamedOpt: K2): Pipeline<T, ReadQuery, Omit<ReadOptions, K> & {[P in K2]: ReadOptions[K]}, ReadPipelineResults, CreateValues, CreateOptions, CreatePipelineResults, UpdateValues, UpdateOptions, UpdatePipelineResults, PatchQuery, PatchValues, PatchOptions, PatchPipelineResults, DeleteQuery, DeleteOptions, DeletePipelineResults> {
-    //     return this.remapOptions("read", opt, renamedOpt)
-    // }
-
-    /**
-     * Remap the given options to change its name for the given method.
-     *
-     * @param method
-     * @param opt
-     * @param renamedOpt
-     */
-    private remapOptions(method: PipelineMethods, opt: string, renamedOpt: string) {
-        // this.optionsMapping = this.optionsMapping || {};
-        // this.optionsMapping[method] = this.optionsMapping[method] || {};
-        // this.optionsMapping[method][renamedOpt as string] = opt as string;
-        // let schemaBuilderName = `_${method}OptionsSchemaBuilder`
-        // if (!this.hasOwnProperty(schemaBuilderName)) {
-        //     this[schemaBuilderName] = this[schemaBuilderName].clone();
-        // }
-        // this[schemaBuilderName].renameProperty(opt, renamedOpt);
-        // return this as any;
-    }
-
-    // /**
-    //  * Map the input options object according to the configured mapping
-    //  */
-    private prepareOptionsMapping(options, method: PipelineMethods) {
-        // if (typeof options === 'object' && this.optionsMapping) {
-        //     for (let key in this.optionsMapping[method]) {
-        //         if (options[key]) {
-        //             options[this.optionsMapping[key]] = options[key];
-        //             delete (options[key]);
-        //         }
-        //     }
-        // }
-        return options;
-    }
-
     clone(): PipelineAbstract<M, S, R> {
-        return _.cloneDeepWith(this, (value: any, key: number | string | undefined, object: this | undefined, stack: any) => {
+        return _.cloneDeepWith(this, (value: any, key: number | string | undefined) => {
             if (key === "relations") {
                 return _.clone(value)
+            }
+            if (key === "schemaBuilders") {
+                return _.mapValues(value, (schema: SchemaBuilder<any>) => schema ? schema.clone() : _.clone(schema))
+            }
+            if (key === "pipes") {
+                return value ? value.map((pipe: PipeInterface & PipeAbstract) => pipe.clone(this)) : _.clone(value)
             }
         })
     }
