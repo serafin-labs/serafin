@@ -55,6 +55,6 @@
         "dev": "npm run-script watch-dev",
         "watch-dev": "node_modules/.bin/webpack --mode development --watch",
         "build": "webpack --mode production",
-        "prepublishOnly": "npm install && npm run-script build && npm run-script build-test && npm test"
+        "prepublishOnly": "npm install && npm run-script build && npm test"
     }
 }
