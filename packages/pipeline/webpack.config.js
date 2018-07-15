@@ -30,7 +30,7 @@ module.exports = function (env, argv) {
             rules: [
                 {
                     test: /\.tsx?$/,
-                    loader: 'awesome-typescript-loader',
+                    loader: 'ts-loader',
                     exclude: /node_modules|lib/
                 },
             ]
