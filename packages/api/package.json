@@ -28,7 +28,7 @@
         "url": "https://github.com/serafin-labs/api"
     },
     "dependencies": {
-        "@serafin/pipeline": "^0.9.7",
+        "@serafin/pipeline": "^0.9.8",
         "express": "^4.16.3",
         "express-graphql": "^0.6.12",
         "graphql": "^0.13.2",
