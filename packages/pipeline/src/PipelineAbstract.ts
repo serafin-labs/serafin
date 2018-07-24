@@ -116,7 +116,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
 
         // add pipe to the pipeline if it implements at least one of the CRUD methods
         if ("read" in pipe || "create" in pipe || "replace" in pipe || "patch" in pipe || "delete" in pipe) {
-            this.pipes.push(pipe)
+            this.pipes.unshift(pipe)
         }
 
         return this as any as PipelineAbstract<MODEL, SchemaBuildersInterface<MODEL, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>, R & PR>;
