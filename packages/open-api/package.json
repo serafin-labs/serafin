@@ -1,7 +1,7 @@
 {
     "name": "@serafin/open-api",
     "version": "3.0.0",
-    "description": "Open Api 3 typescript types definition and metaschema for the json schema part",
+    "description": "Open Api 3 typescript types definition",
     "contributors": [
         {
             "name": "Sébastien de Saint Florent"
