@@ -29,103 +29,103 @@ export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<
 }
 
 export const schemaTestPipeline =
+{
+    model:
     {
-        model:
+        type: 'object',
+        additionalProperties: false,
+        properties:
+        {
+            id: { description: 'id', type: 'string' },
+            method: { description: 'method', type: 'string' }
+        },
+        required: ['id', 'method']
+    },
+    createValues:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties:
+        {
+            id: { description: 'id', type: 'string' },
+            method: { description: 'method', type: 'string' }
+        },
+        required: ['method']
+    },
+    createOptions: { type: 'object', additionalProperties: false },
+    createMeta: { type: 'object', additionalProperties: false },
+    readQuery:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties:
+        {
+            id:
             {
-                type: 'object',
-                additionalProperties: false,
-                properties:
+                oneOf:
+                    [{ description: 'id', type: 'string' },
+                    { type: 'array', items: { description: 'id', type: 'string' } }]
+            },
+            method:
+            {
+                oneOf:
+                    [{ description: 'method', type: 'string' },
                     {
-                        id: { description: 'id', type: 'string' },
-                        method: { description: 'method', type: 'string' }
-                    },
-                required: ['id', 'method']
-            },
-        createValues:
+                        type: 'array',
+                        items: { description: 'method', type: 'string' }
+                    }]
+            }
+        }
+    },
+    readOptions: { type: 'object', additionalProperties: false },
+    readMeta: { type: 'object', additionalProperties: false },
+    replaceValues:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties: { method: { description: 'method', type: 'string' } },
+        required: ['method']
+    },
+    replaceOptions: { type: 'object', additionalProperties: false },
+    replaceMeta: { type: 'object', additionalProperties: false },
+    patchQuery:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties:
+        {
+            id:
             {
-                type: 'object',
-                additionalProperties: false,
-                properties:
-                    {
-                        id: { description: 'id', type: 'string' },
-                        method: { description: 'method', type: 'string' }
-                    },
-                required: ['method']
-            },
-        createOptions: { type: 'object', additionalProperties: false },
-        createMeta: { type: 'object', additionalProperties: false },
-        readQuery:
+                oneOf:
+                    [{ description: 'id', type: 'string' },
+                    { type: 'array', items: { description: 'id', type: 'string' } }]
+            }
+        },
+        required: ['id']
+    },
+    patchValues:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties: { method: { description: 'method', type: ['string', 'null'] } }
+    },
+    patchOptions: { type: 'object', additionalProperties: false },
+    patchMeta: { type: 'object', additionalProperties: false },
+    deleteQuery:
+    {
+        type: 'object',
+        additionalProperties: false,
+        properties:
+        {
+            id:
             {
-                type: 'object',
-                additionalProperties: false,
-                properties:
-                    {
-                        id:
-                            {
-                                oneOf:
-                                    [{ description: 'id', type: 'string' },
-                                    { type: 'array', items: { description: 'id', type: 'string' } }]
-                            },
-                        method:
-                            {
-                                oneOf:
-                                    [{ description: 'method', type: 'string' },
-                                    {
-                                        type: 'array',
-                                        items: { description: 'method', type: 'string' }
-                                    }]
-                            }
-                    }
-            },
-        readOptions: { type: 'object', additionalProperties: false },
-        readMeta: { type: 'object', additionalProperties: false },
-        replaceValues:
-            {
-                type: 'object',
-                additionalProperties: false,
-                properties: { method: { description: 'method', type: 'string' } },
-                required: ['method']
-            },
-        replaceOptions: { type: 'object', additionalProperties: false },
-        replaceMeta: { type: 'object', additionalProperties: false },
-        patchQuery:
-            {
-                type: 'object',
-                additionalProperties: false,
-                properties:
-                    {
-                        id:
-                            {
-                                oneOf:
-                                    [{ description: 'id', type: 'string' },
-                                    { type: 'array', items: { description: 'id', type: 'string' } }]
-                            }
-                    },
-                required: ['id']
-            },
-        patchValues:
-            {
-                type: 'object',
-                additionalProperties: false,
-                properties: { method: { description: 'method', type: 'string' } }
-            },
-        patchOptions: { type: 'object', additionalProperties: false },
-        patchMeta: { type: 'object', additionalProperties: false },
-        deleteQuery:
-            {
-                type: 'object',
-                additionalProperties: false,
-                properties:
-                    {
-                        id:
-                            {
-                                oneOf:
-                                    [{ description: 'id', type: 'string' },
-                                    { type: 'array', items: { description: 'id', type: 'string' } }]
-                            }
-                    },
-                required: ['id']
-            },
-        deleteOptions: { type: 'object', additionalProperties: false },
-        deleteMeta: { type: 'object', additionalProperties: false }
-    };
+                oneOf:
+                    [{ description: 'id', type: 'string' },
+                    { type: 'array', items: { description: 'id', type: 'string' } }]
+            }
+        },
+        required: ['id']
+    },
+    deleteOptions: { type: 'object', additionalProperties: false },
+    deleteMeta: { type: 'object', additionalProperties: false }
+};

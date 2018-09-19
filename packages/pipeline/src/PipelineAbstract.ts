@@ -70,7 +70,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
             replaceOptions: SchemaBuilder.emptySchema(),
             replaceMeta: SchemaBuilder.emptySchema(),
             patchQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
-            patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals(),
+            patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals().toNullable(),
             patchOptions: SchemaBuilder.emptySchema(),
             patchMeta: SchemaBuilder.emptySchema(),
             deleteQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),

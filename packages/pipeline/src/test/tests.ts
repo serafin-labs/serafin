@@ -10,6 +10,7 @@ import { PipelineAbstract } from "../PipelineAbstract";
 import { IdentityInterface } from "../IdentityInterface";
 import { Relation } from "../Relation";
 import { QueryTemplate } from "../QueryTemplate";
+import { JSONSchema } from "@serafin/schema-builder/lib/JsonSchema";
 
 chai.use(require("chai-as-promised"))
 
@@ -90,21 +91,21 @@ describe('Pipelines', function () {
 
             expect(p.schemaBuilders.model instanceof SchemaBuilder &&
                 p.schemaBuilders.createValues instanceof SchemaBuilder && // p.schemaBuilders.createValues.schema.properties.additionalValue.type == 'string' &&
-                p.schemaBuilders.createOptions instanceof SchemaBuilder && p.schemaBuilders.createOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.createMeta instanceof SchemaBuilder && p.schemaBuilders.createMeta.schema.properties.additionalMeta.type == 'string' &&
+                p.schemaBuilders.createOptions instanceof SchemaBuilder && (p.schemaBuilders.createOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
+                p.schemaBuilders.createMeta instanceof SchemaBuilder && (p.schemaBuilders.createMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
                 p.schemaBuilders.readQuery instanceof SchemaBuilder && //p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.readOptions instanceof SchemaBuilder && p.schemaBuilders.readOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.readMeta instanceof SchemaBuilder && p.schemaBuilders.readMeta.schema.properties.additionalMeta.type == 'string' &&
+                p.schemaBuilders.readOptions instanceof SchemaBuilder && (p.schemaBuilders.readOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
+                p.schemaBuilders.readMeta instanceof SchemaBuilder && (p.schemaBuilders.readMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
                 p.schemaBuilders.replaceValues instanceof SchemaBuilder &&
-                p.schemaBuilders.replaceOptions instanceof SchemaBuilder && p.schemaBuilders.replaceOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.replaceMeta instanceof SchemaBuilder && p.schemaBuilders.replaceMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.patchQuery instanceof SchemaBuilder && p.schemaBuilders.patchQuery.schema.properties.additionalQuery.type == 'string' &&
+                p.schemaBuilders.replaceOptions instanceof SchemaBuilder && (p.schemaBuilders.replaceOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
+                p.schemaBuilders.replaceMeta instanceof SchemaBuilder && (p.schemaBuilders.replaceMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
+                p.schemaBuilders.patchQuery instanceof SchemaBuilder && (p.schemaBuilders.patchQuery.schema.properties.additionalQuery as JSONSchema).type == 'string' &&
                 p.schemaBuilders.patchValues instanceof SchemaBuilder &&
-                p.schemaBuilders.patchOptions instanceof SchemaBuilder && p.schemaBuilders.patchOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.patchMeta instanceof SchemaBuilder && p.schemaBuilders.patchMeta.schema.properties.additionalMeta.type == 'string' &&
-                p.schemaBuilders.deleteQuery instanceof SchemaBuilder && p.schemaBuilders.deleteQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.deleteOptions instanceof SchemaBuilder && p.schemaBuilders.deleteOptions.schema.properties.additionalOption.type == 'string' &&
-                p.schemaBuilders.deleteMeta instanceof SchemaBuilder && p.schemaBuilders.deleteMeta.schema.properties.additionalMeta.type == 'string'
+                p.schemaBuilders.patchOptions instanceof SchemaBuilder && (p.schemaBuilders.patchOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
+                p.schemaBuilders.patchMeta instanceof SchemaBuilder && (p.schemaBuilders.patchMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
+                p.schemaBuilders.deleteQuery instanceof SchemaBuilder && (p.schemaBuilders.deleteQuery.schema.properties.additionalQuery as JSONSchema).type == 'string' &&
+                p.schemaBuilders.deleteOptions instanceof SchemaBuilder && (p.schemaBuilders.deleteOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
+                p.schemaBuilders.deleteMeta instanceof SchemaBuilder && (p.schemaBuilders.deleteMeta.schema.properties.additionalMeta as JSONSchema).type == 'string'
             ).to.be.true;
         });
     });

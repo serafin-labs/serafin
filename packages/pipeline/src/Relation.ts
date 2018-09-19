@@ -7,6 +7,7 @@ import { Omit } from "@serafin/schema-builder"
 import { IdentityInterface } from './IdentityInterface';
 import { SchemaBuildersInterface } from './SchemaBuildersInterface';
 import { ResultsInterface } from './ResultsInterface';
+import { JSONSchema } from '@serafin/schema-builder/lib/JsonSchema';
 
 /**
  * Represents a Relation for the given pipeline
@@ -27,7 +28,7 @@ export class Relation<M extends IdentityInterface = any, NameKey extends keyof a
                 typeof queryValue !== 'string' ||
                 queryValue.charAt(0) != ':' ||
                 (holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)] &&
-                    holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)].type !== 'array')
+                    (holdingPipeline.modelSchemaBuilder.schema.properties[queryValue.substring(1)] as JSONSchema).type !== 'array')
             )) {
                 this.type = 'one';
             }

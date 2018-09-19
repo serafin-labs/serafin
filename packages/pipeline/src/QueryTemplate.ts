@@ -4,7 +4,7 @@ import { escape } from 'querystring';
 export class QueryTemplate {
 
     static hydrate(query: object, resource: object): object {
-        return _.mapValues(query, (o, key) => {
+        return _.mapValues(query, (o: string, key) => {
             if (QueryTemplate.isTemplated(o)) {
                 if (!resource[o.substring(1)]) {
                     throw new Error(`Resource field ${o.substring(1)} not found`);
