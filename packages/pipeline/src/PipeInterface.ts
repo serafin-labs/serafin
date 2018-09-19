@@ -1,6 +1,5 @@
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { SchemaBuilder } from "@serafin/schema-builder";
-import { PipeAbstract } from ".";
 
 export interface PipeInterface<S extends SchemaBuildersInterface = any, M = any, CV= any, CO= any, CM= any,
     RQ= any, RO= any, RM= any, UV= any, UO= any, UM= any, PQ= any, PV= any, PO= any, PM= any, DQ= any, DO= any, DM= any, PR= {}> {

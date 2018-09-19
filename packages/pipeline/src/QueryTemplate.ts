@@ -1,5 +1,4 @@
 import * as _ from 'lodash'
-import { escape } from 'querystring';
 
 export class QueryTemplate {
 

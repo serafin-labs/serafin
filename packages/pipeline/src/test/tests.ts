@@ -1,9 +1,9 @@
 import * as chai from "chai";
 import * as util from 'util';
 import { expect } from "chai";
-import { SchemaBuilder, JSONSchemaStringProperties } from "@serafin/schema-builder";
+import { SchemaBuilder } from "@serafin/schema-builder";
 
-import { TestPipe, schemaTestPipe } from "./TestPipe";
+import { TestPipe } from "./TestPipe";
 import { PipeAbstract } from "../PipeAbstract";
 import { TestPipeline, schemaTestPipeline } from "./TestPipeline";
 import { PipelineAbstract } from "../PipelineAbstract";

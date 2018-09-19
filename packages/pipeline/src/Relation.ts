@@ -1,12 +1,9 @@
 import * as _ from 'lodash'
 import { PipelineAbstract } from "./PipelineAbstract"
-import { validationError } from "./error"
 import { QueryTemplate } from './QueryTemplate';
-import { Merge } from '@serafin/schema-builder';
 import { Omit } from "@serafin/schema-builder"
 import { IdentityInterface } from './IdentityInterface';
 import { SchemaBuildersInterface } from './SchemaBuildersInterface';
-import { ResultsInterface } from './ResultsInterface';
 import { JSONSchema } from '@serafin/schema-builder/lib/JsonSchema';
 
 /**

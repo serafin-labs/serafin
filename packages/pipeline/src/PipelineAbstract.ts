@@ -1,6 +1,6 @@
 import * as _ from "lodash";
 import * as util from "util";
-import { SchemaBuilder, Overwrite, DeepPartialArray, DeepPartial, DeepPartialObject } from "@serafin/schema-builder";
+import { SchemaBuilder, DeepPartialObject } from "@serafin/schema-builder";
 import { notImplementedError, error } from "./error";
 import { final } from "./FinalDecorator";
 import { IdentityInterface } from "./IdentityInterface";
