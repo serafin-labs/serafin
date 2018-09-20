@@ -57,7 +57,7 @@ api.configure(new RestTransport())
 
 ## Pet model schema definition
 
-The JSON schema is based Open Api specification [here](https://swagger.io/specification/#schema-object-98). Serafin provide a powerfull library to programatically create a Schema and its associated type at the same time.
+The JSON schema is based on JSON Schema draft #7. Serafin provide a powerfull library to programatically create a Schema and its associated type at the same time.
 
 So let's create our `Pet` schema.
 
@@ -68,7 +68,6 @@ let petSchemaBuilder = SchemaBuilder.emptySchema()
   .addEnum("category", ["cat", "dog", "tiger"], { description: "The category of the pet." })
   .addArray("tags", SchemaBuilder.stringSchema(), { description: "A list of tags to ease classification." }, false)
   .addArray("photoUrls", SchemaBuilder.stringSchema(), { description: "Urls to photos of this Pet." }, false)
-  .flatType()
 ```
 Under the hood SchemaBuilder create a JSON Schema representation that contains what we have specified. You can access it this way:
 
