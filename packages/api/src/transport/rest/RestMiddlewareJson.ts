@@ -1,7 +1,7 @@
 import * as express from 'express';
 import * as _ from 'lodash';
 import { OpenApi } from './OpenApi';
-import { PipelineAbstract, Relation, notFoundError } from '@serafin/pipeline'
+import { PipelineAbstract, notFoundError } from '@serafin/pipeline'
 
 import { Api } from '../../Api';
 import { RestTransport } from './Rest'

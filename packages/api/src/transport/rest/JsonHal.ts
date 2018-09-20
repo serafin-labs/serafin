@@ -1,6 +1,5 @@
 import * as _ from 'lodash';
 import { QueryTemplate, Relation } from '@serafin/pipeline';
-import { SchemaBuilder } from '@serafin/schema-builder';
 import { Api } from '../../Api';
 
 export class JsonHal {
@@ -44,7 +43,7 @@ export class JsonHal {
                 url = '?';
             }
 
-            _.each(query, (value, key) => {
+            _.each(query, (value: any, key) => {
                 if (Array.isArray(value)) {
                     value.forEach((subValue) => {
                         url += `${key}[]=${subValue}&`;
@@ -70,7 +69,7 @@ export class JsonHal {
             let templatedParts = QueryTemplate.getTemplatedParts(rel.query);
             let nonTemplatedParts = QueryTemplate.getNonTemplatedParts(rel.query);
 
-            _.each(nonTemplatedParts, (value, key) => {
+            _.each(nonTemplatedParts, (value: any, key) => {
                 if (key == 'id' && rel.type == 'one') {
                     idUrl = `/${value}`;
                 } else if (Array.isArray(value)) {

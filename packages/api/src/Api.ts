@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import * as VError from 'verror';
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
-import { throughJsonSchema } from "./util/throughJsonSchema"
 import { TransportInterface } from "./transport/TransportInterface";
 
 /**
@@ -55,7 +54,7 @@ export class Api {
     /**
      * Filter function used to test if an option name is internal or not
      */
-    isNotAnInternalOption = (name: string) => !name.startsWith("_");
+    isNotAnInternalOption = (name: string) => name.charAt(0) !== "_";
 
     /**
      * Filter used to remove input options that are not supposed to be set by the client.

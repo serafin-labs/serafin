@@ -1,9 +1,8 @@
 import * as express from 'express';
 import * as _ from 'lodash';
 import { VError } from 'verror';
-import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
-import { JSONSchema, metaSchema } from "@serafin/open-api"
-import { SchemaBuilder } from '@serafin/schema-builder';
+import { PipelineAbstract, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
+import { SchemaBuilder, JSONSchema } from '@serafin/schema-builder';
 
 import { TransportInterface } from "../TransportInterface"
 import { OpenApi } from "./OpenApi"

@@ -55,7 +55,7 @@ describe('Api', function () {
         api.configure(new RestTransport)
         let testPipeline = class extends PipelineAbstract<any> {
         }
-        api.use(new testPipeline(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 })), "test")
+        api.use(new testPipeline(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("value")), "test")
         let server = app.listen(process.env.PORT || 8089, (error: any) => {
             if (error) {
                 server.close();

@@ -3,19 +3,42 @@ import * as _ from "lodash";
 import * as jsonpointer from 'jsonpointer';
 
 import { throughJsonSchema } from "./throughJsonSchema"
+import { JSONSchema } from "@serafin/schema-builder";
 
 /**
  * Go through the given schema and remove properties not supported by Open API
  *
  * @param schema
  */
-export function jsonSchemaToOpenApiSchema(schema) {
+export function jsonSchemaToOpenApiSchema(schema: JSONSchema): SchemaObject {
     throughJsonSchema(schema, (s) => {
-        delete s.id;
         delete s.$id;
         delete s.$schema;
+        delete s.dependencies;
+        delete s.patternProperties;
+        if (Array.isArray(s.type)) {
+            if (s.type.length === 0) {
+                delete s.type
+            } else if (s.type.length === 1) {
+                s.type = s.type[0]
+            } else if (s.type.length === 2 && s.type.indexOf("null") !== -1) {
+                s.type = s.type.filter(t => t !== "null")[0];
+                (s as any).nullable = true;
+            } else {
+                // TODO handle this case properly. oneOf? Empty Schema ?
+                delete s.type
+            }
+        }
+        if (s.type === "null") {
+            delete s.type;
+            (s as any).nullable = true;
+        }
+        if (s.const) {
+            s.enum = [s.const];
+            delete s.const
+        }
     })
-    return schema
+    return schema as any
 }
 
 /**
@@ -23,7 +46,7 @@ export function jsonSchemaToOpenApiSchema(schema) {
  */
 export function remapRefs(schema: SchemaObject, basePath: string) {
     throughJsonSchema(schema as any, (s) => {
-        if (s.$ref && s.$ref.startsWith("#")) {
+        if (s.$ref && s.$ref.charAt(0) === "#") {
             s.$ref = `${basePath}${s.$ref.substr(1)}`
         }
     })
@@ -51,7 +74,7 @@ export function flattenSchemas(definitions: { [name: string]: SchemaObject }) {
                 // remap refs to work with the futur position of this schema
                 let originalPath = `#/components/schemas/${name}/definitions/${subSchemaName}`;
                 let newPath = `#/components/schemas/${newSchemaName}`
-                throughJsonSchema(_.values(definitions), s => {
+                throughJsonSchema(_.values(definitions) as any, s => {
                     if (s.$ref && s.$ref === originalPath) {
                         s.$ref = newPath
                     }
@@ -92,7 +115,7 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
         for (let property in schema.properties) {
             let propertySchemaObject: SchemaObject
             let propertySchema = schema.properties[property]
-            if (propertySchema.hasOwnProperty("$ref") && (propertySchema as ReferenceObject).$ref.startsWith("#")) {
+            if (propertySchema.hasOwnProperty("$ref") && (propertySchema as ReferenceObject).$ref.charAt(0) === "#") {
                 let propertySchemaReference = propertySchema as ReferenceObject
                 propertySchemaObject = jsonpointer.get(spec, propertySchemaReference.$ref.substr(1))
             } else {

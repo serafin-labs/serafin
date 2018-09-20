@@ -2,7 +2,7 @@ import * as graphql from "graphql"
 import * as _ from "lodash"
 import * as jsonpointer from 'jsonpointer';
 import * as GraphQLJSON from 'graphql-type-json';
-import { JSONSchema } from "@serafin/open-api"
+import { JSONSchema } from "@serafin/schema-builder";
 
 /**
  * Basic types that can be converted to JSON Schema directly
@@ -53,7 +53,7 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, pr
             } else {
                 // map all properties to their graphql equivalent
                 let fields = _.mapValues(properties, (propertySchema, propertyName) => {
-                    let type = _jsonSchemaToGraphQL(propertySchema, `${name}${_.upperFirst(propertyName)}`)
+                    let type = _jsonSchemaToGraphQL(propertySchema as JSONSchema, `${name}${_.upperFirst(propertyName)}`)
                     return {
                         type: type ? type : GraphQLJSON
                     }
@@ -82,14 +82,14 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, pr
                 // if items is a list, we can't provide an accurate type for the list
                 result = new graphql.GraphQLList(GraphQLJSON);
             } else {
-                result = new graphql.GraphQLList(_jsonSchemaToGraphQL(schema.items, `${name}Element`))
+                result = new graphql.GraphQLList(_jsonSchemaToGraphQL(schema.items as JSONSchema, `${name}Element`))
             }
         } else if (["integer", "number", "boolean", "string"].indexOf(schema.type as string) !== -1) {
             // convert basic types
             result = jsonSchemaToGraphQLTypes[schema.type as string];
         } else if (schema.$ref) {
             // if we have an external ref, throw an error
-            if (!schema.$ref.startsWith("#")) {
+            if (schema.$ref.charAt(0) !== "#") {
                 throw Error(`$ref is only supported for local references`)
             }
             result = _jsonSchemaToGraphQL(jsonpointer.get(rootSchema, schema.$ref.substr(1)), `${rootName}${pathToSchemaName(schema.$ref)}`)
@@ -102,9 +102,9 @@ export function jsonSchemaToGraphQL(rootSchema: JSONSchema, rootName: string, pr
         }
 
         // if definitions are included along with the schema, we convert them also
-        if (schema.definitions) {
-            for (let definition in schema.definitions) {
-                _jsonSchemaToGraphQL(schema.definitions[definition], `${name}${_.upperFirst(definition)}`)
+        if ((schema as any).definitions) {
+            for (let definition in (schema as any).definitions) {
+                _jsonSchemaToGraphQL((schema as any).definitions[definition], `${name}${_.upperFirst(definition)}`)
             }
         }
 

@@ -2,10 +2,10 @@
     "compilerOptions": {
         "sourceMap": true,
         "declaration": true,
-        "declarationDir": ".",
+        "declarationDir": "./lib",
         "module": "esnext",
         "moduleResolution": "node",
-        "target": "esnext"
+        "target": "es5"
     },
     "files": [
         "./src/index.ts"

@@ -1,11 +1,8 @@
 import * as _ from 'lodash';
-import * as jsonpointer from 'jsonpointer';
-import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "@serafin/pipeline"
 
 import { Api } from "../../Api"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, pathParameters, remapRefs, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils";
-import { throughJsonSchema } from '../../util/throughJsonSchema';
+import { flattenSchemas, jsonSchemaToOpenApiSchema, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils";
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {
@@ -27,7 +24,7 @@ export class OpenApi {
         for (let schemaBuilderName in pipeline.schemaBuilders) {
             if (pipeline.schemaBuilders[schemaBuilderName]) {
                 let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
-                let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
+                let schema = jsonSchemaToOpenApiSchema(pipeline.schemaBuilders[schemaBuilderName].clone().schema);
                 schema.title = schemaName;
                 this.api.openApi.components.schemas[schemaName] = schema
             }
