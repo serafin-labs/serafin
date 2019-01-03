@@ -61,7 +61,7 @@ export const schemaTestPipeline =
             {
                 oneOf:
                     [{ description: 'id', type: 'string' },
-                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                    { type: 'array', items: [{ description: 'id', type: 'string' }] }]
             },
             method:
             {
@@ -69,7 +69,7 @@ export const schemaTestPipeline =
                     [{ description: 'method', type: 'string' },
                     {
                         type: 'array',
-                        items: { description: 'method', type: 'string' }
+                        items: [{ description: 'method', type: 'string' }]
                     }]
             }
         }
@@ -95,7 +95,7 @@ export const schemaTestPipeline =
             {
                 oneOf:
                     [{ description: 'id', type: 'string' },
-                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                    { type: 'array', items: [{ description: 'id', type: 'string' }] }]
             }
         },
         required: ['id']
@@ -118,7 +118,7 @@ export const schemaTestPipeline =
             {
                 oneOf:
                     [{ description: 'id', type: 'string' },
-                    { type: 'array', items: { description: 'id', type: 'string' } }]
+                    { type: 'array', items: [{ description: 'id', type: 'string' }] }]
             }
         },
         required: ['id']
