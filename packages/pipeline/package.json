@@ -1,6 +1,6 @@
 {
     "name": "@serafin/pipeline",
-    "version": "0.10.3",
+    "version": "0.10.4",
     "description": "CRUD data access library with a functional approach",
     "contributors": [
         {
