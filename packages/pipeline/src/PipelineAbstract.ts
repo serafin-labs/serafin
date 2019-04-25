@@ -60,20 +60,20 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     } {
         return {
             model: modelSchemaBuilder,
-            createValues: modelSchemaBuilder.clone().setOptionalProperties(["id"]),
+            createValues: modelSchemaBuilder.setOptionalProperties(["id"]),
             createOptions: SchemaBuilder.emptySchema(),
             createMeta: SchemaBuilder.emptySchema(),
-            readQuery: modelSchemaBuilder.clone().transformPropertiesToArray().toOptionals(),
+            readQuery: modelSchemaBuilder.transformPropertiesToArray().toOptionals(),
             readOptions: SchemaBuilder.emptySchema(),
             readMeta: SchemaBuilder.emptySchema(),
-            replaceValues: modelSchemaBuilder.clone().omitProperties(["id"]),
+            replaceValues: modelSchemaBuilder.omitProperties(["id"]),
             replaceOptions: SchemaBuilder.emptySchema(),
             replaceMeta: SchemaBuilder.emptySchema(),
-            patchQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
-            patchValues: modelSchemaBuilder.clone().omitProperties(["id"]).toDeepOptionals().toNullable(),
+            patchQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
+            patchValues: modelSchemaBuilder.omitProperties(["id"]).toDeepOptionals().toNullable(),
             patchOptions: SchemaBuilder.emptySchema(),
             patchMeta: SchemaBuilder.emptySchema(),
-            deleteQuery: modelSchemaBuilder.clone().pickProperties(["id"]).transformPropertiesToArray(),
+            deleteQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
             deleteOptions: SchemaBuilder.emptySchema(),
             deleteMeta: SchemaBuilder.emptySchema(),
         }
@@ -147,7 +147,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     public addRelation<NameKey extends keyof any, RelationModel extends IdentityInterface, RelationReadQuery, RelationReadOptions, RelationReadMeta,
         QueryKeys extends keyof RelationReadQuery = null, OptionsKeys extends keyof RelationReadOptions = null>
         (name: NameKey, pipeline: () => PipelineAbstract<RelationModel, SchemaBuildersInterface<RelationModel, {}, {}, {}, RelationReadQuery, RelationReadOptions, RelationReadMeta>, any>,
-        query: { [key in QueryKeys]: any }, options?: { [key in OptionsKeys]: any }) {
+            query: { [key in QueryKeys]: any }, options?: { [key in OptionsKeys]: any }) {
 
         this.relations[name as string] = new Relation(this as any, name, pipeline, query, options)
         return this as any as PipelineAbstract<M, S, R & { [key in NameKey]: Relation<M, NameKey, RelationModel, RelationReadQuery, RelationReadOptions, RelationReadMeta, QueryKeys, OptionsKeys> }>;
@@ -275,16 +275,20 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
     }
 
     clone(): PipelineAbstract<M, S, R> {
-        return _.cloneDeepWith(this, (value: any, key: number | string | undefined) => {
+        let clonedPipeline = _.cloneDeepWith(this, (value: any, key: number | string | undefined) => {
             if (key === "relations") {
                 return _.clone(value)
             }
             if (key === "schemaBuilders") {
-                return _.mapValues(value, (schema: SchemaBuilder<any>) => schema ? schema.clone() : _.clone(schema))
+                return _.clone(value)
             }
             if (key === "pipes") {
-                return value ? value.map((pipe: PipeInterface & PipeAbstract) => pipe.clone(this)) : _.clone(value)
+                return value ? value.map((pipe: PipeInterface & PipeAbstract) => pipe.clone()) : _.clone(value)
             }
         })
+        for (let pipe of clonedPipeline.pipes) {
+            pipe[PIPELINE] = clonedPipeline
+        }
+        return clonedPipeline
     }
 }

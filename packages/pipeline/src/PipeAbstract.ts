@@ -20,11 +20,9 @@ export abstract class PipeAbstract {
         return this[PIPELINE];
     }
 
-    public clone(pipeline?: PipelineAbstract<any, any>) {
+    public clone() {
         const clonedPipe = _.clone(this);
-        if (pipeline) {
-            this[PIPELINE] = pipeline
-        }
+        clonedPipe[PIPELINE] = undefined
         return clonedPipe
     }
 }
