@@ -24,7 +24,7 @@ export class OpenApi {
         for (let schemaBuilderName in pipeline.schemaBuilders) {
             if (pipeline.schemaBuilders[schemaBuilderName]) {
                 let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
-                let schema = jsonSchemaToOpenApiSchema(pipeline.schemaBuilders[schemaBuilderName].clone().schema);
+                let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
                 schema.title = schemaName;
                 this.api.openApi.components.schemas[schemaName] = schema
             }
