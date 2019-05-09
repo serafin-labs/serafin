@@ -71,9 +71,9 @@ async function main() {
     await pipeline.create([{myString: "test3", myNumber: 2}])
     await pipeline.create([{myString: "toto", myNumber: 70}])
     await pipeline.patch({id: "hop"}, {myString: "test4"})
-    // console.log("READ id 'hop':", await pipeline.read({id: "hop"}))
+    console.log("READ id 'hop':", await pipeline.read({id: "hop"}))
     await pipeline.delete({id: "hop"})
-    // console.log("READ all:", await pipeline.read({}))
+    console.log("READ all:", await pipeline.read({}))
 
     api.use(pipeline, "test")
 
