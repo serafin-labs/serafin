@@ -5,7 +5,7 @@ gulp.task('default', ['start']);
 gulp.task('dev', ['watch', 'watch-build-done', 'start']);
 gulp.task('watch', ['watch-typescript', 'watch-assets']);
 gulp.task('build', ['build-typescript', 'copy-assets']);
-gulp.task('build-done', ['restart', 'test']);
+gulp.task('build-done', ['restart']);
 
 var main = process.env.MAIN || 'lib/example/petstore/index.js';
 

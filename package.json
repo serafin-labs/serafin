@@ -17,8 +17,10 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "@serafin/api": "^0.3.0",
-    "@serafin/pipeline": "^0.10.0",
+    "@serafin/api": "^0.4.0",
+    "@serafin/pipeline": "^0.11.0",
+    "@serafin/pipeline-mongodb": "^0.2.4",
+    "mongodb": "^3.2.4",
     "node-uuid": "^1.4.8"
   },
   "devDependencies": {
@@ -32,7 +34,7 @@
     "merge-stream": "^1.0.0",
     "mocha": "^3.5.3",
     "remap-istanbul": "^0.7.0",
-    "typescript": "^3.0.3"
+    "typescript": "3.3.4000"
   },
   "scripts": {
     "start": "forever --minUptime 1000 --spinSleepTime 1000 lib/index.js",

@@ -60,6 +60,7 @@ typings/
 # specific
 /lib
 /.history
+/.mongo_data
 /.idea
 /.DS_Store
 !/.gitkeep

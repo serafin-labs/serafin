@@ -1,4 +1,5 @@
 /.idea
+/.mongo_data
 /.vscode
 /.backup
 /.dockerignore
