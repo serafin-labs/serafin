@@ -6,21 +6,21 @@ import { SchemaBuilder } from "@serafin/schema-builder";
 import { TestPipe } from "./TestPipe";
 import { PipeAbstract } from "../PipeAbstract";
 import { TestPipeline, schemaTestPipeline } from "./TestPipeline";
+import { EmptyPipeline } from "./EmptyPipeline";
 import { PipelineAbstract } from "../PipelineAbstract";
-import { IdentityInterface } from "../IdentityInterface";
 import { Relation } from "../Relation";
 import { QueryTemplate } from "../QueryTemplate";
-import { JSONSchema } from "@serafin/schema-builder/lib/JsonSchema";
+import { defaultSchemaBuilders } from "../SchemaBuildersInterface";
 
 chai.use(require("chai-as-promised"))
 
-const testPipeline = () => new TestPipeline(SchemaBuilder.emptySchema()
+const testPipeline = () => new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema()
     .addString("id", { description: "id" })
-    .addString("method", { description: "method" }));
+    .addString("method", { description: "method" })));
 
-const testEmptyPipeline = () => new (class extends PipelineAbstract<any> { })(SchemaBuilder.emptySchema()
+const testEmptyPipeline = () => new EmptyPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema()
     .addString("id", { description: "id" })
-    .addString("method", { description: "method" }));
+    .addString("method", { description: "method" })));
 
 describe('Pipelines', function () {
     describe('PipeAbstract', function () {
@@ -60,53 +60,6 @@ describe('Pipelines', function () {
             p.pipe(testPipe as any);
             let p2 = testPipeline();
             return expect(() => p2.pipe(testPipe as any)).to.throw();
-        });
-
-        it(`should extend schema builders`, function () {
-            class ExtendedPipeline<M extends IdentityInterface> extends PipelineAbstract<M> {
-                schemaBuilders = {
-                    model: super.getSchemaBuilders().model,
-                    createValues: super.getSchemaBuilders().createValues,
-                    createOptions: super.getSchemaBuilders().createOptions.addString("additionalOption"),
-                    createMeta: super.getSchemaBuilders().createMeta.addString("additionalMeta"),
-                    readQuery: super.getSchemaBuilders().readQuery,
-                    readOptions: super.getSchemaBuilders().readOptions.addString("additionalOption"),
-                    readMeta: super.getSchemaBuilders().readMeta.addString("additionalMeta"),
-                    replaceValues: super.getSchemaBuilders().replaceValues,
-                    replaceOptions: super.getSchemaBuilders().replaceOptions.addString("additionalOption"),
-                    replaceMeta: super.getSchemaBuilders().replaceMeta.addString("additionalMeta"),
-                    patchQuery: super.getSchemaBuilders().patchQuery.addString("additionalQuery"),
-                    patchValues: super.getSchemaBuilders().patchValues,
-                    patchOptions: super.getSchemaBuilders().patchOptions.addString("additionalOption"),
-                    patchMeta: super.getSchemaBuilders().patchMeta.addString("additionalMeta"),
-                    deleteQuery: super.getSchemaBuilders().deleteQuery.addString("additionalQuery"),
-                    deleteOptions: super.getSchemaBuilders().deleteOptions.addString("additionalOption"),
-                    deleteMeta: super.getSchemaBuilders().deleteMeta.addString("additionalMeta")
-                }
-            };
-            let p = new ExtendedPipeline
-                (SchemaBuilder.emptySchema()
-                    .addString("id", { description: "id" })
-                    .addString("method", { description: "method" }));
-
-            expect(p.schemaBuilders.model instanceof SchemaBuilder &&
-                p.schemaBuilders.createValues instanceof SchemaBuilder && // p.schemaBuilders.createValues.schema.properties.additionalValue.type == 'string' &&
-                p.schemaBuilders.createOptions instanceof SchemaBuilder && (p.schemaBuilders.createOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
-                p.schemaBuilders.createMeta instanceof SchemaBuilder && (p.schemaBuilders.createMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
-                p.schemaBuilders.readQuery instanceof SchemaBuilder && //p.schemaBuilders.readQuery.schema.properties.additionalQuery.type == 'string' &&
-                p.schemaBuilders.readOptions instanceof SchemaBuilder && (p.schemaBuilders.readOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
-                p.schemaBuilders.readMeta instanceof SchemaBuilder && (p.schemaBuilders.readMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
-                p.schemaBuilders.replaceValues instanceof SchemaBuilder &&
-                p.schemaBuilders.replaceOptions instanceof SchemaBuilder && (p.schemaBuilders.replaceOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
-                p.schemaBuilders.replaceMeta instanceof SchemaBuilder && (p.schemaBuilders.replaceMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
-                p.schemaBuilders.patchQuery instanceof SchemaBuilder && (p.schemaBuilders.patchQuery.schema.properties.additionalQuery as JSONSchema).type == 'string' &&
-                p.schemaBuilders.patchValues instanceof SchemaBuilder &&
-                p.schemaBuilders.patchOptions instanceof SchemaBuilder && (p.schemaBuilders.patchOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
-                p.schemaBuilders.patchMeta instanceof SchemaBuilder && (p.schemaBuilders.patchMeta.schema.properties.additionalMeta as JSONSchema).type == 'string' &&
-                p.schemaBuilders.deleteQuery instanceof SchemaBuilder && (p.schemaBuilders.deleteQuery.schema.properties.additionalQuery as JSONSchema).type == 'string' &&
-                p.schemaBuilders.deleteOptions instanceof SchemaBuilder && (p.schemaBuilders.deleteOptions.schema.properties.additionalOption as JSONSchema).type == 'string' &&
-                p.schemaBuilders.deleteMeta instanceof SchemaBuilder && (p.schemaBuilders.deleteMeta.schema.properties.additionalMeta as JSONSchema).type == 'string'
-            ).to.be.true;
         });
     });
 
@@ -174,7 +127,7 @@ describe('Pipelines', function () {
             return expect(testEmptyPipeline().pipe(new TestPipe() as any).replace('1', { 'method': 'test' })).to.be.rejected;
         });
         it(`should fail calling the patch method`, function () {
-            return expect(testEmptyPipeline().pipe(new TestPipe() as any).patch({ id: '1' }, { id: '1' })).to.be.rejected;
+            return expect(testEmptyPipeline().pipe(new TestPipe() as any).patch({ id: '1' }, { id: '1' } as any)).to.be.rejected;
         });
         it(`should fail calling the delete method`, function () {
             return expect(testEmptyPipeline().pipe(new TestPipe() as any).delete({ id: '1' })).to.be.rejected;
@@ -255,9 +208,9 @@ describe('Pipelines', function () {
         });
 
         it('should associate properly the remote pipeline properties and allow arrays', function () {
-            let p2 = new TestPipeline(SchemaBuilder.emptySchema()
+            let p2 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema()
                 .addString("id", { description: "id" })
-                .addArray("test", SchemaBuilder.emptySchema().addString('hop')))
+                .addArray("test", SchemaBuilder.emptySchema().addString('hop'))))
             let p1 = testPipeline().addRelation("p2", () => p2, { test: [{ hop: "la" }] });
             return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: '1', method: 'read' }], meta: {} });
         });
@@ -277,9 +230,9 @@ describe('Pipelines', function () {
             expect(p3.relations.p2.type).to.equal("many");
 
             // Relation referencing the remote object "id", but from an array: many relation
-            let p4 = new TestPipeline(SchemaBuilder.emptySchema()
+            let p4 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema()
                 .addString("id", { description: "id" })
-                .addArray("test", SchemaBuilder.emptySchema().addString('hop')))
+                .addArray("test", SchemaBuilder.emptySchema().addString('hop'))))
                 .addRelation("test", () => p2, { "id": ":test" });
             expect(p4.relations.test.type).to.equal("many");
 

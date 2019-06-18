@@ -1,26 +1,37 @@
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { SchemaBuilder } from "@serafin/schema-builder";
+import { IdentityInterface } from "./IdentityInterface";
+import { IdentityQueryInterface } from "./IdentityQueryInterface";
+import { PipeAbstract } from "./PipeAbstract";
 
-export interface PipeInterface<S extends SchemaBuildersInterface = any, M = any, CV= any, CO= any, CM= any,
-    RQ= any, RO= any, RM= any, UV= any, UO= any, UM= any, PQ= any, PV= any, PO= any, PM= any, DQ= any, DO= any, DM= any, PR= {}> {
-
-    schemaBuilderModel?: (s: S["model"]) => SchemaBuilder<M>
-    schemaBuilderCreateValues?: (s: S["createValues"]) => SchemaBuilder<CV>
-    schemaBuilderCreateOptions?: (s: S["createOptions"]) => SchemaBuilder<CO>
-    schemaBuilderCreateMeta?: (s: S["createMeta"]) => SchemaBuilder<CM>
-    schemaBuilderReadQuery?: (s: S["readQuery"]) => SchemaBuilder<RQ>
-    schemaBuilderReadOptions?: (s: S["readOptions"]) => SchemaBuilder<RO>
-    schemaBuilderReadMeta?: (s: S["readMeta"]) => SchemaBuilder<RM>
-    schemaBuilderReplaceValues?: (s: S["replaceValues"]) => SchemaBuilder<UV>
-    schemaBuilderReplaceOptions?: (s: S["replaceOptions"]) => SchemaBuilder<UO>
-    schemaBuilderReplaceMeta?: (s: S["replaceMeta"]) => SchemaBuilder<UM>
-    schemaBuilderPatchQuery?: (s: S["patchQuery"]) => SchemaBuilder<PQ>
-    schemaBuilderPatchValues?: (s: S["patchValues"]) => SchemaBuilder<PV>
-    schemaBuilderPatchOptions?: (s: S["patchOptions"]) => SchemaBuilder<PO>
-    schemaBuilderPatchMeta?: (s: S["patchMeta"]) => SchemaBuilder<PM>
-    schemaBuilderDeleteQuery?: (s: S["deleteQuery"]) => SchemaBuilder<DQ>
-    schemaBuilderDeleteOptions?: (s: S["deleteOptions"]) => SchemaBuilder<DO>
-    schemaBuilderDeleteMeta?: (s: S["deleteMeta"]) => SchemaBuilder<DM>
-
-    relations?: PR
+export interface PipeInterface<
+    M extends IdentityInterface = any,
+    CV = any, CO = any, CM = any,
+    RQ extends IdentityQueryInterface = any, RO = any, RM = any,
+    UV = any, UO = any, UM = any,
+    PQ = any, PV = any, PO = any, PM = any,
+    DQ = any, DO = any, DM = any,
+    M2 extends IdentityInterface = any,
+    CV2 = any, CO2 = any, CM2 = any,
+    RQ2 extends IdentityQueryInterface = any, RO2 = any, RM2 = any,
+    UV2 = any, UO2 = any, UM2 = any,
+    PQ2 = any, PV2 = any, PO2 = any, PM2 = any,
+    DQ2 = any, DO2 = any, DM2 = any
+    > extends PipeAbstract {
+    schemaBuilderModel?: (s: SchemaBuilder<M>) => SchemaBuilder<M2>
+    schemaBuilderCreateValues?: (s: SchemaBuilder<CV>) => SchemaBuilder<CV2>
+    schemaBuilderCreateOptions?: (s: SchemaBuilder<CO>) => SchemaBuilder<CO2>
+    schemaBuilderCreateMeta?: (s: SchemaBuilder<CM>) => SchemaBuilder<CM2>
+    schemaBuilderReadQuery?: (s: SchemaBuilder<RQ>) => SchemaBuilder<RQ2>
+    schemaBuilderReadOptions?: (s: SchemaBuilder<RO>) => SchemaBuilder<RO2>
+    schemaBuilderReadMeta?: (s: SchemaBuilder<RM>) => SchemaBuilder<RM2>
+    schemaBuilderReplaceValues?: (s: SchemaBuilder<UV>) => SchemaBuilder<UV2>
+    schemaBuilderReplaceOptions?: (s: SchemaBuilder<UO>) => SchemaBuilder<UO2>
+    schemaBuilderReplaceMeta?: (s: SchemaBuilder<UM>) => SchemaBuilder<UM2>
+    schemaBuilderPatchQuery?: (s: SchemaBuilder<PQ>) => SchemaBuilder<PQ2>
+    schemaBuilderPatchValues?: (s: SchemaBuilder<PV>) => SchemaBuilder<PV2>
+    schemaBuilderPatchOptions?: (s: SchemaBuilder<PO>) => SchemaBuilder<PO2>
+    schemaBuilderPatchMeta?: (s: SchemaBuilder<PM>) => SchemaBuilder<PM2>
+    schemaBuilderDeleteQuery?: (s: SchemaBuilder<DQ>) => SchemaBuilder<DQ2>
+    schemaBuilderDeleteOptions?: (s: SchemaBuilder<DO>) => SchemaBuilder<DO2>
+    schemaBuilderDeleteMeta?: (s: SchemaBuilder<DM>) => SchemaBuilder<DM2>
 }

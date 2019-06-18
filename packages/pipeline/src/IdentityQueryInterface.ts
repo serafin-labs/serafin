@@ -1,0 +1,1 @@
+export interface IdentityQueryInterface { id?: string | string[] }

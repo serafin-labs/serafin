@@ -1,26 +1,29 @@
 import { PipelineAbstract } from "../PipelineAbstract";
 import { IdentityInterface } from "../IdentityInterface";
-import { ResultsInterface } from "../ResultsInterface";
+import { IdentityQueryInterface } from "../IdentityQueryInterface";
 
 // @description("test pipeline description")
-export class TestPipeline<T extends IdentityInterface> extends PipelineAbstract<T> {
-    protected async _create(resources: any[], options?: any): Promise<ResultsInterface<any>> {
+export class TestPipeline<M extends IdentityInterface, CV = {}, CO = {}, CM = {}, RQ extends IdentityQueryInterface = IdentityQueryInterface, RO = {}, RM = {},
+    UV = {}, UO = {}, UM = {}, PQ = {}, PV = {}, PO = {}, PM = {}, DQ = {}, DO = {}, DM = {}, R = {}> extends PipelineAbstract<M, CV, CO, CM, RQ, RO, RM,
+    UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, R> {
+
+    protected async _create(resources: any[]): Promise<any> {
         return { data: [{ id: '1', method: 'create' }], meta: {} };
     }
 
-    protected async _read(query?: any, options?: any): Promise<ResultsInterface<any>> {
+    protected async _read(query?: any): Promise<any> {
         return { data: [{ id: '1', method: 'read' }], meta: {} };
     }
 
-    protected async _replace(id: string, values: any, options?: any): Promise<ResultsInterface<any>> {
+    protected async _replace(id: string, values: any): Promise<any> {
         return { data: [{ id: '1', method: 'replace' }], meta: {} };
     }
 
-    protected async _patch(query: any, values: any, options?: any): Promise<ResultsInterface<any>> {
+    protected async _patch(query: any, values: any): Promise<any> {
         return { data: [{ id: '1', method: 'patch' }], meta: {} };
     }
 
-    protected async _delete(query: any, options?: any): Promise<ResultsInterface<any>> {
+    protected async _delete(query: any): Promise<any> {
         return { data: [{ id: '1', method: 'delete' }], meta: {} };
     }
 }
@@ -104,7 +107,7 @@ export const schemaTestPipeline =
     {
         type: 'object',
         additionalProperties: false,
-        properties: { method: { description: 'method', type: ['string', 'null'] } }
+        properties: { method: { description: 'method', type: 'string' } }
     },
     patchOptions: { type: 'object', additionalProperties: false },
     patchMeta: { type: 'object', additionalProperties: false },
