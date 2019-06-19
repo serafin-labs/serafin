@@ -3,7 +3,7 @@ import { QueryTemplate, Relation } from '@serafin/pipeline';
 import { Api } from '../../Api';
 
 export class JsonHal {
-    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation }) {
+    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {
 
     }
 
@@ -29,7 +29,7 @@ export class JsonHal {
         return links;
     }
 
-    private createNonTemplatedLink(rel: Relation, resource: object) {
+    private createNonTemplatedLink(rel: Relation<any, any, any, any, any, any>, resource: object) {
         let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             console.log(rel.pipeline)
@@ -60,7 +60,7 @@ export class JsonHal {
         return null;
     }
 
-    private createTemplatedLink(rel: Relation): object {
+    private createTemplatedLink(rel: Relation<any, any, any, any, any, any>): object {
         let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
         if (relationPath !== undefined) {
             let idUrl = "";

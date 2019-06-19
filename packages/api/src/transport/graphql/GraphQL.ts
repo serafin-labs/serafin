@@ -36,7 +36,7 @@ export interface GraphQLOptions {
  */
 export class GraphQLTransport implements TransportInterface {
     private api: Api
-    private graphQlModelTypes: { pipeline: PipelineAbstract<any, any>, schema: graphql.GraphQLObjectType }[] = [];
+    private graphQlModelTypes: { pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, schema: graphql.GraphQLObjectType }[] = [];
     private graphQlSchemaQueries: any = {};
     private _graphQlSchema: graphql.GraphQLSchema;
     private get graphQlSchema() {
@@ -84,7 +84,7 @@ export class GraphQLTransport implements TransportInterface {
      * @param name
      * @param pluralName
      */
-    use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, name: string, pluralName: string) {
         let relations = pipeline.relations;
 
         // prepare Ajv filters
@@ -134,7 +134,7 @@ export class GraphQLTransport implements TransportInterface {
                     // get the existing fields of the unerlying function
                     let existingFields = existingFieldsFunction();
                     // resolve the pipeline reference
-                    let pipeline: PipelineAbstract<any> = relation.pipeline()
+                    let pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any> = relation.pipeline()
                     // find the model graphql type of this relation
                     let relationType = _.find(this.graphQlModelTypes, m => m.pipeline === pipeline)
                     if (!relationType) {

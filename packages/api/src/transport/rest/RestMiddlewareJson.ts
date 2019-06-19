@@ -7,7 +7,7 @@ import { Api } from '../../Api';
 import { RestTransport } from './Rest'
 import { JsonHal } from './JsonHal';
 
-export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstract<any, any>,
+export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
     openApi: OpenApi, endpointPath: string, resourcesPath: string, name: string) => {
     let router: express.Router = express.Router();
     router.use((req, res, next) => {

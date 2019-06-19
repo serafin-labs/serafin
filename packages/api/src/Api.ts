@@ -14,7 +14,7 @@ export class Api {
     /**
      * Map of all exposed pipelines
      */
-    public pipelineByName: { [name: string]: PipelineAbstract<any, any> } = {}
+    public pipelineByName: { [name: string]: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any> } = {}
 
     /**
      * Base path of the API
@@ -90,7 +90,7 @@ export class Api {
      * @param name The singular name of the underlying resource.
      * @param pluralName The plural name the underlying resource. If not provided, it defaults to `${name}s`
      */
-    use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string = `${name}s`): this {
+    use(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, name: string, pluralName: string = `${name}s`): this {
         this.pipelineByName[pluralName] = pipeline
         for (let transport of this.transports) {
             transport.use(pipeline, name, pluralName)

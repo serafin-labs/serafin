@@ -34,7 +34,7 @@ export class RestTransport implements TransportInterface {
      * @param name
      * @param pluralName
      */
-    use(pipeline: PipelineAbstract<any, any>, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, name: string, pluralName: string) {
         // setup the router
         let endpointPath = `${this.api.basePath}/${pluralName}`;
         let resourcesPath = `/${pluralName}`;
@@ -108,7 +108,7 @@ export class RestTransport implements TransportInterface {
         }
     }
 
-    public static availableMethods(pipeline: PipelineAbstract<any, any>) {
+    public static availableMethods(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>) {
         return {
             canRead: !!pipeline.schemaBuilders.readQuery,
             canCreate: !!pipeline.schemaBuilders.createValues,

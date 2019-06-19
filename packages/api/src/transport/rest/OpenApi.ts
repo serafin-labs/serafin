@@ -16,7 +16,7 @@ export class OpenApi {
     private upperName: string;
     private upperPluralName: string
 
-    constructor(private api: Api, private pipeline: PipelineAbstract<any, any>, private resourcesPath, private name: string, private pluralName: string) {
+    constructor(private api: Api, private pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, private resourcesPath, private name: string, private pluralName: string) {
         // import pipeline schemas to openApi definitions
         this.upperName = _.upperFirst(name);
         this.upperPluralName = _.upperFirst(pluralName);
@@ -38,8 +38,8 @@ export class OpenApi {
     }
 
     addReadDoc() {
-        let readQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.readQuery.schema, this.api.openApi);
-        let readOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.readOptions.schema, this.api.openApi));
+        let readQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.readQuery.schema as any, this.api.openApi);
+        let readOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.readOptions.schema as any, this.api.openApi));
 
         // general get
         this.api.openApi.paths[this.resourcesPath]["get"] = {
@@ -140,7 +140,7 @@ export class OpenApi {
     }
 
     addCreateDoc() {
-        let createOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.createOptions.schema, this.api.openApi));
+        let createOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.createOptions.schema as any, this.api.openApi));
 
         // post a new resource
         this.api.openApi.paths[this.resourcesPath]["post"] = {
@@ -200,8 +200,8 @@ export class OpenApi {
     }
 
     addPatchDoc() {
-        let patchQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchQuery.schema, this.api.openApi)
-        let patchOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchOptions.schema, this.api.openApi));
+        let patchQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchQuery.schema as any, this.api.openApi)
+        let patchOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchOptions.schema as any, this.api.openApi));
 
         // patch by id
         this.api.openApi.paths[this.resourcesPathWithId]["patch"] = {
@@ -266,7 +266,7 @@ export class OpenApi {
     }
 
     addReplaceDoc() {
-        let replaceOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.replaceOptions.schema, this.api.openApi));
+        let replaceOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.replaceOptions.schema as any, this.api.openApi));
 
         // put by id
         this.api.openApi.paths[this.resourcesPathWithId]["put"] = {
@@ -331,7 +331,7 @@ export class OpenApi {
     }
 
     addDeleteDoc() {
-        let deleteOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema, this.api.openApi));
+        let deleteOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema as any, this.api.openApi));
         // delete by id
         this.api.openApi.paths[this.resourcesPathWithId]["delete"] = {
             description: `Delete a ${this.upperName} using its id`,

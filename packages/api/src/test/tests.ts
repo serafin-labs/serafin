@@ -2,13 +2,18 @@ import { expect } from "chai";
 import * as chai from "chai";
 import * as express from "express"
 import { ParameterObject } from "@serafin/open-api";
-import { PipelineAbstract } from "@serafin/pipeline";
+import { PipelineAbstract, IdentityInterface, defaultSchemaBuilders } from "@serafin/pipeline";
 import { Api } from "../Api";
 import { RestTransport } from "../transport/rest/Rest"
 import { SchemaBuilder } from "@serafin/schema-builder";
 
 chai.use(require("chai-http"))
 chai.use(require("chai-as-promised"))
+
+class EmptyPipeline<M extends IdentityInterface, CV = {}, CO = {}, CM = {}, RQ = {}, RO = {}, RM = {},
+    UV = {}, UO = {}, UM = {}, PQ = {}, PV = {}, PO = {}, PM = {}, DQ = {}, DO = {}, DM = {}, R = {}> extends PipelineAbstract<M, CV, CO, CM, RQ, RO, RM,
+    UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, R> {
+}
 
 describe('Api', function () {
     let api: Api
@@ -53,9 +58,7 @@ describe('Api', function () {
 
     it('should configure a transport', function (done) {
         api.configure(new RestTransport)
-        let testPipeline = class extends PipelineAbstract<any> {
-        }
-        api.use(new testPipeline(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("value")), "test")
+        api.use(new EmptyPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("value"))), "test")
         let server = app.listen(process.env.PORT || 8089, (error: any) => {
             if (error) {
                 server.close();
