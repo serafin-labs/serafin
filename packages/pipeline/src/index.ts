@@ -1,5 +1,4 @@
 export * from "./Relation"
-export * from './IdentityQueryInterface'
 export * from './IdentityInterface'
 export * from './ResultsInterface'
 export * from "./PipeAbstract"

@@ -4,7 +4,6 @@ import { SchemaBuilder } from "@serafin/schema-builder";
 import { notImplementedError, error } from "./error";
 import { final } from "./FinalDecorator";
 import { IdentityInterface } from "./IdentityInterface";
-import { IdentityQueryInterface } from "./IdentityQueryInterface";
 import { PIPELINE, PipeAbstract } from "./PipeAbstract";
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface";
 import { PipeInterface } from "./PipeInterface";
@@ -13,7 +12,7 @@ import { ResultsInterface } from "./ResultsInterface";
 
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
-export abstract class PipelineAbstract<M extends IdentityInterface, CV extends {} = {}, CO = {}, CM = {}, RQ extends IdentityQueryInterface = IdentityQueryInterface, RO = {}, RM = {},
+export abstract class PipelineAbstract<M extends IdentityInterface, CV extends {} = {}, CO = {}, CM = {}, RQ = {}, RO = {}, RM = {},
     UV = {}, UO = {}, UM = {}, PQ = {}, PV = {}, PO = {}, PM = {}, DQ = {}, DO = {}, DM = {}, R extends {} = {}> {
     public relations: R = {} as any;
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];
@@ -30,7 +29,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV extends {
     public pipe<
         M2 extends IdentityInterface = M,
         CV2 = CV, CO2 = CO, CM2 = CM,
-        RQ2 extends { id?: string | string[] } = RQ, RO2 = RO, RM2 = RM,
+        RQ2 = RQ, RO2 = RO, RM2 = RM,
         UV2 = UV, UO2 = UO, UM2 = UM,
         PQ2 = PQ, PV2 = PV, PO2 = PO, PM2 = PM,
         DQ2 = DQ, DO2 = DO, DM2 = DM
@@ -85,7 +84,7 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV extends {
         NameKey extends keyof any,
         M2 extends IdentityInterface,
         CV2, CO2, CM2,
-        RQ2 extends { id?: string | string[] }, RO2, RM2,
+        RQ2, RO2, RM2,
         UV2, UO2, UM2,
         PQ2, PV2, PO2, PM2,
         DQ2, DO2, DM2,

@@ -10,24 +10,6 @@ export interface PipeAbstract {
     replace(next: (id: string, values: any, options?: any) => Promise<any>, id: string, values: any, options?: any): Promise<any>;
     patch(next: (query: any, values: any, options?: any) => Promise<any>, query: any, values: any, options?: any): Promise<any>;
     delete(next: (query: any, options?: any) => Promise<any>, query: any, options?: any): Promise<any>;
-
-    schemaBuilderModel?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderCreateValues?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderCreateOptions?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderCreateMeta?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReadQuery?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReadOptions?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReadMeta?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReplaceValues?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReplaceOptions?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderReplaceMeta?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderPatchQuery?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderPatchValues?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderPatchOptions?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderPatchMeta?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderDeleteQuery?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderDeleteOptions?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
-    schemaBuilderDeleteMeta?: (s: SchemaBuilder<any>) => SchemaBuilder<any>
 }
 
 export abstract class PipeAbstract {

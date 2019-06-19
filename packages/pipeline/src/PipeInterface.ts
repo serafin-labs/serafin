@@ -1,18 +1,17 @@
 import { SchemaBuilder } from "@serafin/schema-builder";
 import { IdentityInterface } from "./IdentityInterface";
-import { IdentityQueryInterface } from "./IdentityQueryInterface";
 import { PipeAbstract } from "./PipeAbstract";
 
 export interface PipeInterface<
     M extends IdentityInterface = any,
     CV = any, CO = any, CM = any,
-    RQ extends IdentityQueryInterface = any, RO = any, RM = any,
+    RQ = any, RO = any, RM = any,
     UV = any, UO = any, UM = any,
     PQ = any, PV = any, PO = any, PM = any,
     DQ = any, DO = any, DM = any,
     M2 extends IdentityInterface = any,
     CV2 = any, CO2 = any, CM2 = any,
-    RQ2 extends IdentityQueryInterface = any, RO2 = any, RM2 = any,
+    RQ2 = any, RO2 = any, RM2 = any,
     UV2 = any, UO2 = any, UM2 = any,
     PQ2 = any, PV2 = any, PO2 = any, PM2 = any,
     DQ2 = any, DO2 = any, DM2 = any
