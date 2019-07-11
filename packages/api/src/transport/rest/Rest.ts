@@ -78,7 +78,7 @@ export class RestTransport implements TransportInterface {
         }
     }
 
-    public handleOptionsAndQuery(req: express.Request, res: express.Response, next: () => any, optionsSchemaBuilder: SchemaBuilder<any>, querySchemaBuilder: SchemaBuilder<any> = null): { options: object, query: object } {
+    public handleOptionsAndQuery(req: express.Request, res: express.Response, next: () => any, optionsSchemaBuilder: SchemaBuilder<any>, querySchemaBuilder: SchemaBuilder<any> = null, id?: string | string[]): { options: object, query: object } {
         try {
             let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query));
             if (this.options.internalOptions) {
@@ -88,7 +88,7 @@ export class RestTransport implements TransportInterface {
 
             let pipelineQuery = {};
             if (querySchemaBuilder !== null) {
-                pipelineQuery = _.cloneDeep(req.query)
+                pipelineQuery = id ? { ..._.cloneDeep(req.query), id } : _.cloneDeep(req.query)
                 querySchemaBuilder.validate(pipelineQuery);
             }
             return { options: pipelineOptions, query: pipelineQuery }
