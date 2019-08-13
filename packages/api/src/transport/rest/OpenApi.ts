@@ -22,7 +22,7 @@ export class OpenApi {
         this.upperPluralName = _.upperFirst(pluralName);
 
         for (let schemaBuilderName in pipeline.schemaBuilders) {
-            if (pipeline.schemaBuilders[schemaBuilderName]) {
+            if (pipeline.schemaBuilders[schemaBuilderName] && !/Options$|Query$/.test(schemaBuilderName)) {
                 let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
                 let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
                 schema.title = schemaName;
