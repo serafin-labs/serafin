@@ -121,23 +121,21 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
             } else {
                 propertySchemaObject = propertySchema as SchemaObject
             }
-            if (propertySchemaObject.type) {
-                let parameter: ParameterObject = {
-                    in: "query",
-                    name: property,
-                    schema: propertySchemaObject,
-                    description: propertySchemaObject.description,
-                    required: schema.required && schema.required.indexOf(property) !== -1,
+            let parameter: ParameterObject = {
+                in: "query",
+                name: property,
+                schema: propertySchemaObject,
+                description: propertySchemaObject.description || "",
+                required: schema.required && schema.required.indexOf(property) !== -1,
 
-                }
-                if (propertySchemaObject.type === 'object') {
-                    parameter.style = "deepObject"
-                }
-                if (propertySchemaObject.type === 'array') {
-                    parameter.style = "form"
-                }
-                data.push(parameter)
             }
+            if (propertySchemaObject.type === 'object') {
+                parameter.style = "deepObject"
+            }
+            if (propertySchemaObject.type === 'array') {
+                parameter.style = "form"
+            }
+            data.push(parameter)
         }
         if (schema.oneOf) {
             data = data.concat(schema.oneOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
