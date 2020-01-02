@@ -110,16 +110,17 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
     if (availableMethods.canPatch) {
         // patch an existing resource
         router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.patchOptions);
+            var id = req.params.id
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.patchOptions, pipeline.schemaBuilders.patchQuery, id);
             if (!pipelineParams) {
                 return
             }
 
             var patch = req.body
-            var id = req.params.id
 
             // run the query
             pipeline.patch({
+                ...pipelineParams.query,
                 id: id
             }, patch, pipelineParams.options).then(updatedResources => {
                 if (updatedResources.data.length === 0) {
