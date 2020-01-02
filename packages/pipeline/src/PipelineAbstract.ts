@@ -12,7 +12,7 @@ import { ResultsInterface } from "./ResultsInterface";
 
 export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete";
 
-export abstract class PipelineAbstract<M extends IdentityInterface, CV extends {} = {}, CO = {}, CM = {}, RQ = {}, RO = {}, RM = {},
+export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO = {}, CM = {}, RQ = {}, RO = {}, RM = {},
     UV = {}, UO = {}, UM = {}, PQ = {}, PV = {}, PO = {}, PM = {}, DQ = {}, DO = {}, DM = {}, R extends {} = {}> {
     public relations: R = {} as any;
     public static CRUDMethods: PipelineMethods[] = ['create', 'read', 'replace', 'patch', 'delete'];

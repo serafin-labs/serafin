@@ -1,6 +1,5 @@
 import { PipelineAbstract } from "./PipelineAbstract";
 import * as _ from "lodash";
-import { SchemaBuilder } from "@serafin/schema-builder";
 
 export const PIPELINE = Symbol("Pipeline");
 
