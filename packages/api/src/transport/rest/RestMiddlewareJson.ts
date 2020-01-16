@@ -169,15 +169,15 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
 
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.deleteOptions);
+            var id = req.params.id
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.deleteOptions, pipeline.schemaBuilders.deleteQuery, id);
             if (!pipelineParams) {
                 return
             }
 
-            let id = req.params.id;
-
             // run the query
             pipeline.delete({
+                ...pipelineParams.query,
                 id: id
             }, pipelineParams.options).then(deletedResources => {
                 if (deletedResources.data.length === 0) {
