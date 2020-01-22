@@ -45,7 +45,7 @@ export class OpenApi {
         this.api.openApi.paths[this.resourcesPath]["get"] = {
             description: `Find ${this.upperPluralName}`,
             operationId: `find${this.upperPluralName}`,
-            parameters: removeDuplicatedParameters(readQueryParameters.concat(readOptionsParameters)),
+            parameters: removeDuplicatedParameters([...readQueryParameters, ...readOptionsParameters]),
             responses: {
                 200: {
                     description: `${this.upperPluralName} corresponding to the query`,
@@ -152,7 +152,10 @@ export class OpenApi {
                 required: true,
                 content: {
                     "application/json": {
-                        schema: { $ref: `#/components/schemas/${this.upperName}CreateValues` }
+                        schema: {
+                            type: 'array',
+                            items: { $ref: `#/components/schemas/${this.upperName}CreateValues` },
+                        }
                     }
                 }
             },
@@ -164,7 +167,10 @@ export class OpenApi {
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                    },
                                     meta: { $ref: `#/components/schemas/${this.upperName}CreateMeta` }
                                 }
                             }
@@ -207,12 +213,12 @@ export class OpenApi {
         this.api.openApi.paths[this.resourcesPathWithId]["patch"] = {
             description: `Patch a ${this.upperName} using its id`,
             operationId: `patch${this.upperName}`,
-            parameters: removeDuplicatedParameters(patchOptionsParameters).concat([{
+            parameters: removeDuplicatedParameters([{
                 in: "path",
                 name: "id",
                 schema: { type: "string" },
                 required: true
-            }]),
+            }, ...patchQueryParameters, ...patchOptionsParameters]),
             requestBody: {
                 description: `The patch of ${this.upperName}.`,
                 required: true,
@@ -230,7 +236,10 @@ export class OpenApi {
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                    },
                                     meta: { $ref: `#/components/schemas/${this.upperName}PatchMeta` }
                                 }
                             }
@@ -295,7 +304,10 @@ export class OpenApi {
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                    },
                                     meta: { $ref: `#/components/schemas/${this.upperName}ReplaceMeta` }
                                 }
                             }
@@ -331,19 +343,18 @@ export class OpenApi {
     }
 
     addDeleteDoc() {
+        let deleteQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteQuery.schema as any, this.api.openApi)
         let deleteOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema as any, this.api.openApi));
         // delete by id
         this.api.openApi.paths[this.resourcesPathWithId]["delete"] = {
             description: `Delete a ${this.upperName} using its id`,
             operationId: `delete${this.upperName}`,
-            parameters: removeDuplicatedParameters(deleteOptionsParameters).concat([
-                {
-                    in: "path",
-                    name: "id",
-                    schema: { type: "string" },
-                    required: true
-                }
-            ]),
+            parameters: removeDuplicatedParameters([{
+                in: "path",
+                name: "id",
+                schema: { type: "string" },
+                required: true
+            }, ...deleteQueryParameters, ...deleteOptionsParameters]),
             responses: {
                 200: {
                     description: `Deleted ${this.upperName}`,
@@ -352,7 +363,10 @@ export class OpenApi {
                             schema: {
                                 type: 'object',
                                 properties: {
-                                    data: { $ref: `#/components/schemas/${this.upperName}Model` },
+                                    data: {
+                                        type: 'array',
+                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                    },
                                     meta: { $ref: `#/components/schemas/${this.upperName}DeleteMeta` }
                                 }
                             }

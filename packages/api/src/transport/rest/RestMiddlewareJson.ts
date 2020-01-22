@@ -71,7 +71,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
                     if (acceptHeader.search('application/hal+json') !== -1) {
                         result.data[0]['_links'] = (new JsonHal(endpointPath + `/${id}`, rest.api, pipeline.relations)).links(result.data[0]);
                     }
-                    res.status(200).json(result.data[0])
+                    res.status(200).json(result)
                 } else {
                     throw notFoundError(`${name}:${id}`)
                 }
@@ -94,11 +94,8 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
             var data = req.body
 
             // run the query
-            pipeline.create([data], pipelineParams.options).then(createdResources => {
-                if (createdResources.data.length !== 1) {
-                    throw new Error(`Api Error: unexpected create result for endpoint ${resourcesPath}`)
-                }
-                res.status(201).json(createdResources.data[0])
+            pipeline.create(data, pipelineParams.options).then(createdResources => {
+                res.status(201).json(createdResources)
             }).catch(error => {
                 rest.handleError(Api.apiError(error, req), res, next)
             });
@@ -126,7 +123,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
                 if (updatedResources.data.length === 0) {
                     throw notFoundError(`${name}:${id}`)
                 } else {
-                    res.status(200).json(updatedResources.data[0])
+                    res.status(200).json(updatedResources)
                 }
                 res.end()
             }).catch(error => {
@@ -183,7 +180,7 @@ export const restMiddlewareJson = (rest: RestTransport, pipeline: PipelineAbstra
                 if (deletedResources.data.length === 0) {
                     throw notFoundError(`${name}:${id}`)
                 } else {
-                    res.status(200).json(deletedResources.data[0])
+                    res.status(200).json(deletedResources)
                 }
                 res.end()
             }).catch(error => {
