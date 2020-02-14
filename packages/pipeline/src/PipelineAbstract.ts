@@ -108,12 +108,14 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO 
      * @param options Map of options to be used by pipelines
      */
     @final async create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
+        const cloned_resources = _.cloneDeep(resources)
+        const cloned_options = _.cloneDeep(options)
         this.handleValidate('create', () => {
-            this.schemaBuilders.createValues.validateList(resources);
-            this.schemaBuilders.createOptions.validate(options || {} as any);
+            this.schemaBuilders.createValues.validateList(cloned_resources);
+            this.schemaBuilders.createOptions.validate(cloned_options || {} as any);
         });
 
-        return this.pipeChain("create")(resources, options)
+        return this.pipeChain("create")(cloned_resources, cloned_options)
     }
 
     protected _create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
@@ -127,12 +129,14 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO 
      * @param options Map of options to be used by pipelines
      */
     @final async read(query?: RQ, options?: RO): Promise<ResultsInterface<M, RM>> {
+        const cloned_query = _.cloneDeep(query)
+        const cloned_options = _.cloneDeep(options)
         this.handleValidate('read', () => {
-            this.schemaBuilders.readQuery.validate(query || {} as any);
-            this.schemaBuilders.readOptions.validate(options || {} as any);
+            this.schemaBuilders.readQuery.validate(cloned_query || {} as any);
+            this.schemaBuilders.readOptions.validate(cloned_options || {} as any);
         });
 
-        return this.pipeChain("read")(query, options)
+        return this.pipeChain("read")(cloned_query, cloned_options)
     }
 
     protected _read(query?: RQ, options?: RO): Promise<ResultsInterface<M, RM>> {
@@ -148,14 +152,15 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO 
      * @param values
      * @param options
      */
-    @final async replace(id: string, values: UV, options?: UO)
-        : Promise<ResultsInterface<M, UM>> {
+    @final async replace(id: string, values: UV, options?: UO): Promise<ResultsInterface<M, UM>> {
+        const cloned_values = _.cloneDeep(values)
+        const cloned_options = _.cloneDeep(options)
         this.handleValidate('replace', () => {
-            this.schemaBuilders.replaceValues.validate(values || {} as any);
-            this.schemaBuilders.replaceOptions.validate(options || {} as any);
+            this.schemaBuilders.replaceValues.validate(cloned_values || {} as any);
+            this.schemaBuilders.replaceOptions.validate(cloned_options || {} as any);
         });
 
-        return this.pipeChain("replace")(id, values, options)
+        return this.pipeChain("replace")(id, cloned_values, cloned_options)
     }
 
     protected _replace(id: string, values: UV, options?: UO): Promise<ResultsInterface<M, UM>> {
@@ -172,12 +177,15 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO 
      * @param options
      */
     @final async patch(query: PQ, values: PV, options?: PO): Promise<ResultsInterface<M, PM>> {
+        const cloned_query = _.cloneDeep(query)
+        const cloned_values = _.cloneDeep(values)
+        const cloned_options = _.cloneDeep(options)
         this.handleValidate('patch', () => {
-            this.schemaBuilders.patchQuery.validate(query);
-            this.schemaBuilders.patchValues.validate(values || {} as any);
-            this.schemaBuilders.patchOptions.validate(options || {} as any);
+            this.schemaBuilders.patchQuery.validate(cloned_query);
+            this.schemaBuilders.patchValues.validate(cloned_values || {} as any);
+            this.schemaBuilders.patchOptions.validate(cloned_options || {} as any);
         });
-        return this.pipeChain("patch")(query, values, options)
+        return this.pipeChain("patch")(cloned_query, cloned_values, cloned_options)
     }
 
     protected _patch(query: PQ, values: PV, options?: PO): Promise<ResultsInterface<M, PM>> {
@@ -190,11 +198,13 @@ export abstract class PipelineAbstract<M extends IdentityInterface, CV = {}, CO 
      * @param options Map of options to be used by pipelines
      */
     @final async delete(query: DQ, options?: DO): Promise<ResultsInterface<M, DM>> {
+        const cloned_query = _.cloneDeep(query)
+        const cloned_options = _.cloneDeep(options)
         this.handleValidate('delete', () => {
-            this.schemaBuilders.deleteQuery.validate(query);
-            this.schemaBuilders.deleteOptions.validate(options || {} as any);
+            this.schemaBuilders.deleteQuery.validate(cloned_query);
+            this.schemaBuilders.deleteOptions.validate(cloned_options || {} as any);
         });
-        return this.pipeChain("delete")(query, options)
+        return this.pipeChain("delete")(cloned_query, cloned_options)
     }
 
     protected _delete(query: DQ, options?: DO): Promise<ResultsInterface<M, DM>> {
