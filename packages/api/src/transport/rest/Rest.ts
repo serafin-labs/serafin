@@ -14,6 +14,7 @@ export interface Error {
     message: string
     info?: any
     cause?: any
+    jse_cause: { name: string }
 }
 
 export interface RestOptions {
