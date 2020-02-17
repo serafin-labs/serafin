@@ -9,12 +9,24 @@ import { OpenApi } from "./OpenApi"
 import { Api } from "../../Api"
 import { restMiddlewareJson, restRootMiddlewareJson } from './RestMiddlewareJson';
 
+export interface Error {
+    name: string
+    message: string
+    info?: any
+    cause?: any
+    jse_cause: { name: string }
+}
+
 export interface RestOptions {
     /**
      * If provided, the Api will use this function to gather internal options for this request.
      * It can be used for example to pass _user or _role to the underlying pipeline.
      */
     internalOptions?: (req: express.Request) => Object
+    /*
+     * Allows you to execute custom code on error, primarily useful if you want to add extra logging
+     */
+    onError?: (error: Error) => void
 }
 
 export class RestTransport implements TransportInterface {
@@ -60,6 +72,9 @@ export class RestTransport implements TransportInterface {
 
     // error handling closure for this endpoint
     public handleError(error, res: express.Response, next: (err?: any) => void) {
+        if (this.options.onError) {
+            this.options.onError(error)
+        }
         // handle known errors
         if (![[ValidationErrorName, 400], [NotFoundErrorName, 404], [ConflictErrorName, 409], [NotImplementedErrorName, 405], [UnauthorizedErrorName, 401]].some((p: [string, number]) => {
             let [errorName, code] = p;

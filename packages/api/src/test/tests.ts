@@ -38,7 +38,7 @@ describe('Api', function () {
     });
 
     it('should provide a /api.json enpoint', function (done) {
-        let server = app.listen(process.env.PORT || 8089, (error: any) => {
+        let server = app.listen(+process.env.PORT || 8089, "localhost", (error: any[]) => {
             if (error) {
                 server.close();
                 return done(error)
@@ -59,7 +59,7 @@ describe('Api', function () {
     it('should configure a transport', function (done) {
         api.configure(new RestTransport)
         api.use(new EmptyPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("value"))), "test")
-        let server = app.listen(process.env.PORT || 8089, (error: any) => {
+        let server = app.listen(+process.env.PORT || 8089, "localhost", (error: any) => {
             if (error) {
                 server.close();
                 return done(error)
