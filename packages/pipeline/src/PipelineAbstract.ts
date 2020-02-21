@@ -168,6 +168,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     @final async create(resources: this["schemaBuilders"]["createValues"]["T"][], options?: this["schemaBuilders"]["createOptions"]["T"])
         : Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["createMeta"]["T"]>> {
+        resources = _.cloneDeep(resources)
+        options = _.cloneDeep(options)
         this.handleValidate('create', () => {
             this.schemaBuilders.createValues.validateList(resources);
             this.schemaBuilders.createOptions.validate(options || {} as any);
@@ -188,7 +190,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     @final async read(query?: this["schemaBuilders"]["readQuery"]["T"], options?: this["schemaBuilders"]["readOptions"]["T"])
         : Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["readMeta"]["T"]>> {
-
+        query = _.cloneDeep(query)
+        options = _.cloneDeep(options)
         this.handleValidate('read', () => {
             this.schemaBuilders.readQuery.validate(query || {});
             this.schemaBuilders.readOptions.validate(options || {});
@@ -212,6 +215,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     @final async replace(id: string, values: this["schemaBuilders"]["replaceValues"]["T"], options?: this["schemaBuilders"]["replaceOptions"]["T"])
         : Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["replaceMeta"]["T"]>> {
+        values = _.cloneDeep(values)
+        options = _.cloneDeep(options)
         this.handleValidate('replace', () => {
             this.schemaBuilders.replaceValues.validate(values || {});
             this.schemaBuilders.replaceOptions.validate(options || {});
@@ -235,6 +240,9 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     @final async patch(query: this["schemaBuilders"]["patchQuery"]["T"], values: this["schemaBuilders"]["patchValues"]["T"],
         options?: this["schemaBuilders"]["patchOptions"]["T"]): Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["patchMeta"]["T"]>> {
+        query = _.cloneDeep(query)
+        values = _.cloneDeep(values)
+        options = _.cloneDeep(options)
         this.handleValidate('patch', () => {
             this.schemaBuilders.patchQuery.validate(query);
             this.schemaBuilders.patchValues.validate(values || {});
@@ -254,6 +262,8 @@ export abstract class PipelineAbstract<M extends IdentityInterface, S extends Sc
      */
     @final async delete(query: this["schemaBuilders"]["deleteQuery"]["T"], options?: this["schemaBuilders"]["deleteOptions"]["T"])
         : Promise<ResultsInterface<this["schemaBuilders"]["model"]["T"], this["schemaBuilders"]["deleteMeta"]["T"]>> {
+        query = _.cloneDeep(query)
+        options = _.cloneDeep(options)
         this.handleValidate('delete', () => {
             this.schemaBuilders.deleteQuery.validate(query);
             this.schemaBuilders.deleteOptions.validate(options || {});
