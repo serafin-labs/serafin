@@ -29,9 +29,12 @@ export const restMiddlewareJson = (
 
     // create the routes for this endpoint
     if (availableMethods.canRead) {
+        // prepare schemas to handle transforming the query params & options and filtering unwanted properties
+        const readQuerySchema = pipeline.schemaBuilders.readQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
+        const readOptionsSchema = pipeline.schemaBuilders.readOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // get many resources
         router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.readOptions, pipeline.schemaBuilders.readQuery)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, readOptionsSchema, readQuerySchema)
             if (!pipelineParams) {
                 return
             }
@@ -65,7 +68,7 @@ export const restMiddlewareJson = (
         // get a resource by its id
         router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             let id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.readOptions)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, readOptionsSchema)
             if (!pipelineParams) {
                 return
             }
@@ -99,9 +102,11 @@ export const restMiddlewareJson = (
     }
 
     if (availableMethods.canCreate) {
+        // prepare schemas to handle transforming the options and filtering unwanted properties
+        const createOptionsSchema = pipeline.schemaBuilders.createOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // create a new resource
         router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.createOptions)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, createOptionsSchema)
             if (!pipelineParams) {
                 return
             }
@@ -122,10 +127,13 @@ export const restMiddlewareJson = (
     }
 
     if (availableMethods.canPatch) {
+        // prepare schemas to handle transforming the query params & options and filtering unwanted properties
+        const patchQuerySchema = pipeline.schemaBuilders.patchQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
+        const patchOptionsSchema = pipeline.schemaBuilders.patchOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // patch an existing resource
         router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             var id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.patchOptions, pipeline.schemaBuilders.patchQuery, id)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, patchOptionsSchema, patchQuerySchema, id)
             if (!pipelineParams) {
                 return
             }
@@ -159,9 +167,11 @@ export const restMiddlewareJson = (
     }
 
     if (availableMethods.canReplace) {
+        // prepare schemas to handle transforming the options and filtering unwanted properties
+        const replaceOptionsSchema = pipeline.schemaBuilders.replaceOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // put an existing resource
         router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.replaceOptions)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, replaceOptionsSchema)
             if (!pipelineParams) {
                 return
             }
@@ -189,10 +199,13 @@ export const restMiddlewareJson = (
     }
 
     if (availableMethods.canDelete) {
+        // prepare schemas to handle transforming the query params & options and filtering unwanted properties
+        const deleteQuerySchema = pipeline.schemaBuilders.deleteQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
+        const deleteOptionsSchema = pipeline.schemaBuilders.deleteOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             var id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, pipeline.schemaBuilders.deleteOptions, pipeline.schemaBuilders.deleteQuery, id)
+            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, deleteOptionsSchema, deleteQuerySchema, id)
             if (!pipelineParams) {
                 return
             }
