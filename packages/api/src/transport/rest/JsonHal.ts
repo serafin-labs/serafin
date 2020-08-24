@@ -1,105 +1,101 @@
-import * as _ from 'lodash';
-import { QueryTemplate, Relation } from '@serafin/pipeline';
-import { Api } from '../../Api';
+import * as _ from "lodash"
+import { QueryTemplate, Relation } from "@serafin/pipeline"
+import { Api } from "../../Api"
 
 export class JsonHal {
-    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {
-
-    }
+    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {}
 
     links(resource: object = null) {
-        let links = {};
+        let links = {}
 
         if (this.relations) {
             for (let relName in this.relations) {
                 let rel = this.relations[relName]
-                let link: object = null;
+                let link: object = null
                 if (resource) {
-                    link = this.createNonTemplatedLink(rel, resource);
+                    link = this.createNonTemplatedLink(rel, resource)
                 } else {
-                    link = this.createTemplatedLink(rel);
+                    link = this.createTemplatedLink(rel)
                 }
 
                 if (link) {
-                    links[rel.name] = link;
+                    links[rel.name] = link
                 }
             }
         }
 
-        return links;
+        return links
     }
 
     private createNonTemplatedLink(rel: Relation<any, any, any, any, any, any>, resource: object) {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any)
         if (relationPath !== undefined) {
             console.log(rel.pipeline)
-            let url = "";
-            let query = QueryTemplate.hydrate(rel.query, resource);
+            let url = ""
+            let query = QueryTemplate.hydrate(rel.query, resource)
 
-            if (query['id'] && rel.type == 'one') {
-                url = `/${query['id']}?`;
-                delete (query['id']);
+            if (query["id"] && rel.type == "one") {
+                url = `/${query["id"]}?`
+                delete query["id"]
             } else {
-                url = '?';
+                url = "?"
             }
 
             _.each(query, (value: any, key) => {
                 if (Array.isArray(value)) {
                     value.forEach((subValue) => {
-                        url += `${key}[]=${subValue}&`;
+                        url += `${key}[]=${subValue}&`
                     })
                 } else {
-                    url += `${key}=${value}&`;
+                    url += `${key}=${value}&`
                 }
-            });
+            })
 
-
-            return { href: `/${relationPath}${url}`.slice(0, -1) };
+            return { href: `/${relationPath}${url}`.slice(0, -1) }
         }
 
-        return null;
+        return null
     }
 
     private createTemplatedLink(rel: Relation<any, any, any, any, any, any>): object {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any);
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any)
         if (relationPath !== undefined) {
-            let idUrl = "";
-            let url = "?";
+            let idUrl = ""
+            let url = "?"
 
-            let templatedParts = QueryTemplate.getTemplatedParts(rel.query);
-            let nonTemplatedParts = QueryTemplate.getNonTemplatedParts(rel.query);
+            let templatedParts = QueryTemplate.getTemplatedParts(rel.query)
+            let nonTemplatedParts = QueryTemplate.getNonTemplatedParts(rel.query)
 
             _.each(nonTemplatedParts, (value: any, key) => {
-                if (key == 'id' && rel.type == 'one') {
-                    idUrl = `/${value}`;
+                if (key == "id" && rel.type == "one") {
+                    idUrl = `/${value}`
                 } else if (Array.isArray(value)) {
                     value.forEach((subValue) => {
-                        url += `${key}[]=${QueryTemplate.escape(subValue)}&`;
+                        url += `${key}[]=${QueryTemplate.escape(subValue)}&`
                     })
                 } else {
-                    url += `${key}=${QueryTemplate.escape(value)}&`;
+                    url += `${key}=${QueryTemplate.escape(value)}&`
                 }
-            });
+            })
 
-            let templatedParams: string[] = [];
+            let templatedParams: string[] = []
             _.each(templatedParts, (value, key) => {
-                if (key == 'id' && rel.type == 'one') {
-                    idUrl = `/{id}`;
+                if (key == "id" && rel.type == "one") {
+                    idUrl = `/{id}`
                 } else {
-                    templatedParams.push(key + "*");
+                    templatedParams.push(key + "*")
                 }
-            });
+            })
 
             if (templatedParams.length > 0) {
-                url = idUrl + `{${url.slice(-1)}${templatedParams.join(',')}}`;
-            }
-            else {
-                url = idUrl + url.slice(0, -1);
+                url = idUrl + `{${url.slice(-1)}${templatedParams.join(",")}}`
+            } else {
+                url = idUrl + url.slice(0, -1)
             }
 
-            return { href: `/${relationPath}${url}`, templated: true };
+            return { href: `/${relationPath}${url}`, templated: true }
         }
 
-        return null;
+        return null
     }
 }

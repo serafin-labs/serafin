@@ -1,11 +1,11 @@
 import * as _ from "lodash"
-import { JSONSchema } from "@serafin/schema-builder";
+import { JSONSchema } from "@serafin/schema-builder"
 
 /**
  * Go through the given schema and apply the given action to all the schema element.
- * 
- * @param schema 
- * @param action 
+ *
+ * @param schema
+ * @param action
  */
 export function throughJsonSchema(schema: boolean | JSONSchema | JSONSchema[], action: (schema: JSONSchema) => void) {
     if (typeof schema !== "boolean") {
@@ -29,13 +29,13 @@ export function throughJsonSchema(schema: boolean | JSONSchema | JSONSchema[], a
                 }
             }
             if (schema.oneOf) {
-                schema.oneOf.forEach(s => throughJsonSchema(s, action))
+                schema.oneOf.forEach((s) => throughJsonSchema(s, action))
             }
             if (schema.allOf) {
-                schema.allOf.forEach(s => throughJsonSchema(s, action))
+                schema.allOf.forEach((s) => throughJsonSchema(s, action))
             }
             if (schema.anyOf) {
-                schema.anyOf.forEach(s => throughJsonSchema(s, action))
+                schema.anyOf.forEach((s) => throughJsonSchema(s, action))
             }
             if (schema.items) {
                 throughJsonSchema(schema.items as JSONSchema, action)

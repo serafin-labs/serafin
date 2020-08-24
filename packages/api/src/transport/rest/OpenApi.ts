@@ -1,8 +1,7 @@
-import * as _ from 'lodash';
 import { PipelineAbstract } from "@serafin/pipeline"
-
+import * as _ from "lodash"
 import { Api } from "../../Api"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils";
+import { flattenSchemas, jsonSchemaToOpenApiSchema, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils"
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {
@@ -12,34 +11,42 @@ function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     }
 }
 export class OpenApi {
-    private resourcesPathWithId;
-    private upperName: string;
+    private resourcesPathWithId
+    private upperName: string
     private upperPluralName: string
 
-    constructor(private api: Api, private pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, private resourcesPath, private name: string, private pluralName: string) {
+    constructor(
+        private api: Api,
+        private pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
+        private resourcesPath,
+        private name: string,
+        private pluralName: string,
+    ) {
         // import pipeline schemas to openApi definitions
-        this.upperName = _.upperFirst(name);
-        this.upperPluralName = _.upperFirst(pluralName);
+        this.upperName = _.upperFirst(name)
+        this.upperPluralName = _.upperFirst(pluralName)
 
         for (let schemaBuilderName in pipeline.schemaBuilders) {
             if (pipeline.schemaBuilders[schemaBuilderName] && !/Options$|Query$/.test(schemaBuilderName)) {
                 let schemaName = mapSchemaBuilderName(schemaBuilderName, this.upperName)
-                let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema));
-                schema.title = schemaName;
+                let schema = jsonSchemaToOpenApiSchema(_.cloneDeep(pipeline.schemaBuilders[schemaBuilderName].schema))
+                schema.title = schemaName
                 this.api.openApi.components.schemas[schemaName] = schema
             }
         }
-        flattenSchemas(this.api.openApi.components.schemas);
+        flattenSchemas(this.api.openApi.components.schemas)
 
         // prepare open API metadata for each endpoint
-        this.resourcesPathWithId = `${resourcesPath}/{id}`;
-        this.api.openApi.paths[this.resourcesPath] = this.api.openApi.paths[this.resourcesPath] || {};
-        this.api.openApi.paths[this.resourcesPathWithId] = this.api.openApi.paths[this.resourcesPathWithId] || {};
+        this.resourcesPathWithId = `${resourcesPath}/{id}`
+        this.api.openApi.paths[this.resourcesPath] = this.api.openApi.paths[this.resourcesPath] || {}
+        this.api.openApi.paths[this.resourcesPathWithId] = this.api.openApi.paths[this.resourcesPathWithId] || {}
     }
 
     addReadDoc() {
-        let readQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.readQuery.schema as any, this.api.openApi);
-        let readOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.readOptions.schema as any, this.api.openApi));
+        let readQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.readQuery.schema as any, this.api.openApi)
+        let readOptionsParameters = this.api.filterInternalParameters(
+            schemaToOpenApiParameter(this.pipeline.schemaBuilders.readOptions.schema as any, this.api.openApi),
+        )
 
         // general get
         this.api.openApi.paths[this.resourcesPath]["get"] = {
@@ -52,95 +59,99 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
 
         // get by id
         this.api.openApi.paths[this.resourcesPathWithId]["get"] = {
             description: `Get one ${this.upperName} by its id`,
             operationId: `get${this.upperName}ById`,
-            parameters: [{
-                in: "path",
-                name: "id",
-                schema: { type: "string" },
-                required: true
-            }],
+            parameters: [
+                {
+                    in: "path",
+                    name: "id",
+                    schema: { type: "string" },
+                    required: true,
+                },
+            ],
             responses: {
                 200: {
                     description: `${this.upperPluralName} corresponding to the provided id`,
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReadMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 404: {
                     description: "Not Found",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
     }
 
     addCreateDoc() {
-        let createOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.createOptions.schema as any, this.api.openApi));
+        let createOptionsParameters = this.api.filterInternalParameters(
+            schemaToOpenApiParameter(this.pipeline.schemaBuilders.createOptions.schema as any, this.api.openApi),
+        )
 
         // post a new resource
         this.api.openApi.paths[this.resourcesPath]["post"] = {
@@ -153,11 +164,11 @@ export class OpenApi {
                 content: {
                     "application/json": {
                         schema: {
-                            type: 'array',
+                            type: "array",
                             items: { $ref: `#/components/schemas/${this.upperName}CreateValues` },
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             },
             responses: {
                 201: {
@@ -165,68 +176,74 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}CreateMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}CreateMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 409: {
                     description: "Conflict",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
     }
 
     addPatchDoc() {
         let patchQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchQuery.schema as any, this.api.openApi)
-        let patchOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchOptions.schema as any, this.api.openApi));
+        let patchOptionsParameters = this.api.filterInternalParameters(
+            schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchOptions.schema as any, this.api.openApi),
+        )
 
         // patch by id
         this.api.openApi.paths[this.resourcesPathWithId]["patch"] = {
             description: `Patch a ${this.upperName} using its id`,
             operationId: `patch${this.upperName}`,
-            parameters: removeDuplicatedParameters([{
-                in: "path",
-                name: "id",
-                schema: { type: "string" },
-                required: true
-            }, ...patchQueryParameters, ...patchOptionsParameters]),
+            parameters: removeDuplicatedParameters([
+                {
+                    in: "path",
+                    name: "id",
+                    schema: { type: "string" },
+                    required: true,
+                },
+                ...patchQueryParameters,
+                ...patchOptionsParameters,
+            ]),
             requestBody: {
                 description: `The patch of ${this.upperName}.`,
                 required: true,
                 content: {
                     "application/json": {
-                        schema: { $ref: `#/components/schemas/${this.upperName}PatchValues` }
-                    }
-                }
+                        schema: { $ref: `#/components/schemas/${this.upperName}PatchValues` },
+                    },
+                },
             },
             responses: {
                 200: {
@@ -234,67 +251,71 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}PatchMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}PatchMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 404: {
                     description: "Not Found",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
     }
 
     addReplaceDoc() {
-        let replaceOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.replaceOptions.schema as any, this.api.openApi));
+        let replaceOptionsParameters = this.api.filterInternalParameters(
+            schemaToOpenApiParameter(this.pipeline.schemaBuilders.replaceOptions.schema as any, this.api.openApi),
+        )
 
         // put by id
         this.api.openApi.paths[this.resourcesPathWithId]["put"] = {
             description: `Put a ${this.upperName} using its id`,
             operationId: `put${this.upperName}`,
-            parameters: removeDuplicatedParameters(replaceOptionsParameters).concat([{
-                in: "path",
-                name: "id",
-                schema: { type: "string" },
-                required: true
-            }]),
+            parameters: removeDuplicatedParameters(replaceOptionsParameters).concat([
+                {
+                    in: "path",
+                    name: "id",
+                    schema: { type: "string" },
+                    required: true,
+                },
+            ]),
             requestBody: {
                 description: `The ${this.upperName} to be replaced.`,
                 required: true,
                 content: {
                     "application/json": {
-                        schema: { $ref: `#/components/schemas/${this.upperName}ReplaceValues` }
-                    }
-                }
+                        schema: { $ref: `#/components/schemas/${this.upperName}ReplaceValues` },
+                    },
+                },
             },
             responses: {
                 200: {
@@ -302,102 +323,108 @@ export class OpenApi {
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}ReplaceMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}ReplaceMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 404: {
                     description: "Not Found",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
     }
 
     addDeleteDoc() {
         let deleteQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteQuery.schema as any, this.api.openApi)
-        let deleteOptionsParameters = this.api.filterInternalParameters(schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema as any, this.api.openApi));
+        let deleteOptionsParameters = this.api.filterInternalParameters(
+            schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema as any, this.api.openApi),
+        )
         // delete by id
         this.api.openApi.paths[this.resourcesPathWithId]["delete"] = {
             description: `Delete a ${this.upperName} using its id`,
             operationId: `delete${this.upperName}`,
-            parameters: removeDuplicatedParameters([{
-                in: "path",
-                name: "id",
-                schema: { type: "string" },
-                required: true
-            }, ...deleteQueryParameters, ...deleteOptionsParameters]),
+            parameters: removeDuplicatedParameters([
+                {
+                    in: "path",
+                    name: "id",
+                    schema: { type: "string" },
+                    required: true,
+                },
+                ...deleteQueryParameters,
+                ...deleteOptionsParameters,
+            ]),
             responses: {
                 200: {
                     description: `Deleted ${this.upperName}`,
                     content: {
                         "application/json": {
                             schema: {
-                                type: 'object',
+                                type: "object",
                                 properties: {
                                     data: {
-                                        type: 'array',
-                                        items: { "$ref": `#/components/schemas/${this.upperName}Model` },
+                                        type: "array",
+                                        items: { $ref: `#/components/schemas/${this.upperName}Model` },
                                     },
-                                    meta: { $ref: `#/components/schemas/${this.upperName}DeleteMeta` }
-                                }
-                            }
-                        }
-                    }
+                                    meta: { $ref: `#/components/schemas/${this.upperName}DeleteMeta` },
+                                },
+                            },
+                        },
+                    },
                 },
                 400: {
                     description: "Bad request",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 404: {
                     description: "Not Found",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
                 },
                 default: {
                     description: "Unexpected error",
                     content: {
                         "application/json": {
-                            schema: { $ref: '#/components/schemas/Error' }
-                        }
-                    }
-                }
-            }
+                            schema: { $ref: "#/components/schemas/Error" },
+                        },
+                    },
+                },
+            },
         }
     }
 }

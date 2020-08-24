@@ -1,16 +1,15 @@
-import * as express from 'express';
-import * as _ from 'lodash';
-import * as VError from 'verror';
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
-import { PipelineAbstract, validationError, notFoundError, ValidationErrorName, NotFoundErrorName, ConflictErrorName, NotImplementedErrorName, UnauthorizedErrorName } from "@serafin/pipeline"
-import { TransportInterface } from "./transport/TransportInterface";
+import { PipelineAbstract } from "@serafin/pipeline"
+import * as express from "express"
+import * as _ from "lodash"
+import * as VError from "verror"
+import { TransportInterface } from "./transport/TransportInterface"
 
 /**
  * Api class represents a set of endpoints based on pipelines.
  * It will register all routes for the endpoints and for metadata (swagger / open API).
  */
 export class Api {
-
     /**
      * Map of all exposed pipelines
      */
@@ -34,34 +33,34 @@ export class Api {
      */
     constructor(public application: express.Application, public openApi: OpenAPIObject = <any>{}) {
         // init open Api specs
-        this.openApi.paths = this.openApi.paths || {};
-        this.openApi.components = this.openApi.components || {};
-        this.openApi.components.schemas = this.openApi.components.schemas || {};
+        this.openApi.paths = this.openApi.paths || {}
+        this.openApi.components = this.openApi.components || {}
+        this.openApi.components.schemas = this.openApi.components.schemas || {}
         this.openApi.components.schemas.Error = {
             type: "object",
             properties: {
                 code: { type: "number" },
-                message: { type: "string" }
-            }
+                message: { type: "string" },
+            },
         }
 
         // setup endpoints for api metadata
         this.application.get(this.basePath + "/api.json", (req, res) => {
-            res.json(this.openApi).end();
-        });
+            res.json(this.openApi).end()
+        })
     }
 
     /**
      * Filter function used to test if an option name is internal or not
      */
-    isNotAnInternalOption = (name: string) => name.charAt(0) !== "_";
+    isNotAnInternalOption = (name: string) => name.charAt(0) !== "_"
 
     /**
      * Filter used to remove input options that are not supposed to be set by the client.
      * By default all options starting with _ are reserved for internal use and cannot be set by the request
      */
     filterInternalOptions(options: Object) {
-        return _.pickBy(options, (value, key) => this.isNotAnInternalOption(key));
+        return _.pickBy(options, (value, key) => this.isNotAnInternalOption(key))
     }
 
     /**
@@ -78,8 +77,8 @@ export class Api {
      * @param transport
      */
     configure(transport: TransportInterface): this {
-        transport.init(this);
-        this.transports.push(transport);
+        transport.init(this)
+        this.transports.push(transport)
         return this
     }
 
@@ -90,7 +89,11 @@ export class Api {
      * @param name The singular name of the underlying resource.
      * @param pluralName The plural name the underlying resource. If not provided, it defaults to `${name}s`
      */
-    use(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, name: string, pluralName: string = `${name}s`): this {
+    use(
+        pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
+        name: string,
+        pluralName: string = `${name}s`,
+    ): this {
         this.pipelineByName[pluralName] = pipeline
         for (let transport of this.transports) {
             transport.use(pipeline, name, pluralName)
@@ -105,14 +108,18 @@ export class Api {
      * @param req
      */
     static apiError(cause: any, req: express.Request) {
-        return new VError({
-            name: "SerafinRequestError",
-            cause: cause,
-            info: {
-                url: req.url,
-                method: req.method,
-                ip: req.ip
-            }
-        }, '%s', `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`)
+        return new VError(
+            {
+                name: "SerafinRequestError",
+                cause: cause,
+                info: {
+                    url: req.url,
+                    method: req.method,
+                    ip: req.ip,
+                },
+            },
+            "%s",
+            `Request ${req.method} ${req.baseUrl}${req.url} by ${req.ip} failed`,
+        )
     }
 }

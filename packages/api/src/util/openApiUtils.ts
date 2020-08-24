@@ -1,9 +1,9 @@
 import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "@serafin/open-api"
-import * as _ from "lodash";
-import * as jsonpointer from 'jsonpointer';
+import * as _ from "lodash"
+import * as jsonpointer from "jsonpointer"
 
 import { throughJsonSchema } from "./throughJsonSchema"
-import { JSONSchema } from "@serafin/schema-builder";
+import { JSONSchema } from "@serafin/schema-builder"
 
 /**
  * Go through the given schema and remove properties not supported by Open API
@@ -12,29 +12,29 @@ import { JSONSchema } from "@serafin/schema-builder";
  */
 export function jsonSchemaToOpenApiSchema(schema: JSONSchema): SchemaObject {
     throughJsonSchema(schema, (s) => {
-        delete s.$id;
-        delete s.$schema;
-        delete s.dependencies;
-        delete s.patternProperties;
+        delete s.$id
+        delete s.$schema
+        delete s.dependencies
+        delete s.patternProperties
         if (Array.isArray(s.type)) {
             if (s.type.length === 0) {
                 delete s.type
             } else if (s.type.length === 1) {
                 s.type = s.type[0]
             } else if (s.type.length === 2 && s.type.indexOf("null") !== -1) {
-                s.type = s.type.filter(t => t !== "null")[0];
-                (s as any).nullable = true;
+                s.type = s.type.filter((t) => t !== "null")[0]
+                ;(s as any).nullable = true
             } else {
                 // TODO handle this case properly. oneOf? Empty Schema ?
                 delete s.type
             }
         }
         if (s.type === "null") {
-            delete s.type;
-            (s as any).nullable = true;
+            delete s.type
+            ;(s as any).nullable = true
         }
         if (s.const) {
-            s.enum = [s.const];
+            s.enum = [s.const]
             delete s.const
         }
     })
@@ -52,7 +52,6 @@ export function remapRefs(schema: SchemaObject, basePath: string) {
     })
     return schema
 }
-
 
 /**
  * Flatten the given schema definitions, so any sub-schema is moved back to the top and refs are moved accordingly.
@@ -72,9 +71,9 @@ export function flattenSchemas(definitions: { [name: string]: SchemaObject }) {
                 definitionsToMove.push([newSchemaName, schema.definitions[subSchemaName]])
 
                 // remap refs to work with the futur position of this schema
-                let originalPath = `#/components/schemas/${name}/definitions/${subSchemaName}`;
+                let originalPath = `#/components/schemas/${name}/definitions/${subSchemaName}`
                 let newPath = `#/components/schemas/${newSchemaName}`
-                throughJsonSchema(_.values(definitions) as any, s => {
+                throughJsonSchema(_.values(definitions) as any, (s) => {
                     if (s.$ref && s.$ref === originalPath) {
                         s.$ref = newPath
                     }
@@ -86,8 +85,8 @@ export function flattenSchemas(definitions: { [name: string]: SchemaObject }) {
 
     // move the definitions to the top
     definitionsToMove.forEach((def) => {
-        let [name, schema] = def;
-        definitions[name] = schema;
+        let [name, schema] = def
+        definitions[name] = schema
     })
 
     // if definitions were moved, call recursively flatten to process other 'definitions' that have emerged
@@ -95,7 +94,6 @@ export function flattenSchemas(definitions: { [name: string]: SchemaObject }) {
         flattenSchemas(definitions)
     }
 }
-
 
 /**
  * Deduce parameters to set in Open API spec from the JSON Schema provided.
@@ -127,26 +125,25 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
                 schema: propertySchemaObject,
                 description: propertySchemaObject.description || "",
                 required: schema.required && schema.required.indexOf(property) !== -1,
-
             }
-            if (propertySchemaObject.type === 'object') {
+            if (propertySchemaObject.type === "object") {
                 parameter.style = "deepObject"
             }
-            if (propertySchemaObject.type === 'array') {
+            if (propertySchemaObject.type === "array") {
                 parameter.style = "form"
             }
             data.push(parameter)
         }
         if (schema.oneOf) {
-            data = data.concat(schema.oneOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.oneOf.map((subSchema) => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.anyOf) {
-            data = data.concat(schema.anyOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.anyOf.map((subSchema) => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
         if (schema.allOf) {
-            data = data.concat(schema.allOf.map(subSchema => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
+            data = data.concat(schema.allOf.map((subSchema) => schemaToOpenApiParameter(subSchema, spec)).reduce((p, c) => p.concat(c), []))
         }
-        return data;
+        return data
     }
     return []
 }
@@ -174,7 +171,7 @@ export function removeDuplicatedParameters(parameters: ParameterObject[]): Param
  * @param parameters
  */
 export function pathParameters(parameters: ParameterObject[], inPath: string[]): ParameterObject[] {
-    parameters.forEach(parameter => {
+    parameters.forEach((parameter) => {
         if (inPath.indexOf(parameter.name) !== -1) {
             parameter.in = "path"
         }
