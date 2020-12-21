@@ -25,7 +25,7 @@
         "url": "https://github.com/serafin-labs/pipeline"
     },
     "dependencies": {
-        "@serafin/schema-builder": "^0.13.0",
+        "@serafin/schema-builder": "^0.14.0",
         "lodash": "^4.17.20"
     },
     "devDependencies": {
