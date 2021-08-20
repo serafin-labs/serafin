@@ -126,18 +126,17 @@ export abstract class PipelineAbstract<
      * Build a recursive function that will call all the pipes for a CRUD method
      */
     private pipeChain(method: PipelineMethods) {
-        var i = 0
-        const callChain = async (...args) => {
+        const callChain = async (i: number, ...args) => {
             while (i < this.pipes.length && !(method in this.pipes[i])) {
                 ++i
             }
             if (i >= this.pipes.length) {
                 return this[`_${method}`](...args)
             } else {
-                return (this.pipes[i++] as any)[method](callChain, ...args)
+                return (this.pipes[i++] as any)[method]((...args) => callChain(i, ...args), ...args)
             }
         }
-        return callChain
+        return async (...args) => callChain(0, ...args)
     }
 
     /**

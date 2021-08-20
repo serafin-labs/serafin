@@ -11,6 +11,7 @@ import { PipelineAbstract } from "../PipelineAbstract"
 import { Relation } from "../Relation"
 import { QueryTemplate } from "../QueryTemplate"
 import { defaultSchemaBuilders } from "../SchemaBuildersInterface"
+import { TestNextPipe } from "./TestNextPipe"
 
 chai.use(require("chai-as-promised"))
 
@@ -230,6 +231,22 @@ describe("Pipelines", function () {
                     .pipe(new TestPipe())
                     .delete({ id: "1", testDeleteQueryString: "test" }, { testDeleteOptionsString2: "test" } as any),
             ).to.be.rejected
+        })
+        it(`should be able to call next multiple times`, function () {
+            return expect(
+                testPipeline()
+                .pipe(new TestPipe())
+                .pipe(new TestNextPipe())
+                    .create([{ method: "create", testCreateValuesString: "value" }], { testCreateOptionsString: "test" }),
+            ).to.eventually.deep.equal({ meta: { testCreateMetaString: "testCreateMetaValue" }, data: [{
+                id: "1",
+                method: "create",
+                testString: "test"
+            }, {
+                id: "1",
+                method: "create",
+                testString: "second"
+            }] })
         })
     })
 
