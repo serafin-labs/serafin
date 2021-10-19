@@ -1,3 +1,4 @@
+import { ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "@serafin/pipeline"
 import * as _ from "lodash"
 import { Api } from "../../Api"
@@ -216,23 +217,23 @@ export class OpenApi {
         }
     }
 
-    addPatchDoc() {
+    addPatchDoc(withId: boolean) {
         let patchQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchQuery.schema as any, this.api.openApi)
         let patchOptionsParameters = this.api.filterInternalParameters(
             schemaToOpenApiParameter(this.pipeline.schemaBuilders.patchOptions.schema as any, this.api.openApi),
         )
 
         // patch by id
-        this.api.openApi.paths[this.resourcesPathWithId]["patch"] = {
-            description: `Patch a ${this.upperName} using its id`,
-            operationId: `patch${this.upperName}`,
+        this.api.openApi.paths[withId ? this.resourcesPathWithId : this.resourcesPath]["patch"] = {
+            description: withId ? `Patch a ${this.upperName} using its id` : `Patch many ${this.upperPluralName}`,
+            operationId: `patch${withId ? this.upperName : this.upperPluralName}`,
             parameters: removeDuplicatedParameters([
-                {
+               ...(withId ? [{
                     in: "path",
                     name: "id",
                     schema: { type: "string" },
                     required: true,
-                },
+                } as ParameterObject] : []),
                 ...patchQueryParameters,
                 ...patchOptionsParameters,
             ]),
@@ -271,14 +272,14 @@ export class OpenApi {
                         },
                     },
                 },
-                404: {
+                ...(withId && { 404: {
                     description: "Not Found",
                     content: {
                         "application/json": {
                             schema: { $ref: "#/components/schemas/Error" },
                         },
                     },
-                },
+                }}),
                 default: {
                     description: "Unexpected error",
                     content: {

@@ -52,6 +52,11 @@ class TestPipeline<
     }
 }
 
+class GeneralPatchPipe<M extends IdentityInterface, PQ> extends PipeAbstract {
+    schemaBuilderModel = (s: SchemaBuilder<M>) => s
+    schemaBuilderPatchQuery = (s: SchemaBuilder<PQ>) => s.toOptionals().addString("test", {}, false)
+}
+
 export class RolePipe<M, RO, CO, UO, PO, DO> extends PipeAbstract {
     schemaBuilderModel = (s: SchemaBuilder<M>) => s
 
@@ -250,5 +255,32 @@ describe("Api", function () {
         expect(filteredParameters).to.exist
         expect(filteredParameters.length).to.eql(1)
         expect(filteredParameters[0].name).to.eql("okOption")
+    })
+
+    it("should expose general patch only if the schema allows it", function () {
+        const pipeline1 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
+        const pipeline2 = pipeline1.clone()
+        .pipe(
+            new GeneralPatchPipe(),
+        )
+        api.use(pipeline1, "p1", "p1")
+        api.use(pipeline2, "p2", "p2")
+
+        chai.request(app)
+        .patch("/p1/?test=42")
+        .send({ test: "21" })
+        .end((err, res) => {
+            expect(res.status).to.eql(404)
+        })
+
+        chai.request(app)
+        .patch("/p2/?test=42")
+        .send({ test: "21" })
+        .end((err, res) => {
+            expect(res.status).to.eql(200)
+            expect(res.body.data[0].method).to.eql("patch")
+            expect(res.body.data[0].values.test).to.equals("21")
+            expect(res.body.data[0].query.test).to.equals("42")
+        })
     })
 })

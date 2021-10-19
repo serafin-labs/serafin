@@ -1,4 +1,5 @@
 import { notFoundError, PipelineAbstract } from "@serafin/pipeline"
+import { SchemaBuilder } from "@serafin/schema-builder"
 import * as express from "express"
 import * as _ from "lodash"
 import { Api } from "../../Api"
@@ -162,8 +163,35 @@ export const restMiddlewareJson = (
                     rest.handleError(Api.apiError(error, req), res, next)
                 })
         })
+        openApi.addPatchDoc(true)
 
-        openApi.addPatchDoc()
+        if (!patchQuerySchema.schema.required?.includes("id")) {
+            // if "id" is not required, this means we also support general patch on this pipeline
+            router.patch("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
+                let pipelineParams = rest.handleOptionsAndQuery(req, res, next, patchOptionsSchema, patchQuerySchema)
+                if (!pipelineParams) {
+                    return
+                }
+    
+                var patch = req.body
+    
+                // run the query
+                pipeline
+                    .patch(
+                        pipelineParams.query,
+                        patch,
+                        pipelineParams.options,
+                    )
+                    .then((updatedResources) => {
+                        res.status(200).json(updatedResources)
+                        res.end()
+                    })
+                    .catch((error) => {
+                        rest.handleError(Api.apiError(error, req), res, next)
+                    })
+            })
+            openApi.addPatchDoc(false)
+        }
     }
 
     if (availableMethods.canReplace) {
