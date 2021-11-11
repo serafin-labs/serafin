@@ -12,6 +12,7 @@ import { Relation } from "../Relation"
 import { QueryTemplate } from "../QueryTemplate"
 import { defaultSchemaBuilders } from "../SchemaBuildersInterface"
 import { TestNextPipe } from "./TestNextPipe"
+import { PreventCreatePipe } from "./PreventCreatePipe"
 
 chai.use(require("chai-as-promised"))
 
@@ -247,6 +248,14 @@ describe("Pipelines", function () {
                 method: "create",
                 testString: "second"
             }] })
+        })
+        it(`should not modify a schema if it is null already`, function () {
+            const pipeline = testPipeline()
+            .pipe(new PreventCreatePipe())
+            .pipe(new TestPipe())
+            return expect(
+                pipeline.schemaBuilders.createValues
+            ).to.equals(null)
         })
     })
 

@@ -109,7 +109,8 @@ export abstract class PipelineAbstract<
         _.forEach(this.schemaBuilders, (value, key) => {
             let schemaBuilderResolver = pipe["schemaBuilder" + _.upperFirst(key)]
 
-            if (typeof schemaBuilderResolver == "function") {
+            if (this.schemaBuilders[key] && typeof schemaBuilderResolver == "function") {
+                // The schema is modified only if it exists and a transform function is provided by the pipe
                 this.schemaBuilders[key] = schemaBuilderResolver(this.schemaBuilders[key])
             }
         })
