@@ -30,7 +30,7 @@ export abstract class PipelineAbstract<
     DQ = {},
     DO = {},
     DM = {},
-    R extends {} = {}
+    R extends {} = {},
 > {
     public relations: R = {} as any
     public static CRUDMethods: PipelineMethods[] = ["create", "read", "replace", "patch", "delete"]
@@ -60,7 +60,7 @@ export abstract class PipelineAbstract<
         PM2 = PM,
         DQ2 = DQ,
         DO2 = DO,
-        DM2 = DM
+        DM2 = DM,
     >(
         pipe: PipeInterface<
             M,
@@ -120,7 +120,7 @@ export abstract class PipelineAbstract<
             this.pipes.unshift(pipe)
         }
 
-        return (this as any) as PipelineAbstract<M2, CV2, CO2, CM2, RQ2, RO2, RM2, UV2, UO2, UM2, PQ2, PV2, PO2, PM2, DQ2, DO2, DM2, R>
+        return this as any as PipelineAbstract<M2, CV2, CO2, CM2, RQ2, RO2, RM2, UV2, UO2, UM2, PQ2, PV2, PO2, PM2, DQ2, DO2, DM2, R>
     }
 
     /**
@@ -132,7 +132,7 @@ export abstract class PipelineAbstract<
                 ++i
             }
             if (i >= this.pipes.length) {
-                return this[`_${method}`](...args)
+                return (this[`_${method}`] as (...args) => any)(...args)
             } else {
                 return (this.pipes[i++] as any)[method]((...args) => callChain(i, ...args), ...args)
             }
@@ -165,7 +165,7 @@ export abstract class PipelineAbstract<
         DQ2,
         DO2,
         DM2,
-        PR
+        PR,
     >(
         name: NameKey,
         pipeline: () => PipelineAbstract<M2, CV2, CO2, CM2, RQ2, RO2, RM2, UV2, UO2, UM2, PQ2, PV2, PO2, PM2, DQ2, DO2, DM2, PR>,
@@ -173,7 +173,7 @@ export abstract class PipelineAbstract<
         options?: Partial<RO2>,
     ) {
         ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query, options)
-        return (this as any) as PipelineAbstract<
+        return this as any as PipelineAbstract<
             M,
             CV,
             CO,

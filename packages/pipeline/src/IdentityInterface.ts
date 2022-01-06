@@ -1,1 +1,3 @@
-export interface IdentityInterface { id: string }
+export interface IdentityInterface {
+    id: string
+}

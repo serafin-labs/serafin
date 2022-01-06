@@ -236,26 +236,28 @@ describe("Pipelines", function () {
         it(`should be able to call next multiple times`, function () {
             return expect(
                 testPipeline()
-                .pipe(new TestPipe())
-                .pipe(new TestNextPipe())
+                    .pipe(new TestPipe())
+                    .pipe(new TestNextPipe())
                     .create([{ method: "create", testCreateValuesString: "value" }], { testCreateOptionsString: "test" }),
-            ).to.eventually.deep.equal({ meta: { testCreateMetaString: "testCreateMetaValue" }, data: [{
-                id: "1",
-                method: "create",
-                testString: "test"
-            }, {
-                id: "1",
-                method: "create",
-                testString: "second"
-            }] })
+            ).to.eventually.deep.equal({
+                meta: { testCreateMetaString: "testCreateMetaValue" },
+                data: [
+                    {
+                        id: "1",
+                        method: "create",
+                        testString: "test",
+                    },
+                    {
+                        id: "1",
+                        method: "create",
+                        testString: "second",
+                    },
+                ],
+            })
         })
         it(`should not modify a schema if it is null already`, function () {
-            const pipeline = testPipeline()
-            .pipe(new PreventCreatePipe())
-            .pipe(new TestPipe())
-            return expect(
-                pipeline.schemaBuilders.createValues
-            ).to.equals(null)
+            const pipeline = testPipeline().pipe(new PreventCreatePipe()).pipe(new TestPipe())
+            return expect(pipeline.schemaBuilders.createValues).to.equals(null)
         })
     })
 

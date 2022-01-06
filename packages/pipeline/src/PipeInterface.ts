@@ -36,7 +36,7 @@ export interface PipeInterface<
     PM2 = any,
     DQ2 = any,
     DO2 = any,
-    DM2 = any
+    DM2 = any,
 > extends PipeAbstract {
     schemaBuilderModel?: (s: SchemaBuilder<M>) => SchemaBuilder<M2>
     schemaBuilderCreateValues?: (s: SchemaBuilder<CV>) => SchemaBuilder<CV2>

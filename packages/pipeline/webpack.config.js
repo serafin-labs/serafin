@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
 const nodeExternals = require('webpack-node-externals');
-const WebpackShellPlugin = require('webpack-shell-plugin');
+const WebpackShellPlugin = require('webpack-shell-plugin-next');
 
 // Webpack dev server doesn't support multiconfiguration. We need to detect it to use only the webapp configuration.
 const isWebpackDevServer = process.env.MODE === "wds"
@@ -45,7 +45,18 @@ module.exports = function (env, argv) {
             path: path.resolve(__dirname, 'lib')
         },
         plugins: [
-            ...(!isProduction ? [new WebpackShellPlugin({ onBuildExit: ['npm test'] })] : []),
+            ...(isProduction
+                ? []
+                : [
+                      new WebpackShellPlugin({
+                          swallowError: true,
+                          onDoneWatch: {
+                              scripts: ["npm test"],
+                              blocking: false,
+                              parallel: true,
+                          },
+                      }),
+                  ]),
             ...(isProduction ? [new CleanWebpackPlugin(["lib"])] : []),
         ]
     }];

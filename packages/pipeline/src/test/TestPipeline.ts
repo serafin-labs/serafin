@@ -20,7 +20,7 @@ export class TestPipeline<
     DQ = {},
     DO = {},
     DM = {},
-    R = {}
+    R = {},
 > extends PipelineAbstract<M, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, R> {
     protected async _create(resources: any[]): Promise<any> {
         return { data: [{ id: "1", method: "create" }], meta: {} }
