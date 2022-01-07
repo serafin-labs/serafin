@@ -68,13 +68,10 @@
         "webpack-shell-plugin-next": "^2.2.2"
     },
     "scripts": {
-        "test": "nyc mocha --require ts-node/register --require source-map-support/register --recursive ./lib/test.js",
-        "debug": "node_modules/.bin/mocha -R spec ./lib/test.js --inspect-brk=[::]:9229",
+        "test": "nyc mocha --require ts-node/register --require source-map-support/register --recursive ./src/test/**/*.spec.ts",
         "predev": "npm install",
-        "dev": "npm run-script watch-dev",
-        "watch-dev": "NODE_ENV=development BUILD_TYPE=test node_modules/.bin/webpack --mode development --watch",
-        "build": "NODE_ENV=production webpack --mode production",
-        "build-test": "NODE_ENV=production BUILD_TYPE=test webpack --display=errors-only --mode production",
-        "prepublishOnly": "npm install && npm run-script build && npm run-script build-test && npm test"
+        "dev": "webpack --mode development --watch",
+        "build": "webpack --mode production",
+        "prepublishOnly": "npm install && npm run-script build && npm test"
     }
 }

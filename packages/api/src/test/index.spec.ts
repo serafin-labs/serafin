@@ -9,7 +9,8 @@ import { RestTransport } from "../transport/rest/Rest"
 import * as bodyParser from "body-parser"
 import chaiHttp from "chai-http"
 
-chai.use(chaiHttp)
+chaiHttp
+chai.use(require("chai-http"))
 chai.use(require("chai-as-promised"))
 
 class TestPipeline<
