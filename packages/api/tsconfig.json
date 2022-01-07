@@ -5,12 +5,9 @@
         "declarationDir": "./lib",
         "module": "esnext",
         "moduleResolution": "node",
-        "target": "es5"
+        "target": "es5",
+        "allowSyntheticDefaultImports": true
     },
-    "files": [
-        "./src/index.ts"
-    ],
-    "include": [
-        "./src/**/*.ts"
-    ]
+    "files": ["./src/index.ts"],
+    "include": ["./src/**/*.ts"]
 }

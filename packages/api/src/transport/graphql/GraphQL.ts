@@ -141,26 +141,8 @@ export class GraphQLTransport implements TransportInterface {
                     // get the existing fields of the unerlying function
                     let existingFields = existingFieldsFunction()
                     // resolve the pipeline reference
-                    let pipeline: PipelineAbstract<
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any,
-                        any
-                    > = relation.pipeline()
+                    let pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any> =
+                        relation.pipeline()
                     // find the model graphql type of this relation
                     let relationType = _.find(this.graphQlModelTypes, (m) => m.pipeline === pipeline)
                     if (!relationType) {

@@ -172,16 +172,12 @@ export const restMiddlewareJson = (
                 if (!pipelineParams) {
                     return
                 }
-    
+
                 var patch = req.body
-    
+
                 // run the query
                 pipeline
-                    .patch(
-                        pipelineParams.query,
-                        patch,
-                        pipelineParams.options,
-                    )
+                    .patch(pipelineParams.query, patch, pipelineParams.options)
                     .then((updatedResources) => {
                         res.status(200).json(updatedResources)
                         res.end()

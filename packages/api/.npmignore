@@ -5,6 +5,9 @@
 /.gitignore
 /.npmignore
 /.history
+/.nyc_output
+/.nycrc
+/.prettierrc.json
 /node_modules
 /npm-debug.log
 .DS_Store

@@ -1,54 +1,61 @@
-const path = require('path');
-const webpack = require('webpack');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
-const nodeExternals = require('webpack-node-externals');
-const WebpackShellPlugin = require('webpack-shell-plugin');
+const path = require("path")
+const { CleanWebpackPlugin } = require("clean-webpack-plugin")
+const nodeExternals = require("webpack-node-externals")
+const WebpackShellPlugin = require("webpack-shell-plugin-next")
 
 // detect production/development mode
-const options = {
-    isProduction: process.env.NODE_ENV === "production",
-    isTest: process.env.BUILD_TYPE === "test"
-};
+console.log(`Building for ${process.env.NODE_ENV}`)
+const isProduction = process.env.NODE_ENV === "production"
 
-console.log(`Building for production:${options.isProduction} test:${options.isTest}`);
-
-module.exports = {
-    entry: (options.isTest) ? { "test": "./src/test/tests.ts" } : { "index": "./src/index.ts" },
-    resolve: {
-        extensions: ['.ts', '.tsx', '.js', '.jsx']
+var configuration = {
+    entry: {
+        index: "./src/index.ts",
+        test: "./src/test/tests.ts",
     },
     target: "node",
     externals: [nodeExternals()],
-    devtool: 'nosources-source-map',
+    devtool: "nosources-source-map",
+    watch: !isProduction,
     watchOptions: {
         poll: 1000,
-        ignored: /node_modules|lib/
+        ignored: /node_modules|lib/,
     },
     module: {
         rules: [
             {
                 test: /\.tsx?$/,
-                use: {
-                    loader: 'ts-loader',
-                    options: {
-                        configFile: (options.isTest) ? 'tsconfig.test.json' : 'tsconfig.json'
-                    }
-                },
+                use: "ts-loader",
                 exclude: /node_modules/,
-            }
-        ]
+            },
+        ],
     },
     optimization: {
-        minimize: false
+        minimize: false,
+    },
+    resolve: {
+        extensions: [".webpack.js", ".web.js", ".ts", ".tsx", ".js"],
     },
     output: {
-        filename: '[name].js',
-        libraryTarget: 'commonjs',
-        devtoolModuleFilenameTemplate: info => info.resourcePath.startsWith('./src') ? `.${info.resourcePath}` : info.absoluteResourcePath,
-        path: path.resolve(__dirname, 'lib')
+        filename: "[name].js",
+        libraryTarget: "commonjs",
+        devtoolModuleFilenameTemplate: (info) => (info.resourcePath.startsWith("./src") ? `.${info.resourcePath}` : info.absoluteResourcePath),
+        path: path.resolve(__dirname, "lib"),
     },
     plugins: [
-        ...(options.isTest && !options.isProduction ? [new WebpackShellPlugin({ onBuildExit: ['npm test'] })] : []),
-        ...(!options.isTest && options.isProduction ? [new CleanWebpackPlugin(["lib"])] : []),
-    ]
-};
+        new CleanWebpackPlugin(),
+        ...(isProduction
+            ? []
+            : [
+                  new WebpackShellPlugin({
+                      swallowError: true,
+                      onDoneWatch: {
+                          scripts: ["npm test"],
+                          blocking: false,
+                          parallel: true,
+                      },
+                  }),
+              ]),
+    ],
+}
+
+module.exports = configuration

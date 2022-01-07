@@ -7,8 +7,9 @@ import * as express from "express"
 import { Api } from "../Api"
 import { RestTransport } from "../transport/rest/Rest"
 import * as bodyParser from "body-parser"
+import chaiHttp from "chai-http"
 
-chai.use(require("chai-http"))
+chai.use(chaiHttp)
 chai.use(require("chai-as-promised"))
 
 class TestPipeline<
@@ -29,7 +30,7 @@ class TestPipeline<
     DQ = {},
     DO = {},
     DM = {},
-    R = {}
+    R = {},
 > extends PipelineAbstract<M, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, R> {
     protected async _create(resources: any[], options?: any): Promise<any> {
         return { data: [{ id: "1", method: "create", resources, options }], meta: {} }
@@ -91,11 +92,7 @@ describe("Api", function () {
             new RolePipe(),
         )
         api.use(pipeline, "test")
-        server = app.listen(+process.env.PORT || 8089, "localhost", (error: any[]) => {
-            if (error) {
-                server.close()
-                return done(error)
-            }
+        server = app.listen(+process.env.PORT || 8089, "localhost", () => {
             done()
         })
     })
@@ -259,28 +256,25 @@ describe("Api", function () {
 
     it("should expose general patch only if the schema allows it", function () {
         const pipeline1 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
-        const pipeline2 = pipeline1.clone()
-        .pipe(
-            new GeneralPatchPipe(),
-        )
+        const pipeline2 = pipeline1.clone().pipe(new GeneralPatchPipe())
         api.use(pipeline1, "p1", "p1")
         api.use(pipeline2, "p2", "p2")
 
         chai.request(app)
-        .patch("/p1/?test=42")
-        .send({ test: "21" })
-        .end((err, res) => {
-            expect(res.status).to.eql(404)
-        })
+            .patch("/p1/?test=42")
+            .send({ test: "21" })
+            .end((err, res) => {
+                expect(res.status).to.eql(404)
+            })
 
         chai.request(app)
-        .patch("/p2/?test=42")
-        .send({ test: "21" })
-        .end((err, res) => {
-            expect(res.status).to.eql(200)
-            expect(res.body.data[0].method).to.eql("patch")
-            expect(res.body.data[0].values.test).to.equals("21")
-            expect(res.body.data[0].query.test).to.equals("42")
-        })
+            .patch("/p2/?test=42")
+            .send({ test: "21" })
+            .end((err, res) => {
+                expect(res.status).to.eql(200)
+                expect(res.body.data[0].method).to.eql("patch")
+                expect(res.body.data[0].values.test).to.equals("21")
+                expect(res.body.data[0].query.test).to.equals("42")
+            })
     })
 })

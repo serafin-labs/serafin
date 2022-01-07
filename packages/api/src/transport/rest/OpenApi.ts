@@ -228,12 +228,16 @@ export class OpenApi {
             description: withId ? `Patch a ${this.upperName} using its id` : `Patch many ${this.upperPluralName}`,
             operationId: `patch${withId ? this.upperName : this.upperPluralName}`,
             parameters: removeDuplicatedParameters([
-               ...(withId ? [{
-                    in: "path",
-                    name: "id",
-                    schema: { type: "string" },
-                    required: true,
-                } as ParameterObject] : []),
+                ...(withId
+                    ? [
+                          {
+                              in: "path",
+                              name: "id",
+                              schema: { type: "string" },
+                              required: true,
+                          } as ParameterObject,
+                      ]
+                    : []),
                 ...patchQueryParameters,
                 ...patchOptionsParameters,
             ]),
@@ -272,14 +276,16 @@ export class OpenApi {
                         },
                     },
                 },
-                ...(withId && { 404: {
-                    description: "Not Found",
-                    content: {
-                        "application/json": {
-                            schema: { $ref: "#/components/schemas/Error" },
+                ...(withId && {
+                    404: {
+                        description: "Not Found",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                            },
                         },
                     },
-                }}),
+                }),
                 default: {
                     description: "Unexpected error",
                     content: {
