@@ -3,19 +3,12 @@
         "sourceMap": true,
         "declaration": true,
         "declarationDir": "./lib",
-        "module": "esnext",
+        "module": "CommonJS",
         "moduleResolution": "node",
         "target": "es5",
-        "lib": [
-            "es2015"
-        ],
+        "lib": ["es2015"],
         "experimentalDecorators": true
     },
-    "files": [
-        "./src/index.ts"
-    ],
-    "exclude": [
-        "./node_modules",
-        "./lib"
-    ]
+    "include": ["./src/**/*.ts"],
+    "exclude": ["node_modules", "**/*.spec.ts"]
 }

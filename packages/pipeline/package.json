@@ -54,7 +54,7 @@
         "webpack-shell-plugin-next": "^2.2.2"
     },
     "scripts": {
-        "test": "nyc mocha --require ts-node/register --require source-map-support/register --recursive ./lib/test.js",
+        "test": "nyc mocha --require ts-node/register --require source-map-support/register --recursive ./src/test/**/*.spec.ts",
         "debug": "node_modules/.bin/mocha -R spec ./lib/test.js --inspect-brk=[::]:9229",
         "predev": "npm install",
         "dev": "npm run-script watch-dev",
