@@ -80,7 +80,7 @@ describe("Api", function () {
     beforeEach(function (done) {
         app = express()
         app.use(bodyParser.json())
-        api = new Api(app, {
+        api = new Api(app, "", {
             openapi: "3.0.0",
             info: {
                 version: "1.0.0",

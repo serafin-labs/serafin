@@ -16,22 +16,16 @@ export class Api {
     public pipelineByName: { [name: string]: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any> } = {}
 
     /**
-     * Base path of the API
-     */
-    public get basePath(): string {
-        return this.openApi.basePath || ""
-    }
-
-    /**
      * List of transports configured
      */
     private transports: TransportInterface[] = []
 
     /**
      * @param application the express app the Api will rely on to register endpoints
+     * @param basePath Base path of the API
      * @param openApi Base open api document. To be used to provide general information about the api.
      */
-    constructor(public application: express.Application, public openApi: OpenAPIObject = <any>{}) {
+    constructor(public application: express.Application, public readonly basePath = "", public openApi: OpenAPIObject = <any>{}) {
         // init open Api specs
         this.openApi.paths = this.openApi.paths || {}
         this.openApi.components = this.openApi.components || {}
