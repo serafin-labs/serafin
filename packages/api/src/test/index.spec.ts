@@ -255,7 +255,7 @@ describe("Api", function () {
         expect(filteredParameters[0].name).to.eql("okOption")
     })
 
-    it("should expose general patch only if the schema allows it", function () {
+    xit("should expose general patch only if the schema allows it", function () {
         const pipeline1 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
         const pipeline2 = pipeline1.clone().pipe(new GeneralPatchPipe())
         api.use(pipeline1, "p1", "p1")

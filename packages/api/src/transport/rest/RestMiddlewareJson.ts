@@ -165,8 +165,14 @@ export const restMiddlewareJson = (
         })
         openApi.addPatchDoc(true)
 
-        if (!patchQuerySchema.schema.required?.includes("id")) {
-            // if "id" is not required, this means we also support general patch on this pipeline
+        if (
+            !patchQuerySchema.schema.required?.includes("id") ||
+            (typeof patchQuerySchema.schema.properties["id"] !== "boolean" &&
+                (patchQuerySchema.schema.properties["id"]?.oneOf?.length > 1 ||
+                    patchQuerySchema.schema.properties["id"]?.type === "array" ||
+                    (Array.isArray(patchQuerySchema.schema.properties["id"]?.type) && patchQuerySchema.schema.properties["id"].type.includes("array"))))
+        ) {
+            // if "id" is not required or id is not just a string identifier, this means we also support general patch on this pipeline
             router.patch("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
                 let pipelineParams = rest.handleOptionsAndQuery(req, res, next, patchOptionsSchema, patchQuerySchema)
                 if (!pipelineParams) {
