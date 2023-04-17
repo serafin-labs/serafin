@@ -8,6 +8,7 @@ import { IdentityInterface } from "../IdentityInterface"
 import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, PipeReadNext } from "../PipeInterface"
 import { Relation } from "../Relation"
 import { ResultsInterface } from "../ResultsInterface"
+import { RelationType } from "../RelationType"
 
 chai.use(require("chai-as-promised"))
 
@@ -258,7 +259,7 @@ describe("PipelineAbstract", function () {
 
     it("should add relations", function () {
         let p2 = new TestPipeline(schemas, defaultResults)
-        let p1 = new TestPipeline(schemas, defaultResults).addRelation("test", () => p2, {})
+        let p1 = new TestPipeline(schemas, defaultResults).addRelation("test", () => p2, {}, RelationType.one)
         expect(p1.relations).to.exist
         expect(p1.relations.test).to.be.an.instanceof(Relation)
         expect(Object.keys(p1.relations).length).to.eql(1)
@@ -266,14 +267,14 @@ describe("PipelineAbstract", function () {
 
     it("should inherit relations", function () {
         let p2 = new TestPipeline(schemas, defaultResults)
-        let p1 = new TestPipeline(schemas, defaultResults).addRelation("test", () => p2, {}).pipe(TestPipe())
+        let p1 = new TestPipeline(schemas, defaultResults).addRelation("test", () => p2, {}, RelationType.one).pipe(TestPipe())
         expect(p1.relations).to.exist
         expect(p1.relations.test).to.be.an.instanceof(Relation)
     })
 
     it("should support templated relations", function () {
         let p2 = new TestPipeline(schemas, defaultResults)
-        let p1 = new TestPipeline(schemas, defaultResults).addRelation("p2", () => p2, { id: ":id" })
+        let p1 = new TestPipeline(schemas, defaultResults).addRelation("p2", () => p2, { id: ":id" }, RelationType.one)
         expect(p1.relations.p2).to.be.an.instanceof(Relation)
         return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal({ data: [{ id: "1", method: "read" }], meta: {} })
     })
@@ -283,7 +284,7 @@ describe("PipelineAbstract", function () {
         const schemas2 = defaultSchemaBuilders(model2Schema)
         const readResult = { data: [{ id: "1", test: [{ hop: "la" }] }], meta: {} }
         let p2 = new TestPipeline(schemas2, { readResult })
-        let p1 = new TestPipeline(schemas, defaultResults).addRelation("p2", () => p2, { test: [{ hop: "la" }] })
+        let p1 = new TestPipeline(schemas, defaultResults).addRelation("p2", () => p2, { test: [{ hop: "la" }] }, RelationType.many)
         return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal(readResult)
     })
 })

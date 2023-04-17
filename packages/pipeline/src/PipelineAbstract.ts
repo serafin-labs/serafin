@@ -9,6 +9,7 @@ import { Pipe, PipeResultActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
 import { PipelineInterface, PipelineMethods, pipelineMethods } from "./PipelineInterface"
+import { RelationType } from "./RelationType"
 
 export interface PipelineAbstractOptions {
     validationEnabled?: boolean
@@ -27,7 +28,7 @@ export abstract class PipelineAbstract<
     RM = any,
     PM = any,
     DM = any,
-    R = any,
+    R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
 > implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>
 {
     public relations: R = {} as R
@@ -100,12 +101,13 @@ export abstract class PipelineAbstract<
      *
      * @param relation
      */
-    public addRelation<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
+    public addRelation<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, Type extends RelationType>(
         name: NameKey,
         pipeline: () => PipelineInterface<RelationModel, any, any, ReadQuery, any, any, any, any, ReadMeta>,
         query: Partial<ReadQuery>,
+        type: Type,
     ) {
-        ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query)
+        ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query, type)
         return this as any as PipelineAbstract<
             M,
             CV,
@@ -118,7 +120,7 @@ export abstract class PipelineAbstract<
             RM,
             PM,
             DM,
-            R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta> }
+            R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, Type> }
         >
     }
 
