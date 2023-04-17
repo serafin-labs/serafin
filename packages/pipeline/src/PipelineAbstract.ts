@@ -4,123 +4,77 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error } from "./error"
 import { final } from "./FinalDecorator"
 import { IdentityInterface } from "./IdentityInterface"
-import { PIPELINE, PipeAbstract } from "./PipeAbstract"
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
-import { PipeInterface } from "./PipeInterface"
+import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface"
+import { Pipe, PipeResultActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
+import { PipelineInterface, PipelineMethods, pipelineMethods } from "./PipelineInterface"
 
-export type PipelineMethods = "create" | "read" | "replace" | "patch" | "delete"
+export interface PipelineAbstractOptions {
+    validationEnabled?: boolean
+}
+export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validationEnabled: true }
 
 export abstract class PipelineAbstract<
-    M extends IdentityInterface,
-    CV = {},
-    CO = {},
-    CM = {},
-    RQ = {},
-    RO = {},
-    RM = {},
-    UV = {},
-    UO = {},
-    UM = {},
-    PQ = {},
-    PV = {},
-    PO = {},
-    PM = {},
-    DQ = {},
-    DO = {},
-    DM = {},
-    R extends {} = {},
-> {
-    public relations: R = {} as any
-    public static CRUDMethods: PipelineMethods[] = ["create", "read", "replace", "patch", "delete"]
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    R = any,
+> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>
+{
+    public relations: R = {} as R
 
-    private pipes: PipeInterface[] = []
+    private pipes: PipeResultActionsInterface[] = []
 
-    constructor(public schemaBuilders: SchemaBuildersInterface<M, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM>) {}
+    private options: PipelineAbstractOptions
 
-    public get modelSchemaBuilder(): SchemaBuilder<M> {
-        return this.schemaBuilders.model as any
+    constructor(public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>, options?: PipelineAbstractOptions) {
+        this.options = { ...defaultPipelineAbstractOptions, ...options }
     }
 
-    public pipe<
-        M2 extends IdentityInterface = M,
-        CV2 = CV,
-        CO2 = CO,
-        CM2 = CM,
-        RQ2 = RQ,
-        RO2 = RO,
-        RM2 = RM,
-        UV2 = UV,
-        UO2 = UO,
-        UM2 = UM,
-        PQ2 = PQ,
-        PV2 = PV,
-        PO2 = PO,
-        PM2 = PM,
-        DQ2 = DQ,
-        DO2 = DO,
-        DM2 = DM,
-    >(
-        pipe: PipeInterface<
-            M,
-            CV,
-            CO,
-            CM,
-            RQ,
-            RO,
-            RM,
-            UV,
-            UO,
-            UM,
-            PQ,
-            PV,
-            PO,
-            PM,
-            DQ,
-            DO,
-            DM,
-            M2,
-            CV2,
-            CO2,
-            CM2,
-            RQ2,
-            RO2,
-            RM2,
-            UV2,
-            UO2,
-            UM2,
-            PQ2,
-            PV2,
-            PO2,
-            PM2,
-            DQ2,
-            DO2,
-            DM2
-        >,
+    public get modelSchemaBuilder() {
+        return this.schemaBuilders.model as SchemaBuilder<M>
+    }
+
+    public pipe<M2 extends IdentityInterface = M, CV2 = CV, CO2 = CO, RQ2 = RQ, PQ2 = PQ, PV2 = PV, DQ2 = DQ, CM2 = CM, RM2 = RM, PM2 = PM, DM2 = DM>(
+        pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>,
     ) {
-        // Pipeline association
-        if (pipe[PIPELINE]) {
-            throw Error("Pipe already associated to a pipeline")
-        }
-        pipe[PIPELINE] = this
-
-        // SchemaBuilders modification
-        _.forEach(this.schemaBuilders, (value, key) => {
-            let schemaBuilderResolver = pipe["schemaBuilder" + _.upperFirst(key)]
-
-            if (this.schemaBuilders[key] && typeof schemaBuilderResolver == "function") {
-                // The schema is modified only if it exists and a transform function is provided by the pipe
-                this.schemaBuilders[key] = schemaBuilderResolver(this.schemaBuilders[key])
-            }
+        // run the pipe
+        const result = (typeof pipe === "function" ? pipe : pipe.transform)({
+            ...this.schemaBuilders,
         })
-
-        // add pipe to the pipeline if it implements at least one of the CRUD methods
-        if ("read" in pipe || "create" in pipe || "replace" in pipe || "patch" in pipe || "delete" in pipe) {
-            this.pipes.unshift(pipe)
+        // combine schema modifications with the current schemas
+        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, R>
+        const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
+        if (Object.keys(modifiedSchemas).length > 0) {
+            newPipeline.schemaBuilders = {
+                ...this.schemaBuilders,
+                ...modifiedSchemas,
+            } as any
+        }
+        // add pipe methods modifications to the pipeline if it implements at least one of the CRUD methods
+        const modifiedMethods = _.pick(result, pipelineMethods)
+        if (Object.keys(modifiedMethods).length > 0) {
+            newPipeline.pipes = [
+                _.mapValues(
+                    modifiedMethods,
+                    (value: any, key) =>
+                        (...props) =>
+                            value(...props, this), // the current pipeline is provided as the last argument
+                ),
+                ...this.pipes,
+            ]
         }
 
-        return this as any as PipelineAbstract<M2, CV2, CO2, CM2, RQ2, RO2, RM2, UV2, UO2, UM2, PQ2, PV2, PO2, PM2, DQ2, DO2, DM2, R>
+        return newPipeline
     }
 
     /**
@@ -146,52 +100,25 @@ export abstract class PipelineAbstract<
      *
      * @param relation
      */
-    public addRelation<
-        NameKey extends keyof any,
-        M2 extends IdentityInterface,
-        CV2,
-        CO2,
-        CM2,
-        RQ2,
-        RO2,
-        RM2,
-        UV2,
-        UO2,
-        UM2,
-        PQ2,
-        PV2,
-        PO2,
-        PM2,
-        DQ2,
-        DO2,
-        DM2,
-        PR,
-    >(
+    public addRelation<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
         name: NameKey,
-        pipeline: () => PipelineAbstract<M2, CV2, CO2, CM2, RQ2, RO2, RM2, UV2, UO2, UM2, PQ2, PV2, PO2, PM2, DQ2, DO2, DM2, PR>,
-        query: Partial<RQ2>,
-        options?: Partial<RO2>,
+        pipeline: () => PipelineInterface<RelationModel, any, any, ReadQuery, any, any, any, any, ReadMeta>,
+        query: Partial<ReadQuery>,
     ) {
-        ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query, options)
+        ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query)
         return this as any as PipelineAbstract<
             M,
             CV,
             CO,
-            CM,
             RQ,
-            RO,
-            RM,
-            UV,
-            UO,
-            UM,
             PQ,
             PV,
-            PO,
-            PM,
             DQ,
-            DO,
+            CM,
+            RM,
+            PM,
             DM,
-            R & { [key in NameKey]: Relation<M, NameKey, M2, RQ2, RO2, RM2> }
+            R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta> }
         >
     }
 
@@ -210,113 +137,81 @@ export abstract class PipelineAbstract<
      * Create new resources based on `resources` input array.
      *
      * @param resources An array of partial resources to be created
-     * @param options Map of options to be used by pipelines
+     * @param options Map of options to be used by pipes
      */
-    @final async create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
+    async create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
         resources = _.cloneDeep(resources)
-        options = _.cloneDeep(options)
+        options = _.cloneDeep(options ?? ({} as CO))
         this.handleValidate("create", () => {
             this.schemaBuilders.createValues.validateList(resources)
-            this.schemaBuilders.createOptions.validate(options || ({} as any))
+            this.schemaBuilders.createOptions.validate(options)
         })
-
         return this.pipeChain("create")(resources, options)
     }
 
-    protected _create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
+    protected _create(resources: CV[], options: CO): Promise<ResultsInterface<M, CM>> {
         throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name)
     }
 
     /**
-     * Read resources from the underlying source according to the given `query` and `options`.
+     * Read resources from the underlying source according to the given `query`.
      *
      * @param query The query filter to be used for fetching the data
-     * @param options Map of options to be used by pipelines
      */
-    @final async read(query?: RQ, options?: RO): Promise<ResultsInterface<M, RM>> {
+    async read(query: RQ): Promise<ResultsInterface<M, RM>> {
         query = _.cloneDeep(query)
-        options = _.cloneDeep(options)
         this.handleValidate("read", () => {
-            this.schemaBuilders.readQuery.validate(query || ({} as any))
-            this.schemaBuilders.readOptions.validate(options || ({} as any))
+            this.schemaBuilders.readQuery.validate(query)
         })
-
-        return this.pipeChain("read")(query, options)
+        return this.pipeChain("read")(query)
     }
 
-    protected _read(query?: RQ, options?: RO): Promise<ResultsInterface<M, RM>> {
+    protected _read(query: RQ): Promise<ResultsInterface<M, RM>> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name)
-    }
-
-    /**
-     * Replace replaces an existing resource with the given values.
-     * Because it replaces the resource, only one can be replaced at a time.
-     * If you need to replace many resources in a single query, please use patch instead
-     *
-     * @param id
-     * @param values
-     * @param options
-     */
-    @final async replace(id: string, values: UV, options?: UO): Promise<ResultsInterface<M, UM>> {
-        values = _.cloneDeep(values)
-        options = _.cloneDeep(options)
-        this.handleValidate("replace", () => {
-            this.schemaBuilders.replaceValues.validate(values || ({} as any))
-            this.schemaBuilders.replaceOptions.validate(options || ({} as any))
-        })
-
-        return this.pipeChain("replace")(id, values, options)
-    }
-
-    protected _replace(id: string, values: UV, options?: UO): Promise<ResultsInterface<M, UM>> {
-        throw notImplementedError("replace", Object.getPrototypeOf(this).constructor.name)
     }
 
     /**
      * Patch resources according to the given query and values.
      * The Query will select a subset of the underlying data source and given `values` are updated on it.
-     * This method follow the JSON merge patch standard. @see https://tools.ietf.org/html/rfc7396
+     * This method follows the JSON merge patch standard. @see https://tools.ietf.org/html/rfc7396
      *
      * @param query
      * @param values
-     * @param options
      */
-    @final async patch(query: PQ, values: PV, options?: PO): Promise<ResultsInterface<M, PM>> {
+    async patch(query: PQ, values: PV): Promise<ResultsInterface<M, PM>> {
         query = _.cloneDeep(query)
         values = _.cloneDeep(values)
-        options = _.cloneDeep(options)
         this.handleValidate("patch", () => {
             this.schemaBuilders.patchQuery.validate(query)
-            this.schemaBuilders.patchValues.validate(values || ({} as any))
-            this.schemaBuilders.patchOptions.validate(options || ({} as any))
+            this.schemaBuilders.patchValues.validate(values)
         })
-        return this.pipeChain("patch")(query, values, options)
+        return this.pipeChain("patch")(query, values)
     }
 
-    protected _patch(query: PQ, values: PV, options?: PO): Promise<ResultsInterface<M, PM>> {
+    protected _patch(query: PQ, values: PV): Promise<ResultsInterface<M, PM>> {
         throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name)
     }
 
     /**
      * Delete resources that match th given Query.
      * @param query The query filter to be used for selecting resources to delete
-     * @param options Map of options to be used by pipelines
      */
-    @final async delete(query: DQ, options?: DO): Promise<ResultsInterface<M, DM>> {
+    async delete(query: DQ): Promise<ResultsInterface<M, DM>> {
         query = _.cloneDeep(query)
-        options = _.cloneDeep(options)
         this.handleValidate("delete", () => {
             this.schemaBuilders.deleteQuery.validate(query)
-            this.schemaBuilders.deleteOptions.validate(options || ({} as any))
         })
-        return this.pipeChain("delete")(query, options)
+        return this.pipeChain("delete")(query)
     }
 
-    protected _delete(query: DQ, options?: DO): Promise<ResultsInterface<M, DM>> {
+    protected _delete(query: DQ): Promise<ResultsInterface<M, DM>> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name)
     }
 
     private handleValidate(method: string, validate: () => void) {
+        if (!this.options.validationEnabled) {
+            return
+        }
         try {
             validate()
         } catch (e) {
@@ -331,19 +226,11 @@ export abstract class PipelineAbstract<
 
     clone(): this {
         let clonedPipeline = _.cloneDeepWith(this, (value: any, key: number | string | undefined) => {
-            if (key === "relations") {
+            if (key === "relations" || key === "schemaBuilders" || key === "pipes") {
+                // shallow clone
                 return _.clone(value)
-            }
-            if (key === "schemaBuilders") {
-                return _.clone(value)
-            }
-            if (key === "pipes") {
-                return value ? value.map((pipe: PipeInterface & PipeAbstract) => pipe.clone()) : _.clone(value)
             }
         })
-        for (let pipe of clonedPipeline.pipes) {
-            pipe[PIPELINE] = clonedPipeline
-        }
         return clonedPipeline
     }
 }

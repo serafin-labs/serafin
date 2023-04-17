@@ -1,58 +1,189 @@
-import { SchemaBuilder } from "@serafin/schema-builder"
+import { PipelineAbstract } from "./PipelineAbstract"
+import * as _ from "lodash"
 import { IdentityInterface } from "./IdentityInterface"
-import { PipeAbstract } from "./PipeAbstract"
+import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
+import { ResultsInterface } from "./ResultsInterface"
+import { PipelineInterface } from "./PipelineInterface"
 
-export interface PipeInterface<
-    M extends IdentityInterface = any,
+export interface PipePropsInterface<
+    M extends IdentityInterface = IdentityInterface,
     CV = any,
     CO = any,
-    CM = any,
     RQ = any,
-    RO = any,
-    RM = any,
-    UV = any,
-    UO = any,
-    UM = any,
     PQ = any,
     PV = any,
-    PO = any,
-    PM = any,
     DQ = any,
-    DO = any,
+    CM = any,
+    RM = any,
+    PM = any,
     DM = any,
-    M2 extends IdentityInterface = any,
-    CV2 = any,
-    CO2 = any,
-    CM2 = any,
-    RQ2 = any,
-    RO2 = any,
-    RM2 = any,
-    UV2 = any,
-    UO2 = any,
-    UM2 = any,
-    PQ2 = any,
-    PV2 = any,
-    PO2 = any,
-    PM2 = any,
-    DQ2 = any,
-    DO2 = any,
-    DM2 = any,
-> extends PipeAbstract {
-    schemaBuilderModel?: (s: SchemaBuilder<M>) => SchemaBuilder<M2>
-    schemaBuilderCreateValues?: (s: SchemaBuilder<CV>) => SchemaBuilder<CV2>
-    schemaBuilderCreateOptions?: (s: SchemaBuilder<CO>) => SchemaBuilder<CO2>
-    schemaBuilderCreateMeta?: (s: SchemaBuilder<CM>) => SchemaBuilder<CM2>
-    schemaBuilderReadQuery?: (s: SchemaBuilder<RQ>) => SchemaBuilder<RQ2>
-    schemaBuilderReadOptions?: (s: SchemaBuilder<RO>) => SchemaBuilder<RO2>
-    schemaBuilderReadMeta?: (s: SchemaBuilder<RM>) => SchemaBuilder<RM2>
-    schemaBuilderReplaceValues?: (s: SchemaBuilder<UV>) => SchemaBuilder<UV2>
-    schemaBuilderReplaceOptions?: (s: SchemaBuilder<UO>) => SchemaBuilder<UO2>
-    schemaBuilderReplaceMeta?: (s: SchemaBuilder<UM>) => SchemaBuilder<UM2>
-    schemaBuilderPatchQuery?: (s: SchemaBuilder<PQ>) => SchemaBuilder<PQ2>
-    schemaBuilderPatchValues?: (s: SchemaBuilder<PV>) => SchemaBuilder<PV2>
-    schemaBuilderPatchOptions?: (s: SchemaBuilder<PO>) => SchemaBuilder<PO2>
-    schemaBuilderPatchMeta?: (s: SchemaBuilder<PM>) => SchemaBuilder<PM2>
-    schemaBuilderDeleteQuery?: (s: SchemaBuilder<DQ>) => SchemaBuilder<DQ2>
-    schemaBuilderDeleteOptions?: (s: SchemaBuilder<DO>) => SchemaBuilder<DO2>
-    schemaBuilderDeleteMeta?: (s: SchemaBuilder<DM>) => SchemaBuilder<DM2>
+> extends SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM> {}
+
+export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any> = (
+    resources: CV[],
+    options: CO,
+) => Promise<ResultsInterface<M, CM>>
+
+export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any> = (query: RQ) => Promise<ResultsInterface<M, RM>>
+
+export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any> = (
+    query: PQ,
+    values: PV,
+) => Promise<ResultsInterface<M, PM>>
+
+export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any> = (query: DQ) => Promise<ResultsInterface<M, DM>>
+
+export interface PipeResultActionsInterface<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+> {
+    create?: (
+        next: PipeCreateNext<M, CV, CO, CM>,
+        resources: CV2[],
+        options: CO2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+    ) => Promise<ResultsInterface<M2, CM2>>
+    read?: (
+        next: PipeReadNext<M, RQ, RM>,
+        query: RQ2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+    ) => Promise<ResultsInterface<M2, RM2>>
+    patch?: (
+        next: PipePatchNext<M, PQ, PV, PM>,
+        query: PQ2,
+        values: PV2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+    ) => Promise<ResultsInterface<M2, PM2>>
+    delete?: (
+        next: PipeReadNext<M, DQ, DM>,
+        query: DQ2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+    ) => Promise<ResultsInterface<M2, DM2>>
 }
+
+export interface PipeResultsInterface<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>>,
+        PipeResultActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2> {}
+
+export type PipeFunction<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+> = (
+    p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+
+export type PipeClass<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+> = {
+    transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+}
+
+export type Pipe<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+> =
+    | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+    | PipeClass<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>

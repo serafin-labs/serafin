@@ -3,19 +3,19 @@ import { PipelineAbstract } from "./PipelineAbstract"
 import { QueryTemplate } from "./QueryTemplate"
 import { IdentityInterface } from "./IdentityInterface"
 import { JSONSchema } from "@serafin/schema-builder/lib/JsonSchema"
+import { PipelineInterface } from "./PipelineInterface"
 
 /**
  * Represents a Relation for the given pipeline
  */
-export class Relation<M extends IdentityInterface, NameKey extends keyof any, R extends IdentityInterface, ReadQuery, ReadOptions, ReadMeta> {
+export class Relation<M extends IdentityInterface, NameKey extends string, R extends IdentityInterface, ReadQuery, ReadMeta> {
     type?: "one" | "many"
 
     constructor(
-        private holdingPipeline: PipelineAbstract<M>,
+        holdingPipeline: PipelineAbstract<M>,
         public name: NameKey,
-        public pipeline: () => PipelineAbstract<R, {}, {}, {}, ReadQuery, ReadOptions, ReadMeta>,
+        public pipeline: () => PipelineInterface<R, any, any, ReadQuery, any, any, any, any, ReadMeta>,
         public query: Partial<ReadQuery>,
-        public options?: Partial<ReadOptions>,
     ) {
         this.type = "many"
         if (query["id"]) {
@@ -35,15 +35,12 @@ export class Relation<M extends IdentityInterface, NameKey extends keyof any, R 
         }
     }
 
-    async fetch(resource: M, query?: Partial<ReadQuery>, options?: Partial<ReadOptions>) {
-        return this.pipeline().read(
-            { ...(QueryTemplate.hydrate(this.query, resource) as any), ...(query || {}) },
-            { ...((this.options as any) || {}), ...(options || {}) },
-        )
+    async fetch(resource: M, query?: Partial<ReadQuery>) {
+        return this.pipeline().read({ ...(QueryTemplate.hydrate(this.query, resource) as any), ...(query || {}) })
     }
 
-    async assignToResource(resource: M, query?: Partial<ReadQuery>, options?: Partial<ReadOptions>) {
-        let result = await this.fetch(resource, query, options)
+    async assignToResource(resource: M, query?: Partial<ReadQuery>) {
+        let result = await this.fetch(resource, query)
         if (this.type === "one") {
             resource[this.name as string] = result.data[0]
         } else {
@@ -52,7 +49,7 @@ export class Relation<M extends IdentityInterface, NameKey extends keyof any, R 
         return resource as M & { [k in NameKey]: R[] | R }
     }
 
-    async assignToResources(resources: M[], query?: Partial<ReadQuery>, options?: Partial<ReadOptions>) {
-        return Promise.all(resources.map((resource) => this.assignToResource(resource, query, options)))
+    async assignToResources(resources: M[], query?: Partial<ReadQuery>) {
+        return Promise.all(resources.map((resource) => this.assignToResource(resource, query)))
     }
 }
