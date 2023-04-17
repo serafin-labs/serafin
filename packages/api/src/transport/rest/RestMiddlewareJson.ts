@@ -262,7 +262,35 @@ export const restMiddlewareJson = (
                 })
         })
 
-        openApi.addDeleteDoc()
+        openApi.addDeleteDoc(true)
+
+        if (
+            !deleteQuerySchema.schema.required?.includes("id") ||
+            (typeof deleteQuerySchema.schema.properties["id"] !== "boolean" &&
+                (deleteQuerySchema.schema.properties["id"]?.oneOf?.length > 1 ||
+                    deleteQuerySchema.schema.properties["id"]?.type === "array" ||
+                    (Array.isArray(deleteQuerySchema.schema.properties["id"]?.type) && deleteQuerySchema.schema.properties["id"].type.includes("array"))))
+        ) {
+            // if "id" is not required or id is not just a string identifier, this means we also support general delete on this pipeline
+            router.delete("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
+                let pipelineParams = rest.handleOptionsAndQuery(req, res, next, deleteOptionsSchema, deleteQuerySchema)
+                if (!pipelineParams) {
+                    return
+                }
+
+                // run the query
+                pipeline
+                    .delete(pipelineParams.query, pipelineParams.options)
+                    .then((deletedResources) => {
+                        res.status(200).json(deletedResources)
+                        res.end()
+                    })
+                    .catch((error) => {
+                        rest.handleError(Api.apiError(error, req), res, next)
+                    })
+            })
+            openApi.addDeleteDoc(false)
+        }
     }
 
     return router

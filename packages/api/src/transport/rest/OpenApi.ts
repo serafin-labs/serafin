@@ -252,7 +252,7 @@ export class OpenApi {
             },
             responses: {
                 200: {
-                    description: `Updated ${this.upperName}`,
+                    description: `Updated ${withId ? this.upperName : this.upperPluralName}`,
                     content: {
                         "application/json": {
                             schema: {
@@ -370,28 +370,32 @@ export class OpenApi {
         }
     }
 
-    addDeleteDoc() {
+    addDeleteDoc(withId: boolean) {
         let deleteQueryParameters = schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteQuery.schema as any, this.api.openApi)
         let deleteOptionsParameters = this.api.filterInternalParameters(
             schemaToOpenApiParameter(this.pipeline.schemaBuilders.deleteOptions.schema as any, this.api.openApi),
         )
         // delete by id
-        this.api.openApi.paths[this.resourcesPathWithId]["delete"] = {
-            description: `Delete a ${this.upperName} using its id`,
-            operationId: `delete${this.upperName}`,
+        this.api.openApi.paths[withId ? this.resourcesPathWithId : this.resourcesPath]["delete"] = {
+            description: withId ? `Delete a ${this.upperName} using its id` : `Delete many ${this.upperPluralName}`,
+            operationId: `delete${withId ? this.upperName : this.upperPluralName}`,
             parameters: removeDuplicatedParameters([
-                {
-                    in: "path",
-                    name: "id",
-                    schema: { type: "string" },
-                    required: true,
-                },
+                ...(withId
+                    ? [
+                          {
+                              in: "path",
+                              name: "id",
+                              schema: { type: "string" },
+                              required: true,
+                          } as ParameterObject,
+                      ]
+                    : []),
                 ...deleteQueryParameters,
                 ...deleteOptionsParameters,
             ]),
             responses: {
                 200: {
-                    description: `Deleted ${this.upperName}`,
+                    description: `Deleted ${withId ? this.upperName : this.upperPluralName}`,
                     content: {
                         "application/json": {
                             schema: {
@@ -415,14 +419,16 @@ export class OpenApi {
                         },
                     },
                 },
-                404: {
-                    description: "Not Found",
-                    content: {
-                        "application/json": {
-                            schema: { $ref: "#/components/schemas/Error" },
+                ...(withId && {
+                    404: {
+                        description: "Not Found",
+                        content: {
+                            "application/json": {
+                                schema: { $ref: "#/components/schemas/Error" },
+                            },
                         },
                     },
-                },
+                }),
                 default: {
                     description: "Unexpected error",
                     content: {
