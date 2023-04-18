@@ -287,4 +287,11 @@ describe("PipelineAbstract", function () {
         let p1 = new TestPipeline(schemas, defaultResults).addRelationWithMany("p2", p2, { test: [{ hop: "la" }] })
         return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal(readResult)
     })
+
+    it("should fail for templated relations referring to a non existing property", function () {
+        let p2 = new TestPipeline(schemas, defaultResults)
+        let p1 = new TestPipeline(schemas, defaultResults).addRelationWithMany("p2", p2, { id: ":blabliblou" })
+        expect(p1.relations.p2).to.be.an.instanceof(Relation)
+        return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.be.rejected
+    })
 })
