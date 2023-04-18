@@ -2,8 +2,7 @@ import * as _ from "lodash"
 import { PipelineAbstract } from "./PipelineAbstract"
 import { QueryTemplate } from "./QueryTemplate"
 import { IdentityInterface } from "./IdentityInterface"
-import { JSONSchema } from "@serafin/schema-builder/lib/JsonSchema"
-import { PipelineInterface, ReadOnlyPipelineInterface } from "./PipelineInterface"
+import { ReadOnlyPipelineInterface } from "./PipelineInterface"
 import { RelationType } from "./RelationType"
 
 /**
@@ -13,13 +12,13 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
     constructor(
         private holdingPipeline: PipelineAbstract<M>,
         public name: NameKey,
-        public pipeline: () => ReadOnlyPipelineInterface<R, ReadQuery, ReadMeta>,
+        public pipeline: ReadOnlyPipelineInterface<R, ReadQuery, ReadMeta>,
         public query: Partial<ReadQuery>,
         public type: Type,
     ) {}
 
     async fetch(resource: M, query?: Partial<ReadQuery>) {
-        return this.pipeline().read({ ...(QueryTemplate.hydrate(this.query, resource) as any), ...(query || {}) })
+        return this.pipeline.read({ ...(QueryTemplate.hydrate(this.query, resource) as any), ...(query || {}) })
     }
 
     async assignToResource(resource: M, query?: Partial<ReadQuery>) {

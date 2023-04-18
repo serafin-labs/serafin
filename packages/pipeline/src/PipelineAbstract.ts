@@ -4,10 +4,10 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error } from "./error"
 import { IdentityInterface } from "./IdentityInterface"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface"
-import { Pipe, PipeResultActionsInterface } from "./PipeInterface"
+import { Pipe, PipeCreateNext, PipeResultActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
-import { PipelineInterface, PipelineMethods, pipelineMethods } from "./PipelineInterface"
+import { PipelineInterface, PipelineMethods, ReadOnlyPipelineInterface, pipelineMethods } from "./PipelineInterface"
 import { RelationType } from "./RelationType"
 
 export interface PipelineAbstractOptions {
@@ -95,32 +95,133 @@ export abstract class PipelineAbstract<
     }
 
     /**
-     * Add a relation to the pipeline.
-     * This method modifies the pipeline and affect the templated type.
-     *
-     * @param relation
+     * Add a many relation to the pipeline.
+     * A query parameter is added to the all actions to conditionally fetch the related entities.
      */
-    public addRelation<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, Type extends RelationType>(
+    public addRelationWithMany<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
         name: NameKey,
-        pipeline: () => PipelineInterface<RelationModel, any, any, ReadQuery, any, any, any, any, ReadMeta>,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
         query: Partial<ReadQuery>,
-        type: Type,
     ) {
-        ;(this.relations as any)[name] = new Relation(this as any, name, pipeline as any, query, type)
-        return this as any as PipelineAbstract<
-            M,
-            CV,
-            CO,
-            RQ,
-            PQ,
-            PV,
-            DQ,
-            CM,
-            RM,
-            PM,
-            DM,
-            R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, Type> }
-        >
+        const relationSchema = SchemaBuilder.arraySchema(pipeline.schemaBuilders.model)
+        const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
+        const relationOptionSchema = SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` })
+        const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> = new Relation(
+            this,
+            name,
+            pipeline,
+            query,
+            RelationType.many,
+        )
+        const newPipeline = (
+            this as any as PipelineAbstract<
+                M,
+                CV,
+                CO,
+                RQ,
+                PQ,
+                PV,
+                DQ,
+                CM,
+                RM,
+                PM,
+                DM,
+                R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> }
+            >
+        ).pipe((p) => {
+            const model = p.model.addProperty(name, relationSchema, false)
+            const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
+            const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
+            const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
+            const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            return {
+                model,
+                readQuery,
+                createOptions,
+                patchQuery,
+                deleteQuery,
+                create: async (next, resources, options) => {
+                    const result = await next(resources, options)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                read: async (next, query: typeof readQuery.T) => {
+                    const result = await next(query)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                patch: async (next, query, values) => {
+                    const result = await next(query, values)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                delete: async (next, query) => {
+                    const result = await next(query)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+            }
+        })
+        newPipeline.relations[name] = relation as any
+        return newPipeline
+    }
+
+    /**
+     * Add a one relation to the pipeline.
+     * A query parameter is added to the all actions to conditionally fetch the related entity.
+     */
+    public addRelationWithOne<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
+        name: NameKey,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
+        query: Partial<ReadQuery>,
+    ) {
+        const relationSchema = pipeline.schemaBuilders.model
+        const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
+        const relationOptionSchema = SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` })
+        const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> = new Relation(this, name, pipeline, query, RelationType.one)
+        const newPipeline = (
+            this as any as PipelineAbstract<
+                M,
+                CV,
+                CO,
+                RQ,
+                PQ,
+                PV,
+                DQ,
+                CM,
+                RM,
+                PM,
+                DM,
+                R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> }
+            >
+        ).pipe((p) => {
+            const model = p.model.addProperty(name, relationSchema, false)
+            const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
+            const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
+            const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
+            const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            return {
+                model,
+                readQuery,
+                createOptions,
+                patchQuery,
+                deleteQuery,
+                create: async (next, resources, options) => {
+                    const result = await next(resources, options)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                read: async (next, query: typeof readQuery.T) => {
+                    const result = await next(query)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                patch: async (next, query, values) => {
+                    const result = await next(query, values)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+                delete: async (next, query) => {
+                    const result = await next(query)
+                    return { ...result, data: await relation.assignToResources(result.data) }
+                },
+            }
+        })
+        newPipeline.relations[name] = relation as any
+        return newPipeline
     }
 
     /**
