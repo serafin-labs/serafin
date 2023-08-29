@@ -1,4 +1,12 @@
-import { ConflictErrorName, NotFoundErrorName, NotImplementedErrorName, PipelineAbstract, UnauthorizedErrorName, ValidationErrorName } from "@serafin/pipeline"
+import {
+    ConflictErrorName,
+    MovedPermanentlyErrorName,
+    NotFoundErrorName,
+    NotImplementedErrorName,
+    PipelineAbstract,
+    UnauthorizedErrorName,
+    ValidationErrorName,
+} from "@serafin/pipeline"
 import { JSONSchema, SchemaBuilder } from "@serafin/schema-builder"
 import * as express from "express"
 import * as _ from "lodash"
@@ -84,9 +92,17 @@ export class RestTransport implements TransportInterface {
                 [ConflictErrorName, 409],
                 [NotImplementedErrorName, 405],
                 [UnauthorizedErrorName, 401],
+                [MovedPermanentlyErrorName, 301],
             ].some((p: [string, number]) => {
                 let [errorName, code] = p
-                if (VError.findCauseByName(error, errorName)) {
+                const causeByName = VError.findCauseByName(error, errorName)
+                if (causeByName) {
+                    if (code === 301) {
+                        const location = VError.info(causeByName).location
+                        if (location) {
+                            res.header("Location", location)
+                        }
+                    }
                     res.status(code).json({
                         code: code,
                         message: error.message,
