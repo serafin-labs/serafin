@@ -38,3 +38,8 @@ export const UnauthorizedErrorName = "SerafinUnauthorizedError"
 export function unauthorizedError(reason: string, info?: any, cause?: Error) {
     return error(UnauthorizedErrorName, `Action not authorized : ${reason}`, info, cause)
 }
+
+export const MovedPermanentlyErrorName = "SerafinMovedPermanentlyError"
+export function movedPermanentlyError(newResource: string, info?: any, cause?: Error) {
+    return error(MovedPermanentlyErrorName, `The resource has been moved permanently to '${newResource}'`, info, cause)
+}
