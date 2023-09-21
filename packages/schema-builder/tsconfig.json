@@ -1,13 +1,8 @@
 {
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "**/*.spec.ts"],
+    "extends": "./tsconfig.base.json",
     "compilerOptions": {
-        "sourceMap": true,
-        "declaration": true,
-        "declarationDir": "./lib",
         "module": "esnext",
-        "moduleResolution": "node",
-        "target": "es5",
-        "strict": true
+        "target": "esnext",
+        "outDir": "lib/esm"
     }
 }
