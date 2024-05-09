@@ -6,20 +6,20 @@ import { PipeReadNext } from "../PipeInterface"
  * Pipe that set the given read query parameter default value
  * The schema will not be modified.
  */
-export function SetReadQueryParameterDefaultValue<M extends IdentityInterface, RQ, RM, V extends object | boolean | number | string>(
-    par: PropertyAccessorResolver<RQ, V>,
-    value: V | ((query: RQ) => Promise<V>),
+export function SetReadQueryParameterDefaultValue<M extends IdentityInterface, RQ, RM, CTX, V extends object | boolean | number | string>(
+    queryParameterAccessor: PropertyAccessorResolver<RQ, V>,
+    value: V | ((query: RQ, context: CTX) => Promise<V>),
 ) {
-    const pa = par(createPropertyAccessor())
+    const queryParameter = queryParameterAccessor(createPropertyAccessor())
     return () => {
         return {
-            read: async (next: PipeReadNext<M, RQ, RM>, query: RQ) => {
-                const existingValue = pa.get(query)
+            read: async (next: PipeReadNext<M, RQ, RM, CTX>, query: RQ, context: CTX) => {
+                const existingValue = queryParameter.get(query)
                 if (existingValue === undefined) {
-                    const defaultValue = typeof value === "function" ? await value(query) : value
-                    query = pa.set(query, defaultValue)
+                    const defaultValue = typeof value === "function" ? await value(query, context) : value
+                    query = queryParameter.set(query, defaultValue)
                 }
-                return next(query)
+                return next(query, context)
             },
         }
     }

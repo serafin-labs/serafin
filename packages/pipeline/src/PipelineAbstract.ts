@@ -27,8 +27,9 @@ export abstract class PipelineAbstract<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
-> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>
+> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>
 {
     public relations: R = {} as R
 
@@ -36,7 +37,7 @@ export abstract class PipelineAbstract<
 
     private options: PipelineAbstractOptions
 
-    constructor(public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>, options?: PipelineAbstractOptions) {
+    constructor(public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>, options?: PipelineAbstractOptions) {
         this.options = { ...defaultPipelineAbstractOptions, ...options }
     }
 
@@ -44,15 +45,26 @@ export abstract class PipelineAbstract<
         return this.schemaBuilders.model as SchemaBuilder<M>
     }
 
-    public pipe<M2 extends IdentityInterface = M, CV2 = CV, CO2 = CO, RQ2 = RQ, PQ2 = PQ, PV2 = PV, DQ2 = DQ, CM2 = CM, RM2 = RM, PM2 = PM, DM2 = DM>(
-        pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>,
-    ) {
+    public pipe<
+        M2 extends IdentityInterface = M,
+        CV2 = CV,
+        CO2 = CO,
+        RQ2 = RQ,
+        PQ2 = PQ,
+        PV2 = PV,
+        DQ2 = DQ,
+        CM2 = CM,
+        RM2 = RM,
+        PM2 = PM,
+        DM2 = DM,
+        CTX2 = CTX,
+    >(pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>) {
         // run the pipe
         const result = (typeof pipe === "function" ? pipe : pipe.transform)({
             ...this.schemaBuilders,
         })
         // combine schema modifications with the current schemas
-        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, R>
+        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, R>
         const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
         if (Object.keys(modifiedSchemas).length > 0) {
             newPipeline.schemaBuilders = {
@@ -126,6 +138,7 @@ export abstract class PipelineAbstract<
                 RM,
                 PM,
                 DM,
+                CTX,
                 R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> }
             >
         ).pipe((p) => {
@@ -140,20 +153,20 @@ export abstract class PipelineAbstract<
                 createOptions,
                 patchQuery,
                 deleteQuery,
-                create: async (next, resources, options) => {
-                    const result = await next(resources, options)
+                create: async (next, resources, options, context) => {
+                    const result = await next(resources, options, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                read: async (next, query: typeof readQuery.T) => {
-                    const result = await next(query)
+                read: async (next, query: typeof readQuery.T, context) => {
+                    const result = await next(query, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                patch: async (next, query, values) => {
-                    const result = await next(query, values)
+                patch: async (next, query, values, context) => {
+                    const result = await next(query, values, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                delete: async (next, query) => {
-                    const result = await next(query)
+                delete: async (next, query, context) => {
+                    const result = await next(query, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
             }
@@ -188,6 +201,7 @@ export abstract class PipelineAbstract<
                 RM,
                 PM,
                 DM,
+                CTX,
                 R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> }
             >
         ).pipe((p) => {
@@ -202,20 +216,20 @@ export abstract class PipelineAbstract<
                 createOptions,
                 patchQuery,
                 deleteQuery,
-                create: async (next, resources, options) => {
-                    const result = await next(resources, options)
+                create: async (next, resources, options, context) => {
+                    const result = await next(resources, options, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                read: async (next, query: typeof readQuery.T) => {
-                    const result = await next(query)
+                read: async (next, query: typeof readQuery.T, context) => {
+                    const result = await next(query, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                patch: async (next, query, values) => {
-                    const result = await next(query, values)
+                patch: async (next, query, values, context) => {
+                    const result = await next(query, values, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
-                delete: async (next, query) => {
-                    const result = await next(query)
+                delete: async (next, query, context) => {
+                    const result = await next(query, context)
                     return { ...result, data: await relation.assignToResources(result.data) }
                 },
             }
@@ -241,17 +255,19 @@ export abstract class PipelineAbstract<
      * @param resources An array of partial resources to be created
      * @param options Map of options to be used by pipes
      */
-    async create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>> {
+    async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>> {
         resources = _.cloneDeep(resources)
         options = _.cloneDeep(options ?? ({} as CO))
+        context = _.cloneDeep(context ?? ({} as CTX))
         this.handleValidate("create", () => {
             this.schemaBuilders.createValues.validateList(resources)
             this.schemaBuilders.createOptions.validate(options)
+            this.schemaBuilders.context.validate(context)
         })
-        return this.pipeChain("create")(resources, options)
+        return this.pipeChain("create")(resources, options, context)
     }
 
-    protected _create(resources: CV[], options: CO): Promise<ResultsInterface<M, CM>> {
+    protected _create(resources: CV[], options: CO, context: CTX): Promise<ResultsInterface<M, CM>> {
         throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name)
     }
 
@@ -260,15 +276,17 @@ export abstract class PipelineAbstract<
      *
      * @param query The query filter to be used for fetching the data
      */
-    async read(query: RQ): Promise<ResultsInterface<M, RM>> {
+    async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, RM>> {
         query = _.cloneDeep(query)
+        context = _.cloneDeep(context ?? ({} as CTX))
         this.handleValidate("read", () => {
             this.schemaBuilders.readQuery.validate(query)
+            this.schemaBuilders.context.validate(context)
         })
-        return this.pipeChain("read")(query)
+        return this.pipeChain("read")(query, context)
     }
 
-    protected _read(query: RQ): Promise<ResultsInterface<M, RM>> {
+    protected _read(query: RQ, context: CTX): Promise<ResultsInterface<M, RM>> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name)
     }
 
@@ -280,17 +298,19 @@ export abstract class PipelineAbstract<
      * @param query
      * @param values
      */
-    async patch(query: PQ, values: PV): Promise<ResultsInterface<M, PM>> {
+    async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, PM>> {
         query = _.cloneDeep(query)
         values = _.cloneDeep(values)
+        context = _.cloneDeep(context ?? ({} as CTX))
         this.handleValidate("patch", () => {
             this.schemaBuilders.patchQuery.validate(query)
             this.schemaBuilders.patchValues.validate(values)
+            this.schemaBuilders.context.validate(context)
         })
-        return this.pipeChain("patch")(query, values)
+        return this.pipeChain("patch")(query, values, context)
     }
 
-    protected _patch(query: PQ, values: PV): Promise<ResultsInterface<M, PM>> {
+    protected _patch(query: PQ, values: PV, context: CTX): Promise<ResultsInterface<M, PM>> {
         throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name)
     }
 
@@ -298,15 +318,17 @@ export abstract class PipelineAbstract<
      * Delete resources that match th given Query.
      * @param query The query filter to be used for selecting resources to delete
      */
-    async delete(query: DQ): Promise<ResultsInterface<M, DM>> {
+    async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, DM>> {
         query = _.cloneDeep(query)
+        context = _.cloneDeep(context ?? ({} as CTX))
         this.handleValidate("delete", () => {
             this.schemaBuilders.deleteQuery.validate(query)
+            this.schemaBuilders.context.validate(context)
         })
-        return this.pipeChain("delete")(query)
+        return this.pipeChain("delete")(query, context)
     }
 
-    protected _delete(query: DQ): Promise<ResultsInterface<M, DM>> {
+    protected _delete(query: DQ, context: CTX): Promise<ResultsInterface<M, DM>> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name)
     }
 

@@ -13,6 +13,7 @@ export interface SchemaBuildersInterface<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
 > {
     model: SchemaBuilder<M>
     createValues: SchemaBuilder<CV>
@@ -25,6 +26,7 @@ export interface SchemaBuildersInterface<
     readMeta: SchemaBuilder<RM>
     patchMeta: SchemaBuilder<PM>
     deleteMeta: SchemaBuilder<DM>
+    context: SchemaBuilder<CTX>
 }
 
 export const schemaBuildersInterfaceKeys = [
@@ -39,6 +41,7 @@ export const schemaBuildersInterfaceKeys = [
     "readMeta",
     "patchMeta",
     "deleteMeta",
+    "context",
 ] as const
 
 export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBuilder: SchemaBuilder<M>) {
@@ -54,5 +57,6 @@ export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBu
         createMeta: SchemaBuilder.emptySchema(),
         patchMeta: SchemaBuilder.emptySchema(),
         deleteMeta: SchemaBuilder.emptySchema(),
+        context: SchemaBuilder.emptySchema(),
     }
 }

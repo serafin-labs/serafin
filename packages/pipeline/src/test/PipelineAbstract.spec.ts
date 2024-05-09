@@ -9,11 +9,12 @@ import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, Pipe
 import { Relation } from "../Relation"
 import { ResultsInterface } from "../ResultsInterface"
 import { RelationType } from "../RelationType"
+import { PipelineInterface } from "../PipelineInterface"
 
 chai.use(require("chai-as-promised"))
 
 const modelSchema = SchemaBuilder.emptySchema().addString("id").addString("method")
-const schemas = defaultSchemaBuilders(modelSchema)
+const schemas = { ...defaultSchemaBuilders(modelSchema), context: SchemaBuilder.emptySchema().addBoolean("_private", {}, false) }
 
 const createResult = { data: [{ id: "1", method: "create" }], meta: {} }
 const readResult = { data: [{ id: "1", method: "read" }], meta: {} }
@@ -33,9 +34,10 @@ class TestPipeline<
     RM extends object = object,
     PM extends object = object,
     DM extends object = object,
-> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM> {
+    CTX extends object = object,
+> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {
     constructor(
-        schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+        schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
         private results: {
             createResult?: ResultsInterface<M, CM>
             readResult?: ResultsInterface<M, RM>
@@ -83,6 +85,7 @@ function TestPipe<
     RM extends object,
     PM extends object,
     DM extends object,
+    CTX extends object,
 >() {
     return (p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>) => {
         const model = p.model.addString("pipe", {}, false)
@@ -114,20 +117,20 @@ function TestPipe<
             readMeta,
             patchMeta,
             deleteMeta,
-            create: async (next: PipeCreateNext<M, CV, CO, CM>, resources: CV2[], options: CO2) => {
-                const result = await next(resources, options)
+            create: async (next: PipeCreateNext<M, CV, CO, CM, CTX>, resources: CV2[], options: CO2, context: CTX) => {
+                const result = await next(resources, options, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "create" })), meta: { ...result.meta, pipe: "create" } }
             },
-            read: async (next: PipeReadNext<M, RQ, RM>, query: RQ2) => {
-                const result = await next(query)
+            read: async (next: PipeReadNext<M, RQ, RM>, query: RQ2, context: CTX) => {
+                const result = await next(query, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "read" })), meta: { ...result.meta, pipe: "read" } }
             },
-            patch: async (next: PipePatchNext<M, PQ, PV, PM>, query: PQ2, values: PV2) => {
-                const result = await next(query, values)
+            patch: async (next: PipePatchNext<M, PQ, PV, PM>, query: PQ2, values: PV2, context: CTX) => {
+                const result = await next(query, values, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "patch" })), meta: { ...result.meta, pipe: "patch" } }
             },
-            delete: async (next: PipeDeleteNext<M, DQ, DM>, query: DQ2) => {
-                const result = await next(query)
+            delete: async (next: PipeDeleteNext<M, DQ, DM>, query: DQ2, context: CTX) => {
+                const result = await next(query, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "delete" })), meta: { ...result.meta, pipe: "delete" } }
             },
         }
@@ -200,6 +203,11 @@ describe("PipelineAbstract", function () {
                     createMeta: { type: "object", additionalProperties: false },
                     patchMeta: { type: "object", additionalProperties: false },
                     deleteMeta: { type: "object", additionalProperties: false },
+                    context: {
+                        type: "object",
+                        additionalProperties: false,
+                        properties: { _private: { type: "boolean" } },
+                    },
                 },
                 false,
                 null,

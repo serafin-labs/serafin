@@ -4,7 +4,7 @@ import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
 
 export const pipelineMethods = ["create", "read", "patch", "delete"] as const
 
-export type PipelineMethods = typeof pipelineMethods[number]
+export type PipelineMethods = (typeof pipelineMethods)[number]
 
 export interface PipelineInterface<
     M extends IdentityInterface = IdentityInterface,
@@ -18,20 +18,21 @@ export interface PipelineInterface<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
 > {
-    schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>
+    schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>
 
-    create(resources: CV[], options?: CO): Promise<ResultsInterface<M, CM>>
+    create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>>
 
-    read: (query: RQ) => Promise<ResultsInterface<M, RM>>
+    read: (query: RQ, context?: CTX) => Promise<ResultsInterface<M, RM>>
 
-    patch: (query: PQ, values: PV) => Promise<ResultsInterface<M, PM>>
+    patch: (query: PQ, values: PV, context?: CTX) => Promise<ResultsInterface<M, PM>>
 
-    delete: (query: DQ) => Promise<ResultsInterface<M, DM>>
+    delete: (query: DQ, context?: CTX) => Promise<ResultsInterface<M, DM>>
 }
 
-export interface ReadOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any> {
-    schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any>
+export interface ReadOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any, CTX>
 
-    read: (query: RQ) => Promise<ResultsInterface<M, RM>>
+    read: (query: RQ, context?: CTX) => Promise<ResultsInterface<M, RM>>
 }

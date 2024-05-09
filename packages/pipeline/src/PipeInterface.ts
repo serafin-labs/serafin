@@ -17,21 +17,30 @@ export interface PipePropsInterface<
     RM = any,
     PM = any,
     DM = any,
-> extends SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM> {}
+    CTX = any,
+> extends SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {}
 
-export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any> = (
+export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> = (
     resources: CV[],
     options: CO,
+    context: CTX,
 ) => Promise<ResultsInterface<M, CM>>
 
-export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any> = (query: RQ) => Promise<ResultsInterface<M, RM>>
+export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> = (
+    query: RQ,
+    context: CTX,
+) => Promise<ResultsInterface<M, RM>>
 
-export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any> = (
+export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> = (
     query: PQ,
     values: PV,
+    context: CTX,
 ) => Promise<ResultsInterface<M, PM>>
 
-export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any> = (query: DQ) => Promise<ResultsInterface<M, DM>>
+export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> = (
+    query: DQ,
+    context: CTX,
+) => Promise<ResultsInterface<M, DM>>
 
 export interface PipeResultActionsInterface<
     M extends IdentityInterface = IdentityInterface,
@@ -45,6 +54,7 @@ export interface PipeResultActionsInterface<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -56,28 +66,33 @@ export interface PipeResultActionsInterface<
     RM2 = RM,
     PM2 = PM,
     DM2 = DM,
+    CTX2 = CTX,
 > {
     create?: (
         next: PipeCreateNext<M, CV, CO, CM>,
         resources: CV2[],
         options: CO2,
-        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+        context: CTX2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
     ) => Promise<ResultsInterface<M2, CM2>>
     read?: (
         next: PipeReadNext<M, RQ, RM>,
         query: RQ2,
-        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+        context: CTX2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
     ) => Promise<ResultsInterface<M2, RM2>>
     patch?: (
         next: PipePatchNext<M, PQ, PV, PM>,
         query: PQ2,
         values: PV2,
-        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+        context: CTX2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
     ) => Promise<ResultsInterface<M2, PM2>>
     delete?: (
         next: PipeReadNext<M, DQ, DM>,
         query: DQ2,
-        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
+        context: CTX2,
+        pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
     ) => Promise<ResultsInterface<M2, DM2>>
 }
 
@@ -93,6 +108,7 @@ export interface PipeResultsInterface<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -104,8 +120,9 @@ export interface PipeResultsInterface<
     RM2 = RM,
     PM2 = PM,
     DM2 = DM,
-> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>>,
-        PipeResultActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2> {}
+    CTX2 = CTX,
+> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>>,
+        PipeResultActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2> {}
 
 export type PipeFunction<
     M extends IdentityInterface = IdentityInterface,
@@ -119,6 +136,7 @@ export type PipeFunction<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -130,9 +148,10 @@ export type PipeFunction<
     RM2 = RM,
     PM2 = PM,
     DM2 = DM,
+    CTX2 = any,
 > = (
-    p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM>,
-) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+    p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
+) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
 
 export type PipeClass<
     M extends IdentityInterface = IdentityInterface,
@@ -146,6 +165,7 @@ export type PipeClass<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -157,8 +177,9 @@ export type PipeClass<
     RM2 = RM,
     PM2 = PM,
     DM2 = DM,
+    CTX2 = CTX,
 > = {
-    transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+    transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
 }
 
 export type Pipe<
@@ -173,6 +194,7 @@ export type Pipe<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -184,6 +206,7 @@ export type Pipe<
     RM2 = RM,
     PM2 = PM,
     DM2 = DM,
+    CTX2 = CTX,
 > =
-    | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
-    | PipeClass<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2>
+    | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    | PipeClass<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
