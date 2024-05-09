@@ -7,7 +7,16 @@ import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBu
 import { Pipe, PipeCreateNext, PipeResultActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
-import { PipelineInterface, PipelineMethods, ReadOnlyPipelineInterface, pipelineMethods } from "./PipelineInterface"
+import {
+    PipelineCreateFunction,
+    PipelineDeleteFunction,
+    PipelineInterface,
+    PipelineMethods,
+    PipelinePatchFunction,
+    PipelineReadFunction,
+    ReadOnlyPipelineInterface,
+    pipelineMethods,
+} from "./PipelineInterface"
 import { RelationType } from "./RelationType"
 
 export interface PipelineAbstractOptions {
@@ -253,7 +262,8 @@ export abstract class PipelineAbstract<
      * Create new resources based on `resources` input array.
      *
      * @param resources An array of partial resources to be created
-     * @param options Map of options to be used by pipes
+     * @param options Options that can alter the action behavior
+     * @param context Context object
      */
     async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>> {
         resources = _.cloneDeep(resources)
@@ -267,14 +277,27 @@ export abstract class PipelineAbstract<
         return this.pipeChain("create")(resources, options, context)
     }
 
+    /**
+     * Create action placeholder
+     * It should be overridden by child pipeline class
+     */
     protected _create(resources: CV[], options: CO, context: CTX): Promise<ResultsInterface<M, CM>> {
         throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone create function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getCreateFunction() {
+        return this.create.bind(this) as PipelineCreateFunction<M, CV, CO, CM, CTX>
     }
 
     /**
      * Read resources from the underlying source according to the given `query`.
      *
      * @param query The query filter to be used for fetching the data
+     * @param context Context object
      */
     async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, RM>> {
         query = _.cloneDeep(query)
@@ -286,17 +309,30 @@ export abstract class PipelineAbstract<
         return this.pipeChain("read")(query, context)
     }
 
+    /**
+     * Read action placeholder
+     * It should be overridden by child pipeline class
+     */
     protected _read(query: RQ, context: CTX): Promise<ResultsInterface<M, RM>> {
         throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name)
     }
 
     /**
+     * Extract a standalone read function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getReadFunction() {
+        return this.read.bind(this) as PipelineReadFunction<M, RQ, RM, CTX>
+    }
+
+    /**
      * Patch resources according to the given query and values.
-     * The Query will select a subset of the underlying data source and given `values` are updated on it.
-     * This method follows the JSON merge patch standard. @see https://tools.ietf.org/html/rfc7396
+     * The `query` will select a subset of the underlying data source and `values` are updated on it.
+     * This method should follow the JSON merge patch standard if possible. @see https://tools.ietf.org/html/rfc7396
      *
      * @param query
      * @param values
+     * @param context Context object
      */
     async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, PM>> {
         query = _.cloneDeep(query)
@@ -310,13 +346,26 @@ export abstract class PipelineAbstract<
         return this.pipeChain("patch")(query, values, context)
     }
 
+    /**
+     * Patch action placeholder
+     * It should be overridden by child pipeline class
+     */
     protected _patch(query: PQ, values: PV, context: CTX): Promise<ResultsInterface<M, PM>> {
         throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name)
     }
 
     /**
+     * Extract a standalone patch function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getPatchFunction() {
+        return this.patch.bind(this) as PipelinePatchFunction<M, PQ, PV, PM, CTX>
+    }
+
+    /**
      * Delete resources that match th given Query.
      * @param query The query filter to be used for selecting resources to delete
+     * @param context Context object
      */
     async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, DM>> {
         query = _.cloneDeep(query)
@@ -328,8 +377,20 @@ export abstract class PipelineAbstract<
         return this.pipeChain("delete")(query, context)
     }
 
+    /**
+     * Delete action placeholder
+     * It should be overridden by child pipeline class
+     */
     protected _delete(query: DQ, context: CTX): Promise<ResultsInterface<M, DM>> {
         throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone delete function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getDeleteFunction() {
+        return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX>
     }
 
     private handleValidate(method: string, validate: () => void) {

@@ -2,10 +2,53 @@ import { IdentityInterface } from "./IdentityInterface"
 import { ResultsInterface } from "./ResultsInterface"
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
 
+/**
+ * List of action methods used by a pipeline
+ */
 export const pipelineMethods = ["create", "read", "patch", "delete"] as const
 
+/**
+ * Pipeline action keys
+ */
 export type PipelineMethods = (typeof pipelineMethods)[number]
 
+/**
+ * Read function interface of a pipeline
+ */
+export type PipelineReadFunction<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> = (
+    query: RQ,
+    context?: CTX,
+) => Promise<ResultsInterface<M, RM>>
+
+/**
+ * Create function interface of a pipeline
+ */
+export type PipelineCreateFunction<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> = (
+    resources: CV[],
+    options?: CO,
+    context?: CTX,
+) => Promise<ResultsInterface<M, CM>>
+
+/**
+ * Patch function interface of a pipeline
+ */
+export type PipelinePatchFunction<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> = (
+    query: PQ,
+    values: PV,
+    context?: CTX,
+) => Promise<ResultsInterface<M, PM>>
+
+/**
+ * Delete function interface of a pipeline
+ */
+export type PipelineDeleteFunction<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> = (
+    query: DQ,
+    context?: CTX,
+) => Promise<ResultsInterface<M, DM>>
+
+/**
+ * Interface of the important properties of a pipeline
+ */
 export interface PipelineInterface<
     M extends IdentityInterface = IdentityInterface,
     CV = any,
@@ -21,18 +64,16 @@ export interface PipelineInterface<
     CTX = any,
 > {
     schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>
-
-    create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>>
-
-    read: (query: RQ, context?: CTX) => Promise<ResultsInterface<M, RM>>
-
-    patch: (query: PQ, values: PV, context?: CTX) => Promise<ResultsInterface<M, PM>>
-
-    delete: (query: DQ, context?: CTX) => Promise<ResultsInterface<M, DM>>
+    create: PipelineCreateFunction<M, CV, CO, CM, CTX>
+    read: PipelineReadFunction<M, RQ, RM, CTX>
+    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX>
+    delete: PipelineDeleteFunction<M, DQ, DM, CTX>
 }
 
+/**
+ * Interface of the important properties of a pipeline for read only
+ */
 export interface ReadOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> {
     schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any, CTX>
-
-    read: (query: RQ, context?: CTX) => Promise<ResultsInterface<M, RM>>
+    read: PipelineReadFunction<M, RQ, RM, CTX>
 }

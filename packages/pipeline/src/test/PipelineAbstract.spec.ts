@@ -223,6 +223,18 @@ describe("PipelineAbstract", function () {
         await expect(p.delete({ id: "42" })).to.eventually.eqls(deleteResult)
     })
 
+    it("should get standalone methods", async function () {
+        let p = new TestPipeline(schemas, defaultResults)
+        const create = p.getCreateFunction()
+        const read = p.getReadFunction()
+        const patch = p.getPatchFunction()
+        const deleteFunc = p.getDeleteFunction()
+        await expect(create([{ method: "create" }])).to.eventually.eqls(createResult)
+        await expect(read({})).to.eventually.eqls(readResult)
+        await expect(patch({ id: "42" }, {})).to.eventually.eqls(patchResult)
+        await expect(deleteFunc({ id: "42" })).to.eventually.eqls(deleteResult)
+    })
+
     it(`should fail to call pipeline methods with invalid parameters`, async function () {
         let p = new TestPipeline(schemas, defaultResults)
         await expect(p.create([{ id: true, method: "create" } as any])).to.be.rejected
