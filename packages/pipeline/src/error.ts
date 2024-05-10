@@ -43,3 +43,8 @@ export const ForbiddenErrorName = "SerafinForbiddenError"
 export function forbiddenError(reason: string, info?: any, cause?: Error) {
     return error(ForbiddenErrorName, `Action forbidden : ${reason}`, info, cause)
 }
+
+export const MovedPermanentlyErrorName = "SerafinMovedPermanentlyError"
+export function movedPermanentlyError(newResource: string, info?: any, cause?: Error) {
+    return error(MovedPermanentlyErrorName, `The resource has been moved permanently to '${newResource}'`, info, cause)
+}
