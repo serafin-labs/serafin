@@ -38,3 +38,8 @@ export const UnauthorizedErrorName = "SerafinUnauthorizedError"
 export function unauthorizedError(reason: string, info?: any, cause?: Error) {
     return error(UnauthorizedErrorName, `Action not authorized : ${reason}`, info, cause)
 }
+
+export const ForbiddenErrorName = "SerafinForbiddenError"
+export function forbiddenError(reason: string, info?: any, cause?: Error) {
+    return error(ForbiddenErrorName, `Action forbidden : ${reason}`, info, cause)
+}

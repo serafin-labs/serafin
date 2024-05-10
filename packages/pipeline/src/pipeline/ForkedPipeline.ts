@@ -20,10 +20,11 @@ export abstract class ForkedPipeline<
     RM = any,
     PM = any,
     DM = any,
+    CTX = any,
     R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
-> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, R> {
+> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, R> {
     constructor(
-        private basePipeline: PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, R>,
+        private basePipeline: PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, R>,
         title: string,
         description: string,
         validationEnabled = true,
