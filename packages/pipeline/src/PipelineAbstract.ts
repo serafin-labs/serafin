@@ -4,7 +4,7 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error } from "./error"
 import { IdentityInterface } from "./IdentityInterface"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface"
-import { Pipe, PipeCreateNext, PipeResultActionsInterface } from "./PipeInterface"
+import { Pipe, PipeResultActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
 import {

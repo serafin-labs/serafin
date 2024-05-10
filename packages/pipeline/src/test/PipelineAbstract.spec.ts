@@ -8,8 +8,7 @@ import { IdentityInterface } from "../IdentityInterface"
 import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, PipeReadNext } from "../PipeInterface"
 import { Relation } from "../Relation"
 import { ResultsInterface } from "../ResultsInterface"
-import { RelationType } from "../RelationType"
-import { PipelineInterface } from "../PipelineInterface"
+import { ReadOnlyPipelineInterface } from "../PipelineInterface"
 
 chai.use(require("chai-as-promised"))
 
@@ -117,19 +116,19 @@ function TestPipe<
             readMeta,
             patchMeta,
             deleteMeta,
-            create: async (next: PipeCreateNext<M, CV, CO, CM, CTX>, resources: CV2[], options: CO2, context: CTX) => {
+            create: async (next: PipeCreateNext<M, CV, CO, CM, CTX>, resources: CV2[], options: CO2, context: CTX, pipeline: ReadOnlyPipelineInterface<M>) => {
                 const result = await next(resources, options, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "create" })), meta: { ...result.meta, pipe: "create" } }
             },
-            read: async (next: PipeReadNext<M, RQ, RM>, query: RQ2, context: CTX) => {
+            read: async (next: PipeReadNext<M, RQ, RM>, query: RQ2, context: CTX, pipeline: ReadOnlyPipelineInterface<M>) => {
                 const result = await next(query, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "read" })), meta: { ...result.meta, pipe: "read" } }
             },
-            patch: async (next: PipePatchNext<M, PQ, PV, PM>, query: PQ2, values: PV2, context: CTX) => {
+            patch: async (next: PipePatchNext<M, PQ, PV, PM>, query: PQ2, values: PV2, context: CTX, pipeline: ReadOnlyPipelineInterface<M>) => {
                 const result = await next(query, values, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "patch" })), meta: { ...result.meta, pipe: "patch" } }
             },
-            delete: async (next: PipeDeleteNext<M, DQ, DM>, query: DQ2, context: CTX) => {
+            delete: async (next: PipeDeleteNext<M, DQ, DM>, query: DQ2, context: CTX, pipeline: ReadOnlyPipelineInterface<M>) => {
                 const result = await next(query, context)
                 return { data: result.data.map((e) => ({ ...e, pipe: "delete" })), meta: { ...result.meta, pipe: "delete" } }
             },

@@ -77,3 +77,27 @@ export interface ReadOnlyPipelineInterface<M extends IdentityInterface = Identit
     schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any, CTX>
     read: PipelineReadFunction<M, RQ, RM, CTX>
 }
+
+/**
+ * Interface of the important properties of a pipeline for create only
+ */
+export interface CreateOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> {
+    schemaBuilders: SchemaBuildersInterface<M, CV, CO, any, any, any, any, CM, any, any, any, CTX>
+    create: PipelineCreateFunction<M, CV, CO, CM, CTX>
+}
+
+/**
+ * Interface of the important properties of a pipeline for patch only
+ */
+export interface PatchOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, any, PQ, PV, any, any, any, PM, any, CTX>
+    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX>
+}
+
+/**
+ * Interface of the important properties of a pipeline
+ */
+export interface DeleteOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, any, any, any, DQ, any, any, any, DM, CTX>
+    delete: PipelineDeleteFunction<M, DQ, DM, CTX>
+}

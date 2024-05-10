@@ -153,7 +153,7 @@ export type PipeFunction<
     p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
 ) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
 
-export type PipeClass<
+export type PipeClassInstance<
     M extends IdentityInterface = IdentityInterface,
     CV = any,
     CO = any,
@@ -180,6 +180,36 @@ export type PipeClass<
     CTX2 = CTX,
 > = {
     transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+}
+
+export interface PipeClass<
+    P extends any[],
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    CTX = any,
+    M2 extends IdentityInterface = M,
+    CV2 = CV,
+    CO2 = CO,
+    RQ2 = RQ,
+    PQ2 = PQ,
+    PV2 = PV,
+    DQ2 = DQ,
+    CM2 = CM,
+    RM2 = RM,
+    PM2 = PM,
+    DM2 = DM,
+    CTX2 = CTX,
+> {
+    new (...params: P): PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
 }
 
 export type Pipe<
@@ -209,4 +239,4 @@ export type Pipe<
     CTX2 = CTX,
 > =
     | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
-    | PipeClass<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    | PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
