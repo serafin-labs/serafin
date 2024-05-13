@@ -24,9 +24,9 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
     async assignToResource(resource: M, query?: Partial<ReadQuery>, context?: any) {
         let result = await this.fetch(resource, query, context)
         if (this.type === "one") {
-            resource[this.name as string] = result.data[0]
+            ;(resource as Record<string, unknown>)[this.name as string] = result.data[0]
         } else {
-            resource[this.name as string] = result.data
+            ;(resource as Record<string, unknown>)[this.name as string] = result.data
         }
         return resource as M & { [k in NameKey]: Type extends RelationType.many ? R[] : Type extends RelationType.one ? R : R | R[] }
     }

@@ -88,7 +88,7 @@ export abstract class PipelineAbstract<
                 _.mapValues(
                     modifiedMethods,
                     (value: any, key) =>
-                        (...props) =>
+                        (...props: any[]) =>
                             value(...props, this), // the current pipeline is provided as the last argument
                 ),
                 ...this.pipes,
@@ -102,17 +102,17 @@ export abstract class PipelineAbstract<
      * Build a recursive function that will call all the pipes for a CRUD method
      */
     private pipeChain(method: PipelineMethods) {
-        const callChain = async (i: number, ...args) => {
+        const callChain = async (i: number, ...args: any[]) => {
             while (i < this.pipes.length && !(method in this.pipes[i])) {
                 ++i
             }
             if (i >= this.pipes.length) {
-                return (this[`_${method}`] as (...args) => any)(...args)
+                return (this[`_${method}`] as (...args: any[]) => any)(...args)
             } else {
-                return (this.pipes[i++] as any)[method]((...args) => callChain(i, ...args), ...args)
+                return (this.pipes[i++] as any)[method]((...args: any[]) => callChain(i, ...args), ...args)
             }
         }
-        return async (...args) => callChain(0, ...args)
+        return async (...args: any[]) => callChain(0, ...args)
     }
 
     /**

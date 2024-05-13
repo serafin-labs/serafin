@@ -1,0 +1,12 @@
+{
+    "include": ["src"],
+    "exclude": ["node_modules", "**/*.spec.ts"],
+    "compilerOptions": {
+        "incremental": true,
+        "sourceMap": true,
+        "declaration": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true
+    }
+}

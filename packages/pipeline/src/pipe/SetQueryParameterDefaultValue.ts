@@ -7,7 +7,7 @@ import { PipeReadNext } from "../PipeInterface"
  * The schema will not be modified.
  */
 export function SetReadQueryParameterDefaultValue<M extends IdentityInterface, RQ, RM, CTX, V extends object | boolean | number | string>(
-    queryParameterAccessor: PropertyAccessorResolver<RQ, V>,
+    queryParameterAccessor: PropertyAccessorResolver<RQ, V | undefined>,
     value: V | ((query: RQ, context: CTX) => Promise<V>),
 ) {
     const queryParameter = queryParameterAccessor(createPropertyAccessor())

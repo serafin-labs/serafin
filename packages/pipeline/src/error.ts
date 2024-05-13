@@ -1,4 +1,4 @@
-import * as VError from "verror"
+import VError from "verror"
 
 export function error(name: string, message: string, info?: any, cause?: any) {
     let opt: any = {

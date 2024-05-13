@@ -1,4 +1,4 @@
-export interface ResultsInterface<T, META extends {} = {}> {
+export interface ResultsInterface<T, META = {}> {
     data: Array<T>
     meta: META
 }
