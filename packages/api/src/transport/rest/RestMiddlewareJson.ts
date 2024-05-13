@@ -9,12 +9,16 @@ import { RestTransport } from "./Rest"
 
 export const restMiddlewareJson = (
     rest: RestTransport,
-    pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
+    pipeline: PipelineAbstract,
     openApi: OpenApi,
     endpointPath: string,
     resourcesPath: string,
     name: string,
 ) => {
+    const api = rest.api
+    if (!api) {
+        throw new Error("Misconfigured API")
+    }
     let router: express.Router = express.Router()
     router.use((req, res, next) => {
         if (req.method !== "OPTIONS") {
@@ -28,30 +32,30 @@ export const restMiddlewareJson = (
 
     let availableMethods = RestTransport.availableMethods(pipeline)
 
+    const contextSchema = pipeline.schemaBuilders.context.configureValidation({ coerceTypes: true, removeAdditional: true })
     // create the routes for this endpoint
     if (availableMethods.canRead) {
         // prepare schemas to handle transforming the query params & options and filtering unwanted properties
         const readQuerySchema = pipeline.schemaBuilders.readQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
-        const readOptionsSchema = pipeline.schemaBuilders.readOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // get many resources
         router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, readOptionsSchema, readQuerySchema)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, readQuerySchema)
             if (!pipelineParams) {
                 return
             }
 
             // run the query
             pipeline
-                .read(pipelineParams.query, pipelineParams.options)
-                .then((result) => {
+                .read(pipelineParams.query, pipelineParams.context)
+                .then((result: any) => {
                     let acceptHeader = req.get("Accept") || ""
                     if (acceptHeader.search("application/hal+json") !== -1) {
-                        let links = new JsonHal(endpointPath, rest.api, pipeline.relations).links()
+                        let links = new JsonHal(endpointPath, api, pipeline.relations).links()
                         result["_links"] = links
                         if (result.data) {
-                            result.data = result.data.map((result) => {
+                            result.data = result.data.map((result: any) => {
                                 if (result["id"]) {
-                                    result["_links"] = new JsonHal(endpointPath + `/${result["id"]}`, rest.api, pipeline.relations).links(result)
+                                    result["_links"] = new JsonHal(endpointPath + `/${result["id"]}`, api, pipeline.relations).links(result)
                                 }
                                 return result
                             })
@@ -69,7 +73,7 @@ export const restMiddlewareJson = (
         // get a resource by its id
         router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             let id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, readOptionsSchema)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema)
             if (!pipelineParams) {
                 return
             }
@@ -80,13 +84,13 @@ export const restMiddlewareJson = (
                     {
                         id: id,
                     },
-                    pipelineParams.options,
+                    pipelineParams.context,
                 )
-                .then((result) => {
+                .then((result: any) => {
                     if (result.data.length > 0) {
                         let acceptHeader = req.get("Accept") || ""
                         if (acceptHeader.search("application/hal+json") !== -1) {
-                            result.data[0]["_links"] = new JsonHal(endpointPath + `/${id}`, rest.api, pipeline.relations).links(result.data[0])
+                            result.data[0]["_links"] = new JsonHal(endpointPath + `/${id}`, api, pipeline.relations).links(result.data[0])
                         }
                         res.status(200).json(result)
                     } else {
@@ -107,7 +111,7 @@ export const restMiddlewareJson = (
         const createOptionsSchema = pipeline.schemaBuilders.createOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // create a new resource
         router.post("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, createOptionsSchema)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, createOptionsSchema)
             if (!pipelineParams) {
                 return
             }
@@ -115,7 +119,7 @@ export const restMiddlewareJson = (
 
             // run the query
             pipeline
-                .create(data, pipelineParams.options)
+                .create(data, pipelineParams.query, pipelineParams.context)
                 .then((createdResources) => {
                     res.status(201).json(createdResources)
                 })
@@ -130,11 +134,10 @@ export const restMiddlewareJson = (
     if (availableMethods.canPatch) {
         // prepare schemas to handle transforming the query params & options and filtering unwanted properties
         const patchQuerySchema = pipeline.schemaBuilders.patchQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
-        const patchOptionsSchema = pipeline.schemaBuilders.patchOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // patch an existing resource
         router.patch("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             var id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, patchOptionsSchema, patchQuerySchema, id)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, patchQuerySchema, id)
             if (!pipelineParams) {
                 return
             }
@@ -149,7 +152,7 @@ export const restMiddlewareJson = (
                         id: id,
                     },
                     patch,
-                    pipelineParams.options,
+                    pipelineParams.context,
                 )
                 .then((updatedResources) => {
                     if (updatedResources.data.length === 0) {
@@ -167,14 +170,15 @@ export const restMiddlewareJson = (
 
         if (
             !patchQuerySchema.schema.required?.includes("id") ||
-            (typeof patchQuerySchema.schema.properties["id"] !== "boolean" &&
-                (patchQuerySchema.schema.properties["id"]?.oneOf?.length > 1 ||
+            (patchQuerySchema.schema.properties &&
+                typeof patchQuerySchema.schema.properties["id"] !== "boolean" &&
+                ((patchQuerySchema.schema.properties["id"]?.oneOf?.length ?? 0) > 1 ||
                     patchQuerySchema.schema.properties["id"]?.type === "array" ||
                     (Array.isArray(patchQuerySchema.schema.properties["id"]?.type) && patchQuerySchema.schema.properties["id"].type.includes("array"))))
         ) {
             // if "id" is not required or id is not just a string identifier, this means we also support general patch on this pipeline
             router.patch("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = rest.handleOptionsAndQuery(req, res, next, patchOptionsSchema, patchQuerySchema)
+                let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, patchQuerySchema)
                 if (!pipelineParams) {
                     return
                 }
@@ -183,7 +187,7 @@ export const restMiddlewareJson = (
 
                 // run the query
                 pipeline
-                    .patch(pipelineParams.query, patch, pipelineParams.options)
+                    .patch(pipelineParams.query, patch, pipelineParams.context)
                     .then((updatedResources) => {
                         res.status(200).json(updatedResources)
                         res.end()
@@ -196,46 +200,13 @@ export const restMiddlewareJson = (
         }
     }
 
-    if (availableMethods.canReplace) {
-        // prepare schemas to handle transforming the options and filtering unwanted properties
-        const replaceOptionsSchema = pipeline.schemaBuilders.replaceOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
-        // put an existing resource
-        router.put("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, replaceOptionsSchema)
-            if (!pipelineParams) {
-                return
-            }
-
-            var data = req.body
-            var id = req.params.id
-
-            // run the query
-            pipeline
-                .replace(id, data, pipelineParams.options)
-                .then((replacedResource) => {
-                    if (!replacedResource) {
-                        throw notFoundError(`${name}:${id}`)
-                    } else {
-                        res.status(200).json(replacedResource)
-                    }
-                    res.end()
-                })
-                .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
-                })
-        })
-
-        openApi.addReplaceDoc()
-    }
-
     if (availableMethods.canDelete) {
         // prepare schemas to handle transforming the query params & options and filtering unwanted properties
         const deleteQuerySchema = pipeline.schemaBuilders.deleteQuery.configureValidation({ coerceTypes: true, removeAdditional: true })
-        const deleteOptionsSchema = pipeline.schemaBuilders.deleteOptions.configureValidation({ coerceTypes: true, removeAdditional: true })
         // delete an existing resource
         router.delete("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             var id = req.params.id
-            let pipelineParams = rest.handleOptionsAndQuery(req, res, next, deleteOptionsSchema, deleteQuerySchema, id)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, deleteQuerySchema, id)
             if (!pipelineParams) {
                 return
             }
@@ -247,7 +218,7 @@ export const restMiddlewareJson = (
                         ...pipelineParams.query,
                         id: id,
                     },
-                    pipelineParams.options,
+                    pipelineParams.context,
                 )
                 .then((deletedResources) => {
                     if (deletedResources.data.length === 0) {
@@ -266,21 +237,22 @@ export const restMiddlewareJson = (
 
         if (
             !deleteQuerySchema.schema.required?.includes("id") ||
-            (typeof deleteQuerySchema.schema.properties["id"] !== "boolean" &&
-                (deleteQuerySchema.schema.properties["id"]?.oneOf?.length > 1 ||
+            (deleteQuerySchema.schema.properties &&
+                typeof deleteQuerySchema.schema.properties["id"] !== "boolean" &&
+                ((deleteQuerySchema.schema.properties["id"]?.oneOf?.length ?? 0) > 1 ||
                     deleteQuerySchema.schema.properties["id"]?.type === "array" ||
                     (Array.isArray(deleteQuerySchema.schema.properties["id"]?.type) && deleteQuerySchema.schema.properties["id"].type.includes("array"))))
         ) {
             // if "id" is not required or id is not just a string identifier, this means we also support general delete on this pipeline
             router.delete("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
-                let pipelineParams = rest.handleOptionsAndQuery(req, res, next, deleteOptionsSchema, deleteQuerySchema)
+                let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, deleteQuerySchema)
                 if (!pipelineParams) {
                     return
                 }
 
                 // run the query
                 pipeline
-                    .delete(pipelineParams.query, pipelineParams.options)
+                    .delete(pipelineParams.query, pipelineParams.context)
                     .then((deletedResources) => {
                         res.status(200).json(deletedResources)
                         res.end()
@@ -296,7 +268,7 @@ export const restMiddlewareJson = (
     return router
 }
 
-export const restRootMiddlewareJson = (api) => {
+export const restRootMiddlewareJson = (api: Api) => {
     let router: express.Router = express.Router()
 
     router.get("", (req: express.Request, res: express.Response, next: (err?: any) => void) => {

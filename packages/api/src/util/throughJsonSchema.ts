@@ -43,7 +43,7 @@ export function throughJsonSchema(schema: boolean | JSONSchema | JSONSchema[], a
             if (schema.not) {
                 throughJsonSchema(schema.not, action)
             }
-            if ("additionalProperties" in schema && typeof schema.additionalProperties !== "boolean") {
+            if ("additionalProperties" in schema && typeof schema.additionalProperties !== "boolean" && schema.additionalProperties) {
                 throughJsonSchema(schema.additionalProperties, action)
             }
         }

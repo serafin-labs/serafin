@@ -149,7 +149,7 @@ export function schemaToOpenApiParameter(schema: SchemaObject, spec: OpenAPIObje
 }
 
 /**
- * Filter a paramater array to remove duplicates. The first occurance is kept and the others are discarded.
+ * Filter a parameter array to remove duplicates. The first occurrence is kept and the others are discarded.
  *
  * @param parameters
  */

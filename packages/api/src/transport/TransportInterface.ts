@@ -9,10 +9,10 @@ export interface TransportInterface {
     /**
      * Init this transport
      */
-    init(api: Api)
+    init(api: Api): void
 
     /**
      * The 'use' method is called by the Api class to pass the pipeline to register
      */
-    use(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>, name: string, pluralName: string)
+    use(pipeline: PipelineAbstract, name: string, pluralName: string): void
 }

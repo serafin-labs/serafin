@@ -12,20 +12,22 @@ const jsonSchemaToGraphQLTypes = {
     number: graphql.GraphQLFloat,
     integer: graphql.GraphQLInt,
     string: graphql.GraphQLString,
-}
+} satisfies Record<string, graphql.GraphQLScalarType>
 
 /**
  * Utility function to create a name for a given path
  * @param path
  */
 function pathToSchemaName(path: string) {
-    return path
-        .split("#")
-        .pop()
-        .split("/")
-        .filter((v) => v !== "definitions")
-        .map((v) => _.upperFirst(v))
-        .join("")
+    return (
+        path
+            .split("#")
+            .pop()
+            ?.split("/")
+            .filter((v) => v !== "definitions")
+            .map((v) => _.upperFirst(v))
+            .join("") ?? ""
+    )
 }
 
 /**
@@ -45,14 +47,14 @@ export function jsonSchemaToGraphQL(
     schemaByNames: { [name: string]: { schema: graphql.GraphQLObjectType; fields: () => any } } = {},
 ): { [name: string]: { schema: graphql.GraphQLObjectType; fields: () => any } } {
     // let's define the recursive method to convert JSON schemas
-    let _jsonSchemaToGraphQL = (schema: JSONSchema, name: string) => {
+    let _jsonSchemaToGraphQL = (schema: JSONSchema, name: string): any => {
         // if this schema was already converted, let's use the existing reference
         if (name in schemaByNames) {
             return schemaByNames[name]
         }
         let result
-        // if our object name contains Query or Options, it means it's an input type for Serafin pipelines
-        let isInputType = name.search("Query") !== -1 || name.search("Options") !== -1
+        // if our object name contains Query, Options or Context, it means it's an input type for Serafin pipelines
+        let isInputType = name.search("Query") !== -1 || name.search("Options") !== -1 || name.search("Context") !== -1
 
         // if the schema type is "object" and we have properties definied, we can convert it to GraphQLObjectType or GraphQLInputObjectType
         if (schema.type === "object" || (!schema.hasOwnProperty("type") && schema.properties)) {
@@ -71,15 +73,15 @@ export function jsonSchemaToGraphQL(
                 })
                 // create the resulting object
                 // here we keep fields as a function to be able to extend it before it is used
-                let schemaObject = {
+                let schemaObject: any = {
                     schema: !isInputType
                         ? new graphql.GraphQLObjectType({
-                              name: name || schema.title,
+                              name: (name || schema.title) ?? "",
                               description: schema.description,
                               fields: () => schemaObject.fields(),
                           })
                         : new graphql.GraphQLInputObjectType({
-                              name: name || schema.title,
+                              name: (name || schema.title) ?? "",
                               description: schema.description,
                               fields: () => schemaObject.fields(),
                           }),
@@ -99,7 +101,7 @@ export function jsonSchemaToGraphQL(
             }
         } else if (["integer", "number", "boolean", "string"].indexOf(schema.type as string) !== -1) {
             // convert basic types
-            result = jsonSchemaToGraphQLTypes[schema.type as string]
+            result = jsonSchemaToGraphQLTypes[schema.type as keyof typeof jsonSchemaToGraphQLTypes]
         } else if (schema.$ref) {
             // if we have an external ref, throw an error
             if (schema.$ref.charAt(0) !== "#") {

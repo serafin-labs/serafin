@@ -1,5 +1,6 @@
 import {
     ConflictErrorName,
+    ForbiddenErrorName,
     MovedPermanentlyErrorName,
     NotFoundErrorName,
     NotImplementedErrorName,
@@ -10,7 +11,7 @@ import {
 import { JSONSchema, SchemaBuilder } from "@serafin/schema-builder"
 import * as express from "express"
 import * as _ from "lodash"
-import { VError } from "verror"
+import VError from "verror"
 import { Api } from "../../Api"
 import { TransportInterface } from "../TransportInterface"
 import { OpenApi } from "./OpenApi"
@@ -33,11 +34,11 @@ export interface RestOptions {
     /*
      * Allows you to execute custom code on error, primarily useful if you want to add extra logging
      */
-    onError?: (error: Error) => void
+    onError?: (error: VError) => void
 }
 
 export class RestTransport implements TransportInterface {
-    public api: Api
+    public api: Api | undefined
     constructor(protected options: RestOptions = {}) {}
 
     init(api: Api) {
@@ -52,48 +53,54 @@ export class RestTransport implements TransportInterface {
      * @param name
      * @param pluralName
      */
-    use(
-        pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
-        name: string,
-        pluralName: string,
-    ) {
+    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
+        const api = this.api
+        if (!api) {
+            throw new Error("Misconfigured API")
+        }
         // setup the router
-        let endpointPath = `${this.api.basePath}/${pluralName}`
+        let endpointPath = `${api.basePath}/${pluralName}`
         let resourcesPath = `/${pluralName}`
 
-        let openApi = new OpenApi(this.api, pipeline, resourcesPath, name, pluralName)
+        let openApi = new OpenApi(api, pipeline, resourcesPath, name, pluralName)
 
         let availableMethods = RestTransport.availableMethods(pipeline)
 
+        if (availableMethods.canCreate) {
+            this.testQueryAndContextConflict(pipeline.schemaBuilders.createOptions.schema, pipeline.schemaBuilders.context.schema)
+        }
         if (availableMethods.canRead) {
-            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.readOptions.schema)
+            this.testQueryAndContextConflict(pipeline.schemaBuilders.readQuery.schema, pipeline.schemaBuilders.context.schema)
         }
         if (availableMethods.canPatch) {
-            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.patchOptions.schema)
+            this.testQueryAndContextConflict(pipeline.schemaBuilders.patchQuery.schema, pipeline.schemaBuilders.context.schema)
         }
         if (availableMethods.canDelete) {
-            this.testOptionsAndQueryConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.deleteOptions.schema)
+            this.testQueryAndContextConflict(pipeline.schemaBuilders.deleteQuery.schema, pipeline.schemaBuilders.context.schema)
         }
 
         // attach the routers to the express app
-        this.api.application.use(endpointPath, restMiddlewareJson(this, pipeline, openApi, endpointPath, resourcesPath, name))
+        api.application.use(endpointPath, restMiddlewareJson(this, pipeline, openApi, endpointPath, resourcesPath, name))
     }
 
     // error handling closure for this endpoint
-    public handleError(error, res: express.Response, next: (err?: any) => void) {
+    public handleError(error: VError, res: express.Response, next: (err?: any) => void) {
         if (this.options.onError) {
             this.options.onError(error)
         }
         // handle known errors
         if (
-            ![
-                [ValidationErrorName, 400],
-                [NotFoundErrorName, 404],
-                [ConflictErrorName, 409],
-                [NotImplementedErrorName, 405],
-                [UnauthorizedErrorName, 401],
-                [MovedPermanentlyErrorName, 301],
-            ].some((p: [string, number]) => {
+            !(
+                [
+                    [ValidationErrorName, 400],
+                    [NotFoundErrorName, 404],
+                    [ConflictErrorName, 409],
+                    [NotImplementedErrorName, 405],
+                    [UnauthorizedErrorName, 401],
+                    [ForbiddenErrorName, 403],
+                    [MovedPermanentlyErrorName, 301],
+                ] as [string, number][]
+            ).some((p: [string, number]) => {
                 let [errorName, code] = p
                 const causeByName = VError.findCauseByName(error, errorName)
                 if (causeByName) {
@@ -118,51 +125,54 @@ export class RestTransport implements TransportInterface {
         }
     }
 
-    public handleOptionsAndQuery(
+    public handleContextAndQuery(
         req: express.Request,
         res: express.Response,
         next: () => any,
-        optionsSchemaBuilder: SchemaBuilder<any>,
-        querySchemaBuilder: SchemaBuilder<any> = null,
+        contextSchemaBuilder: SchemaBuilder<any>,
+        querySchemaBuilder: SchemaBuilder<any> | null = null,
         id?: string | string[],
-    ): { options: object; query: object } {
+    ): { context: object; query: object } | null {
+        const api = this.api
+        if (!api) {
+            throw new Error("Misconfigured API")
+        }
         try {
-            let pipelineOptions = this.api.filterInternalOptions(_.cloneDeep(req.query))
+            let pipelineContext = api.filterInternalOptions(_.cloneDeep(req.query))
             if (this.options.internalOptions) {
-                _.merge(pipelineOptions, this.options.internalOptions(req))
+                _.merge(pipelineContext, this.options.internalOptions(req))
             }
-            optionsSchemaBuilder.validate(pipelineOptions)
+            contextSchemaBuilder.validate(pipelineContext)
 
             let pipelineQuery = {}
             if (querySchemaBuilder !== null) {
                 pipelineQuery = id ? { ..._.cloneDeep(req.query), id } : _.cloneDeep(req.query)
                 querySchemaBuilder.validate(pipelineQuery)
             }
-            return { options: pipelineOptions, query: pipelineQuery }
+            return { context: pipelineContext, query: pipelineQuery }
         } catch (e) {
             this.handleError(Api.apiError(e, req), res, next)
         }
         return null
     }
 
-    private testOptionsAndQueryConflict(optionsSchema: JSONSchema, querySchema: JSONSchema): void {
-        if (optionsSchema && querySchema) {
-            let intersection = _.intersection(Object.keys(optionsSchema.properties || {}), Object.keys(querySchema.properties || {}))
+    private testQueryAndContextConflict(contextSchema: JSONSchema, querySchema: JSONSchema): void {
+        if (contextSchema && querySchema) {
+            let intersection = _.intersection(Object.keys(contextSchema.properties || {}), Object.keys(querySchema.properties || {}))
             if (intersection.length > 0) {
-                throw new VError("SerafinRestParamsNameConflict", `Name conflict between options and query (${intersection.toString()})`, {
+                throw new VError("SerafinRestParamsNameConflict", `Name conflict between context and query (${intersection.toString()})`, {
                     conflict: intersection,
-                    optionsSchema: optionsSchema,
+                    optionsSchema: contextSchema,
                     querySchema: querySchema,
                 })
             }
         }
     }
 
-    public static availableMethods(pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>) {
+    public static availableMethods(pipeline: PipelineAbstract) {
         return {
             canRead: !!pipeline.schemaBuilders.readQuery,
             canCreate: !!pipeline.schemaBuilders.createValues,
-            canReplace: !!pipeline.schemaBuilders.replaceValues,
             canPatch: !!pipeline.schemaBuilders.patchValues,
             canDelete: !!pipeline.schemaBuilders.deleteQuery,
         }

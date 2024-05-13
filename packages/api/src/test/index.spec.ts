@@ -1,71 +1,56 @@
 import { ParameterObject } from "@serafin/open-api"
-import { defaultSchemaBuilders, IdentityInterface, PipeAbstract, PipelineAbstract } from "@serafin/pipeline"
+import { defaultSchemaBuilders, IdentityInterface, PipelineAbstract, PipelineAbstractOptions, SchemaBuildersInterface } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import * as chai from "chai"
-import { expect } from "chai"
-import * as express from "express"
+import { use } from "chai"
+import { expect, request } from "chai"
+import express from "express"
 import { Api } from "../Api"
 import { RestTransport } from "../transport/rest/Rest"
 import * as bodyParser from "body-parser"
 import chaiHttp from "chai-http"
 
 chaiHttp
-chai.use(require("chai-http"))
-chai.use(require("chai-as-promised"))
+use(require("chai-http"))
+use(require("chai-as-promised"))
 
-class TestPipeline<
-    M extends IdentityInterface,
-    CV = {},
-    CO = {},
-    CM = {},
-    RQ = {},
-    RO = {},
-    RM = {},
-    UV = {},
-    UO = {},
-    UM = {},
-    PQ = {},
-    PV = {},
-    PO = {},
-    PM = {},
-    DQ = {},
-    DO = {},
-    DM = {},
-    R = {},
-> extends PipelineAbstract<M, CV, CO, CM, RQ, RO, RM, UV, UO, UM, PQ, PV, PO, PM, DQ, DO, DM, R> {
-    protected async _create(resources: any[], options?: any): Promise<any> {
-        return { data: [{ id: "1", method: "create", resources, options }], meta: {} }
+class TestingPipeline<
+    M extends IdentityInterface = IdentityInterface,
+    CV extends object = object,
+    CO extends object = object,
+    RQ extends object = object,
+    PQ extends object = object,
+    PV extends object = object,
+    DQ extends object = object,
+    CM extends object = object,
+    RM extends object = object,
+    PM extends object = object,
+    DM extends object = object,
+    CTX extends object = object,
+> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {
+    constructor(schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>, options?: PipelineAbstractOptions) {
+        super(schemaBuilders, options)
+    }
+    protected async _create(resources: any[], options: any, context: any): Promise<any> {
+        return { data: [{ id: "1", method: "create", resources, options, context }], meta: {} }
     }
 
-    protected async _read(query?: any, options?: any): Promise<any> {
-        return { data: [{ id: "1", method: "read", query, options }], meta: {} }
+    protected async _read(query: any, context: any): Promise<any> {
+        return { data: [{ id: "1", method: "read", query, context }], meta: {} }
     }
 
-    protected async _replace(id: string, values: any, options?: any): Promise<any> {
-        return { data: [{ id: "1", method: "replace", values, options }], meta: {} }
+    protected async _patch(query: any, values: any, context: any): Promise<any> {
+        return { data: [{ id: "1", method: "patch", query, values, context }], meta: {} }
     }
 
-    protected async _patch(query: any, values: any, options?: any): Promise<any> {
-        return { data: [{ id: "1", method: "patch", query, values, options }], meta: {} }
-    }
-
-    protected async _delete(query: any, options?: any): Promise<any> {
-        return { data: [{ id: "1", method: "delete", query, options }], meta: {} }
+    protected async _delete(query: any, context: any): Promise<any> {
+        return { data: [{ id: "1", method: "delete", query, context }], meta: {} }
     }
 }
 
-export class RolePipe<M, RO, CO, UO, PO, DO> extends PipeAbstract {
-    schemaBuilderModel = (s: SchemaBuilder<M>) => s
-
-    schemaBuilderReadOptions = (s: SchemaBuilder<RO>) => s.addString("_role", {}, false).addNumber("v", {}, false)
-
-    schemaBuilderCreateOptions = (s: SchemaBuilder<CO>) => s.addString("_role", {}, false).addNumber("v", {}, false)
-
-    schemaBuilderReplaceOptions = (s: SchemaBuilder<UO>) => s.addString("_role", {}, false).addNumber("v", {}, false)
-
-    schemaBuilderPatchOptions = (s: SchemaBuilder<PO>) => s.addString("_role", {}, false).addNumber("v", {}, false)
-
-    schemaBuilderDeleteOptions = (s: SchemaBuilder<DO>) => s.addString("_role", {}, false).addNumber("v", {}, false)
+export class RolePipe<CTX> {
+    transform = (p: { context: SchemaBuilder<CTX> }) => ({
+        context: p.context.addString("_role", {}, false).addNumber("v", {}, false),
+    })
 }
 
 describe("Api", function () {
@@ -84,11 +69,11 @@ describe("Api", function () {
             paths: {},
         })
         api.configure(new RestTransport())
-        const pipeline = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addNumber("value"))).pipe(
+        const pipeline = new TestingPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addNumber("value"))).pipe(
             new RolePipe(),
         )
         api.use(pipeline, "test")
-        server = app.listen(+process.env.PORT || 8089, "localhost", () => {
+        server = app.listen(process.env.PORT ? Number(process.env.PORT) : 8089, "localhost", () => {
             done()
         })
     })
@@ -104,7 +89,7 @@ describe("Api", function () {
     })
 
     it("should provide a /api.json enpoint", function (done) {
-        chai.request(app)
+        request(app)
             .get("/api.json")
             .end((err, res) => {
                 expect(err).to.not.exist
@@ -118,14 +103,14 @@ describe("Api", function () {
 
     it("should configure a transport and handle requests", function (done) {
         // malformed read
-        chai.request(app)
+        request(app)
             .get("/tests/badId")
             .end((err, res) => {
                 expect(res.status).to.eql(400)
             })
 
         // read by id
-        chai.request(app)
+        request(app)
             .get("/tests/1")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
@@ -133,7 +118,7 @@ describe("Api", function () {
             })
 
         // read
-        chai.request(app)
+        request(app)
             .get("/tests/")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
@@ -141,7 +126,7 @@ describe("Api", function () {
             })
 
         // read with type coercion
-        chai.request(app)
+        request(app)
             .get("/tests/?value=42")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
@@ -150,7 +135,7 @@ describe("Api", function () {
             })
 
         // read with params filtering
-        chai.request(app)
+        request(app)
             .get("/tests/?other=none")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
@@ -159,17 +144,17 @@ describe("Api", function () {
             })
 
         // read with private options
-        chai.request(app)
+        request(app)
             .get("/tests/?_role=admin&v=1")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
                 expect(res.body.data[0].method).to.eql("read")
-                expect(res.body.data[0].options._role).to.equals(undefined)
-                expect(res.body.data[0].options.v).to.equals(1)
+                expect(res.body.data[0].context._role).to.equals(undefined)
+                expect(res.body.data[0].context.v).to.equals(1)
             })
 
         // malformed create
-        chai.request(app)
+        request(app)
             .post("/tests/")
             .send([{ id: "1" }])
             .end((err, res) => {
@@ -177,46 +162,35 @@ describe("Api", function () {
             })
 
         // create
-        chai.request(app)
+        request(app)
             .post("/tests/?_role=admin&v=1")
             .send([{ value: 42 }])
             .end((err, res) => {
                 expect(res.status).to.eql(201)
                 expect(res.body.data[0].method).to.eql("create")
-                expect(res.body.data[0].options._role).to.equals(undefined)
-                expect(res.body.data[0].options.v).to.equals(1)
+                expect(res.body.data[0].context._role).to.equals(undefined)
+                expect(res.body.data[0].context.v).to.equals(1)
             })
 
         // patch
-        chai.request(app)
+        request(app)
             .patch("/tests/1?_role=admin&v=1")
             .send({ value: 42 })
             .end((err, res) => {
                 expect(res.status).to.eql(200)
                 expect(res.body.data[0].method).to.eql("patch")
-                expect(res.body.data[0].options._role).to.equals(undefined)
-                expect(res.body.data[0].options.v).to.equals(1)
-            })
-
-        // replace
-        chai.request(app)
-            .put("/tests/1?_role=admin&v=1")
-            .send({ value: 42 })
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("replace")
-                expect(res.body.data[0].options._role).to.equals(undefined)
-                expect(res.body.data[0].options.v).to.equals(1)
+                expect(res.body.data[0].context._role).to.equals(undefined)
+                expect(res.body.data[0].context.v).to.equals(1)
             })
 
         // delete
-        chai.request(app)
+        request(app)
             .del("/tests/1?_role=admin&v=1")
             .end((err, res) => {
                 expect(res.status).to.eql(200)
                 expect(res.body.data[0].method).to.eql("delete")
-                expect(res.body.data[0].options._role).to.equals(undefined)
-                expect(res.body.data[0].options.v).to.equals(1)
+                expect(res.body.data[0].context._role).to.equals(undefined)
+                expect(res.body.data[0].context.v).to.equals(1)
                 done()
             })
     })
@@ -251,10 +225,10 @@ describe("Api", function () {
     })
 
     it("should support general patch", function () {
-        const pipeline1 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
+        const pipeline1 = new TestingPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
         api.use(pipeline1, "p1", "p1")
 
-        chai.request(app)
+        request(app)
             .patch("/p1?id=42&id=21")
             .send({ test: "21" })
             .end((err, res) => {
@@ -266,10 +240,10 @@ describe("Api", function () {
     })
 
     it("should support general delete", function () {
-        const pipeline1 = new TestPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
+        const pipeline1 = new TestingPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
         api.use(pipeline1, "p1", "p1")
 
-        chai.request(app)
+        request(app)
             .delete("/p1?id=42&id=21")
             .end((err, res) => {
                 expect(res.status).to.eql(200)

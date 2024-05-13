@@ -3,15 +3,15 @@ import { QueryTemplate, Relation } from "@serafin/pipeline"
 import { Api } from "../../Api"
 
 export class JsonHal {
-    constructor(private selfUrl, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {}
+    constructor(private selfUrl: string, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {}
 
-    links(resource: object = null) {
-        let links = {}
+    links(resource: object | null = null) {
+        let links: Record<string, object> = {}
 
         if (this.relations) {
             for (let relName in this.relations) {
                 let rel = this.relations[relName]
-                let link: object = null
+                let link: object | null = null
                 if (resource) {
                     link = this.createNonTemplatedLink(rel, resource)
                 } else {
@@ -28,11 +28,11 @@ export class JsonHal {
     }
 
     private createNonTemplatedLink(rel: Relation<any, any, any, any, any, any>, resource: object) {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any)
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline.read({}) as any)
         if (relationPath !== undefined) {
             console.log(rel.pipeline)
             let url = ""
-            let query = QueryTemplate.hydrate(rel.query, resource)
+            let query = QueryTemplate.hydrate(rel.query, resource) as Record<string, unknown>
 
             if (query["id"] && rel.type == "one") {
                 url = `/${query["id"]}?`
@@ -57,8 +57,8 @@ export class JsonHal {
         return null
     }
 
-    private createTemplatedLink(rel: Relation<any, any, any, any, any, any>): object {
-        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline() as any)
+    private createTemplatedLink(rel: Relation<any, any, any, any, any, any>): object | null {
+        let relationPath = _.findKey(this.api.pipelineByName, rel.pipeline.read({}) as any)
         if (relationPath !== undefined) {
             let idUrl = ""
             let url = "?"

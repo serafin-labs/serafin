@@ -1,6 +1,6 @@
 import { PipelineAbstract } from "@serafin/pipeline"
 import * as express from "express"
-import * as ExpressGraphQL from "express-graphql"
+import ExpressGraphQL from "express-graphql"
 import * as graphql from "graphql"
 import * as _ from "lodash"
 import { Api } from "../../Api"
@@ -33,13 +33,13 @@ export interface GraphQLOptions {
  * /!\ The graphql transport supports only a subpart of pipelines capabilities currently. Only read is available and there are restrictions on the json schema features you can use.
  */
 export class GraphQLTransport implements TransportInterface {
-    private api: Api
+    private api: Api | undefined
     private graphQlModelTypes: {
-        pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>
+        pipeline: PipelineAbstract
         schema: graphql.GraphQLObjectType
     }[] = []
     private graphQlSchemaQueries: any = {}
-    private _graphQlSchema: graphql.GraphQLSchema
+    private _graphQlSchema: graphql.GraphQLSchema | undefined
     private get graphQlSchema() {
         if (!this._graphQlSchema) {
             this._graphQlSchema = new graphql.GraphQLSchema({
@@ -87,24 +87,24 @@ export class GraphQLTransport implements TransportInterface {
      * @param name
      * @param pluralName
      */
-    use(
-        pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any>,
-        name: string,
-        pluralName: string,
-    ) {
-        let relations = pipeline.relations
+    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
+        const api = this.api
+        if (!api) {
+            throw new Error("Misconfigured API")
+        }
+        let relations: any = pipeline.relations
 
         // prepare Ajv filters
 
         // let's add the root resolver for this pipeline
-        this.graphQlRoot[pluralName] = async (params, request: express.Request) => {
-            let options = this.api.filterInternalOptions(_.cloneDeep(params.options || {}))
+        this.graphQlRoot[pluralName] = async (params: any, request: express.Request) => {
+            let options = api.filterInternalOptions(_.cloneDeep(params.options || {}))
             if (this.options.internalOptions) {
                 _.merge(options, this.options.internalOptions(request))
             }
             let query = _.cloneDeep(params.query || {})
             try {
-                pipeline.schemaBuilders.readOptions.validate(options)
+                pipeline.schemaBuilders.context.validate(options)
                 pipeline.schemaBuilders.readQuery.validate(query)
             } catch (e) {
                 throw Api.apiError(e, request)
@@ -119,7 +119,7 @@ export class GraphQLTransport implements TransportInterface {
 
         // transform json schema to graphql objects
         let graphQLSchemas = jsonSchemaToGraphQL(pipeline.modelSchemaBuilder.schema, schemaName, () => true)
-        jsonSchemaToGraphQL(pipeline.schemaBuilders.readOptions.schema, `${schemaName}ReadOptions`, this.api.isNotAnInternalOption, graphQLSchemas)
+        jsonSchemaToGraphQL(pipeline.schemaBuilders.context.schema, `${schemaName}Context`, api.isNotAnInternalOption, graphQLSchemas)
         jsonSchemaToGraphQL(pipeline.schemaBuilders.readQuery.schema, `${schemaName}ReadQuery`, () => true, graphQLSchemas)
         jsonSchemaToGraphQL(pipeline.schemaBuilders.readMeta.schema, `${schemaName}ReadMeta`, () => true, graphQLSchemas)
 
@@ -141,8 +141,7 @@ export class GraphQLTransport implements TransportInterface {
                     // get the existing fields of the unerlying function
                     let existingFields = existingFieldsFunction()
                     // resolve the pipeline reference
-                    let pipeline: PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any, any> =
-                        relation.pipeline()
+                    let pipeline: PipelineAbstract = relation.pipeline()
                     // find the model graphql type of this relation
                     let relationType = _.find(this.graphQlModelTypes, (m) => m.pipeline === pipeline)
                     if (!relationType) {
@@ -160,7 +159,7 @@ export class GraphQLTransport implements TransportInterface {
                     if (relation.type === "one") {
                         existingFields[relation.name] = {
                             type: relationType.schema,
-                            resolve: async (entity) => {
+                            resolve: async (entity: any) => {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
@@ -171,12 +170,8 @@ export class GraphQLTransport implements TransportInterface {
                     } else {
                         // obtain query and options schemas for this relation
                         let queryFilter = (param: string) => !(param in relation.query)
-                        let optionsFilter = (param: string) => this.api.isNotAnInternalOption(param) && (!relation.options || !(param in relation.options))
-                        let relationGraphQlSchemas = jsonSchemaToGraphQL(
-                            pipeline.schemaBuilders.readOptions.schema,
-                            `${relationSchemaName}ReadOptions`,
-                            optionsFilter,
-                        )
+                        let optionsFilter = (param: string) => api.isNotAnInternalOption(param) && (!relation.options || !(param in relation.options))
+                        let relationGraphQlSchemas = jsonSchemaToGraphQL(pipeline.schemaBuilders.context.schema, `${relationSchemaName}Context`, optionsFilter)
                         jsonSchemaToGraphQL(pipeline.schemaBuilders.readQuery.schema, `${relationSchemaName}ReadQuery`, queryFilter, relationGraphQlSchemas)
                         let args = {} as any
                         if (relationGraphQlSchemas[`${relationSchemaName}ReadQuery`]) {
@@ -184,19 +179,19 @@ export class GraphQLTransport implements TransportInterface {
                                 type: relationGraphQlSchemas[`${relationSchemaName}ReadQuery`].schema,
                             }
                         }
-                        if (relationGraphQlSchemas[`${relationSchemaName}ReadOptions`]) {
+                        if (relationGraphQlSchemas[`${relationSchemaName}Context`]) {
                             args.options = {
-                                type: relationGraphQlSchemas[`${relationSchemaName}ReadOptions`].schema,
+                                type: relationGraphQlSchemas[`${relationSchemaName}Context`].schema,
                             }
                         }
                         existingFields[relation.name] = {
                             type: new graphql.GraphQLList(relationType.schema),
                             args: args,
-                            resolve: async (entity, params, request) => {
+                            resolve: async (entity: any, params: any, request: any) => {
                                 if (entity[relation.name]) {
                                     return entity[relation.name]
                                 }
-                                let options = this.api.filterInternalOptions(_.cloneDeep(params.options || {}))
+                                let options = api.filterInternalOptions(_.cloneDeep(params.options || {}))
                                 if (this.options.internalOptions) {
                                     _.merge(options, this.options.internalOptions(request))
                                 }
@@ -229,8 +224,8 @@ export class GraphQLTransport implements TransportInterface {
         if (graphQLSchemas[`${schemaName}ReadQuery`]) {
             args.query = { type: graphQLSchemas[`${schemaName}ReadQuery`].schema }
         }
-        if (graphQLSchemas[`${schemaName}ReadOptions`]) {
-            args.options = { type: graphQLSchemas[`${schemaName}ReadOptions`].schema }
+        if (graphQLSchemas[`${schemaName}Context`]) {
+            args.options = { type: graphQLSchemas[`${schemaName}Context`].schema }
         }
         this.graphQlSchemaQueries[pluralName] = {
             type: resultSchema,
