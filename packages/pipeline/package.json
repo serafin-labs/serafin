@@ -1,6 +1,6 @@
 {
     "name": "@serafin/pipeline",
-    "version": "0.19.0",
+    "version": "0.19.1",
     "description": "CRUD data access library with a functional approach",
     "main": "./lib/cjs/index.js",
     "exports": "./lib/cjs/index.js",
