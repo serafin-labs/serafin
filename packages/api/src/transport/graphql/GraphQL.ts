@@ -87,7 +87,7 @@ export class GraphQLTransport implements TransportInterface {
      * @param name
      * @param pluralName
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string) {
+    use(pipeline: PipelineAbstract<any>, name: string, pluralName: string) {
         const api = this.api
         if (!api) {
             throw new Error("Misconfigured API")

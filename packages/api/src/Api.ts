@@ -83,7 +83,7 @@ export class Api {
      * @param name The singular name of the underlying resource.
      * @param pluralName The plural name the underlying resource. If not provided, it defaults to `${name}s`
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string = `${name}s`): this {
+    use(pipeline: PipelineAbstract<any>, name: string, pluralName: string = `${name}s`): this {
         this.pipelineByName[pluralName] = pipeline
         for (let transport of this.transports) {
             transport.use(pipeline, name, pluralName)

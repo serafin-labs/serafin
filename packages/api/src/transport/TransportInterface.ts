@@ -14,5 +14,5 @@ export interface TransportInterface {
     /**
      * The 'use' method is called by the Api class to pass the pipeline to register
      */
-    use(pipeline: PipelineAbstract, name: string, pluralName: string): void
+    use(pipeline: PipelineAbstract<any>, name: string, pluralName: string): void
 }
