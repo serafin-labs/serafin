@@ -4,7 +4,7 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error } from "./error"
 import { IdentityInterface } from "./IdentityInterface"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface"
-import { Pipe, PipeResultActionsInterface } from "./PipeInterface"
+import { Pipe, PipeActionsInterface } from "./PipeInterface"
 import { Relation } from "./Relation"
 import { ResultsInterface } from "./ResultsInterface"
 import {
@@ -42,7 +42,7 @@ export abstract class PipelineAbstract<
 {
     public relations: R = {} as R
 
-    private pipes: PipeResultActionsInterface[] = []
+    private pipes: PipeActionsInterface[] = []
 
     private options: PipelineAbstractOptions
 
@@ -69,9 +69,14 @@ export abstract class PipelineAbstract<
         CTX2 = CTX,
     >(pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>) {
         // run the pipe
-        const result = (typeof pipe === "function" ? pipe : pipe.transform)({
-            ...this.schemaBuilders,
-        })
+        const result =
+            typeof pipe === "function"
+                ? pipe({
+                      ...this.schemaBuilders,
+                  })
+                : pipe.transform({
+                      ...this.schemaBuilders,
+                  })
         // combine schema modifications with the current schemas
         const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, R>
         const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
@@ -82,7 +87,7 @@ export abstract class PipelineAbstract<
             } as any
         }
         // add pipe methods modifications to the pipeline if it implements at least one of the CRUD methods
-        const modifiedMethods = _.pick(result, pipelineMethods)
+        const modifiedMethods = _.pickBy(result, (v, k) => !!v && pipelineMethods.includes(k as any))
         if (Object.keys(modifiedMethods).length > 0) {
             newPipeline.pipes = [
                 _.mapValues(
@@ -103,7 +108,7 @@ export abstract class PipelineAbstract<
      */
     private pipeChain(method: PipelineMethods) {
         const callChain = async (i: number, ...args: any[]) => {
-            while (i < this.pipes.length && !(method in this.pipes[i])) {
+            while (i < this.pipes.length && !this.pipes[i][method]) {
                 ++i
             }
             if (i >= this.pipes.length) {
