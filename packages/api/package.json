@@ -1,6 +1,6 @@
 {
     "name": "@serafin/api",
-    "version": "0.13.3",
+    "version": "0.14.0",
     "description": "A RESTful self-descriptive API based on Serafin pipelines",
     "main": "./lib/cjs/index.js",
     "exports": "./lib/cjs/index.js",
