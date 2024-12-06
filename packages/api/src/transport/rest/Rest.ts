@@ -9,7 +9,7 @@ import {
     ValidationErrorName,
 } from "@serafin/pipeline"
 import { JSONSchema, SchemaBuilder } from "@serafin/schema-builder"
-import * as express from "express"
+import { Request, Response } from "express"
 import * as _ from "lodash"
 import VError from "verror"
 import { Api } from "../../Api"
@@ -25,21 +25,38 @@ export interface Error {
     jse_cause: { name: string }
 }
 
-export interface RestOptions {
+export type MiddlewareCallback<T, REQ extends Request = Request, RES extends Response = Response> =
+    | ((req: REQ, res: RES, data: T) => void)
+    | ((req: Request, res: Response, data: T) => void)
+export type CallbackOption<T, REQ extends Request = Request, RES extends Response = Response> =
+    | MiddlewareCallback<T, REQ, RES>
+    | MiddlewareCallback<T, REQ, RES>[]
+
+export interface RestOptions<REQ extends Request = Request, RES extends Response = Response> {
     /**
      * If provided, the Api will use this function to gather internal options for this request.
      * It can be used for example to pass _user or _role to the underlying pipeline.
      */
-    internalOptions?: (req: express.Request) => Object
+    internalOptions?: (req: Request) => Object
     /*
      * Allows you to execute custom code on error, primarily useful if you want to add extra logging
      */
-    onError?: (error: VError) => void
+    onError?: CallbackOption<VError, REQ, RES>
+    onSuccess?: CallbackOption<unknown, REQ, RES>
 }
 
-export class RestTransport implements TransportInterface {
+export class RestTransport<REQ extends Request = Request, RES extends Response = Response> implements TransportInterface {
     public api: Api | undefined
-    constructor(protected options: RestOptions = {}) {}
+    private onErrorsCallbacks: MiddlewareCallback<VError, REQ, RES>[] = []
+    private onSuccessCallbacks: MiddlewareCallback<unknown, REQ, RES>[] = []
+    constructor(protected options: RestOptions<REQ, RES> = {}) {
+        if (options.onSuccess) {
+            this.onSuccessCallbacks.push(...(Array.isArray(options.onSuccess) ? options.onSuccess : [options.onSuccess]))
+        }
+        if (options.onError) {
+            this.onErrorsCallbacks.push(...(Array.isArray(options.onError) ? options.onError : [options.onError]))
+        }
+    }
 
     init(api: Api) {
         this.api = api
@@ -83,11 +100,13 @@ export class RestTransport implements TransportInterface {
         api.application.use(endpointPath, restMiddlewareJson(this, pipeline, openApi, endpointPath, resourcesPath, name))
     }
 
+    public handleSuccess(req: REQ, res: RES, data: unknown) {
+        this.onSuccessCallbacks.forEach((onSuccessCallback) => onSuccessCallback(req, res, data))
+    }
+
     // error handling closure for this endpoint
-    public handleError(error: VError, res: express.Response, next: (err?: any) => void) {
-        if (this.options.onError) {
-            this.options.onError(error)
-        }
+    public handleError(req: REQ, res: RES, next: (err?: any) => void, error: VError) {
+        this.onErrorsCallbacks.forEach((onErrorCallback) => onErrorCallback(req, res, error))
         // handle known errors
         if (
             !(
@@ -126,8 +145,8 @@ export class RestTransport implements TransportInterface {
     }
 
     public handleContextAndQuery(
-        req: express.Request,
-        res: express.Response,
+        req: REQ,
+        res: RES,
         next: () => any,
         contextSchemaBuilder: SchemaBuilder<any>,
         querySchemaBuilder: SchemaBuilder<any> | null = null,
@@ -151,7 +170,7 @@ export class RestTransport implements TransportInterface {
             }
             return { context: pipelineContext, query: pipelineQuery }
         } catch (e) {
-            this.handleError(Api.apiError(e, req), res, next)
+            this.handleError(req, res, next, Api.apiError(e, req))
         }
         return null
     }
