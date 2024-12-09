@@ -8,7 +8,7 @@ import { OpenApi } from "./OpenApi"
 import { RestTransport } from "./Rest"
 
 export const restMiddlewareJson = (
-    rest: RestTransport,
+    rest: RestTransport<any, any>,
     pipeline: PipelineAbstract,
     openApi: OpenApi,
     endpointPath: string,
@@ -61,12 +61,12 @@ export const restMiddlewareJson = (
                             })
                         }
                     }
-
+                    rest.handleSuccess(req, res, result)
                     res.status(200).json(result)
                     res.end()
                 })
                 .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
+                    rest.handleError(req, res, next, Api.apiError(error, req))
                 })
         })
 
@@ -92,6 +92,7 @@ export const restMiddlewareJson = (
                         if (acceptHeader.search("application/hal+json") !== -1) {
                             result.data[0]["_links"] = new JsonHal(endpointPath + `/${id}`, api, pipeline.relations).links(result.data[0])
                         }
+                        rest.handleSuccess(req, res, result)
                         res.status(200).json(result)
                     } else {
                         throw notFoundError(`${name}:${id}`)
@@ -99,7 +100,7 @@ export const restMiddlewareJson = (
                     res.end()
                 })
                 .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
+                    rest.handleError(req, res, next, Api.apiError(error, req))
                 })
         })
 
@@ -121,10 +122,11 @@ export const restMiddlewareJson = (
             pipeline
                 .create(data, pipelineParams.query, pipelineParams.context)
                 .then((createdResources) => {
+                    rest.handleSuccess(req, res, createdResources)
                     res.status(201).json(createdResources)
                 })
                 .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
+                    rest.handleError(req, res, next, Api.apiError(error, req))
                 })
         })
 
@@ -158,12 +160,13 @@ export const restMiddlewareJson = (
                     if (updatedResources.data.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
+                        rest.handleSuccess(req, res, updatedResources)
                         res.status(200).json(updatedResources)
                     }
                     res.end()
                 })
                 .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
+                    rest.handleError(req, res, next, Api.apiError(error, req))
                 })
         })
         openApi.addPatchDoc(true)
@@ -189,11 +192,12 @@ export const restMiddlewareJson = (
                 pipeline
                     .patch(pipelineParams.query, patch, pipelineParams.context)
                     .then((updatedResources) => {
+                        rest.handleSuccess(req, res, updatedResources)
                         res.status(200).json(updatedResources)
                         res.end()
                     })
                     .catch((error) => {
-                        rest.handleError(Api.apiError(error, req), res, next)
+                        rest.handleError(req, res, next, Api.apiError(error, req))
                     })
             })
             openApi.addPatchDoc(false)
@@ -224,12 +228,13 @@ export const restMiddlewareJson = (
                     if (deletedResources.data.length === 0) {
                         throw notFoundError(`${name}:${id}`)
                     } else {
+                        rest.handleSuccess(req, res, deletedResources)
                         res.status(200).json(deletedResources)
                     }
                     res.end()
                 })
                 .catch((error) => {
-                    rest.handleError(Api.apiError(error, req), res, next)
+                    rest.handleError(req, res, next, Api.apiError(error, req))
                 })
         })
 
@@ -254,11 +259,12 @@ export const restMiddlewareJson = (
                 pipeline
                     .delete(pipelineParams.query, pipelineParams.context)
                     .then((deletedResources) => {
+                        rest.handleSuccess(req, res, deletedResources)
                         res.status(200).json(deletedResources)
                         res.end()
                     })
                     .catch((error) => {
-                        rest.handleError(Api.apiError(error, req), res, next)
+                        rest.handleError(req, res, next, Api.apiError(error, req))
                     })
             })
             openApi.addDeleteDoc(false)
