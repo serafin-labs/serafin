@@ -192,6 +192,7 @@ export const restMiddlewareJson = (
                 pipeline
                     .patch(pipelineParams.query, patch, pipelineParams.context)
                     .then((updatedResources) => {
+                        rest.handleSuccess(req, res, updatedResources)
                         res.status(200).json(updatedResources)
                         res.end()
                     })
