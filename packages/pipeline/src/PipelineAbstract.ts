@@ -21,6 +21,7 @@ import { RelationType } from "./RelationType"
 
 export interface PipelineAbstractOptions {
     validationEnabled?: boolean
+    name?: string
 }
 export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validationEnabled: true }
 
@@ -274,11 +275,11 @@ export abstract class PipelineAbstract<
         resources = _.cloneDeep(resources)
         options = _.cloneDeep(options ?? ({} as CO))
         context = _.cloneDeep(context ?? ({} as CTX))
-        this.handleValidate("create", () => {
-            this.schemaBuilders.createValues.validateList(resources)
-            this.schemaBuilders.createOptions.validate(options)
-            this.schemaBuilders.context.validate(context)
-        })
+
+        this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources)
+        this.handleValidationOfData("create", "options", this.schemaBuilders.createOptions, options)
+        this.handleValidationOfData("create", "context", this.schemaBuilders.context, context)
+
         return this.pipeChain("create")(resources, options, context)
     }
 
@@ -307,10 +308,10 @@ export abstract class PipelineAbstract<
     async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, RM>> {
         query = _.cloneDeep(query)
         context = _.cloneDeep(context ?? ({} as CTX))
-        this.handleValidate("read", () => {
-            this.schemaBuilders.readQuery.validate(query)
-            this.schemaBuilders.context.validate(context)
-        })
+
+        this.handleValidationOfData("read", "query", this.schemaBuilders.readQuery, query)
+        this.handleValidationOfData("read", "context", this.schemaBuilders.context, context)
+
         return this.pipeChain("read")(query, context)
     }
 
@@ -343,11 +344,11 @@ export abstract class PipelineAbstract<
         query = _.cloneDeep(query)
         values = _.cloneDeep(values)
         context = _.cloneDeep(context ?? ({} as CTX))
-        this.handleValidate("patch", () => {
-            this.schemaBuilders.patchQuery.validate(query)
-            this.schemaBuilders.patchValues.validate(values)
-            this.schemaBuilders.context.validate(context)
-        })
+
+        this.handleValidationOfData("patch", "query", this.schemaBuilders.patchQuery, query)
+        this.handleValidationOfData("patch", "values", this.schemaBuilders.patchValues, values)
+        this.handleValidationOfData("patch", "context", this.schemaBuilders.context, context)
+
         return this.pipeChain("patch")(query, values, context)
     }
 
@@ -375,10 +376,10 @@ export abstract class PipelineAbstract<
     async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, DM>> {
         query = _.cloneDeep(query)
         context = _.cloneDeep(context ?? ({} as CTX))
-        this.handleValidate("delete", () => {
-            this.schemaBuilders.deleteQuery.validate(query)
-            this.schemaBuilders.context.validate(context)
-        })
+
+        this.handleValidationOfData("delete", "query", this.schemaBuilders.deleteQuery, query)
+        this.handleValidationOfData("delete", "context", this.schemaBuilders.context, context)
+
         return this.pipeChain("delete")(query, context)
     }
 
@@ -398,17 +399,23 @@ export abstract class PipelineAbstract<
         return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX>
     }
 
-    private handleValidate(method: string, validate: () => void) {
+    private handleValidationOfData(method: string, valueName: string, schema: SchemaBuilder<any>, data: any) {
         if (!this.options.validationEnabled) {
             return
         }
         try {
-            validate()
+            if (Array.isArray(data)) {
+                schema.validateList(data)
+            } else {
+                schema.validate(data)
+            }
         } catch (e) {
             throw error(
                 "SerafinValidationError",
-                `Validation failed in ${Object.getPrototypeOf(this).constructor.name}::${method}`,
-                { constructor: Object.getPrototypeOf(this).constructor.name, method: method },
+                `Validation failed in ${Object.getPrototypeOf(this).constructor.name}${
+                    this.options.name ? `::${this.options.name}` : ""
+                }::${method}(${valueName})`,
+                { constructor: Object.getPrototypeOf(this).constructor.name, method: method, schema: schema, data: data },
                 e,
             )
         }
