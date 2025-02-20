@@ -73,7 +73,7 @@ export const restMiddlewareJson = (
         // get a resource by its id
         router.get("/:id", (req: express.Request, res: express.Response, next: (err?: any) => void) => {
             let id = req.params.id
-            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema)
+            let pipelineParams = rest.handleContextAndQuery(req, res, next, contextSchema, readQuerySchema, id)
             if (!pipelineParams) {
                 return
             }
@@ -82,6 +82,7 @@ export const restMiddlewareJson = (
             pipeline
                 .read(
                     {
+                        ...pipelineParams.query,
                         id: id,
                     },
                     pipelineParams.context,
