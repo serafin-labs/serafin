@@ -1,5 +1,4 @@
 import * as chai from "chai"
-import * as util from "util"
 import { expect } from "chai"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { PipelineAbstract } from "../PipelineAbstract"
@@ -141,77 +140,6 @@ describe("PipelineAbstract", function () {
         let p = new TestPipeline(schemas, defaultResults)
         expect(p).to.be.an.instanceOf(TestPipeline)
         expect(p).to.be.an.instanceOf(PipelineAbstract)
-    })
-
-    it("should represent itself as JSONSchema definitions", function () {
-        let p = new TestPipeline(schemas, defaultResults)
-        expect(p.toString()).to.be.equal(
-            util.inspect(
-                {
-                    model: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: { id: { type: "string" }, method: { type: "string" } },
-                        required: ["id", "method"],
-                    },
-                    createValues: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: { id: { type: "string" }, method: { type: "string" } },
-                        required: ["method"],
-                    },
-                    createOptions: { type: "object", additionalProperties: false },
-                    readQuery: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                            id: {
-                                oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
-                            },
-                            method: {
-                                oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
-                            },
-                        },
-                    },
-                    patchQuery: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                            id: {
-                                oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
-                            },
-                        },
-                        required: ["id"],
-                    },
-                    patchValues: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: { method: { type: "string" } },
-                    },
-                    deleteQuery: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: {
-                            id: {
-                                oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
-                            },
-                        },
-                        required: ["id"],
-                    },
-                    readMeta: { type: "object", additionalProperties: false },
-                    createMeta: { type: "object", additionalProperties: false },
-                    patchMeta: { type: "object", additionalProperties: false },
-                    deleteMeta: { type: "object", additionalProperties: false },
-                    context: {
-                        type: "object",
-                        additionalProperties: false,
-                        properties: { _private: { type: "boolean" } },
-                    },
-                },
-                false,
-                null,
-            ),
-        )
     })
 
     it(`should call pipeline methods`, async function () {

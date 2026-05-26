@@ -1,5 +1,4 @@
 import * as _ from "lodash"
-import * as util from "util"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error } from "./error"
 import { IdentityInterface } from "./IdentityInterface"
@@ -39,15 +38,17 @@ export abstract class PipelineAbstract<
     DM = any,
     CTX = any,
     R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
-> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>
-{
+> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {
     public relations: R = {} as R
 
     private pipes: PipeActionsInterface[] = []
 
     private options: PipelineAbstractOptions
 
-    constructor(public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>, options?: PipelineAbstractOptions) {
+    constructor(
+        public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
+        options?: PipelineAbstractOptions,
+    ) {
         this.options = { ...defaultPipelineAbstractOptions, ...options }
     }
 
@@ -254,17 +255,6 @@ export abstract class PipelineAbstract<
     }
 
     /**
-     * Get a readable description of what this pipeline does
-     */
-    toString(): string {
-        return util.inspect(
-            _.mapValues(this.schemaBuilders, (schema: SchemaBuilder<any>) => schema.schema),
-            false,
-            null,
-        )
-    }
-
-    /**
      * Create new resources based on `resources` input array.
      *
      * @param resources An array of partial resources to be created
@@ -276,7 +266,7 @@ export abstract class PipelineAbstract<
         options = _.cloneDeep(options ?? ({} as CO))
         context = _.cloneDeep(context ?? ({} as CTX))
 
-        this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources)
+        this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources, true)
         this.handleValidationOfData("create", "options", this.schemaBuilders.createOptions, options)
         this.handleValidationOfData("create", "context", this.schemaBuilders.context, context)
 
@@ -399,12 +389,12 @@ export abstract class PipelineAbstract<
         return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX>
     }
 
-    private handleValidationOfData(method: string, valueName: string, schema: SchemaBuilder<any>, data: any) {
+    private handleValidationOfData(method: string, valueName: string, schema: SchemaBuilder<any>, data: any, isArray: boolean = false) {
         if (!this.options.validationEnabled) {
             return
         }
         try {
-            if (Array.isArray(data)) {
+            if (isArray) {
                 schema.validateList(data)
             } else {
                 schema.validate(data)
