@@ -12,12 +12,9 @@
 /npm-debug.log
 .DS_Store
 webpack.config.js
-tsconfig.json
+tsconfig.*
 tslint.json
 docker-compose.*
 gulpfile.js
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+/lib/test
+/lib/coverage

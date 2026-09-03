@@ -1,9 +1,9 @@
-import { PipelineAbstract } from "./PipelineAbstract"
-import * as _ from "lodash"
-import { IdentityInterface } from "./IdentityInterface"
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
-import { ResultsInterface } from "./ResultsInterface"
-import { PipelineInterface } from "./PipelineInterface"
+import { PipelineAbstract } from "./PipelineAbstract.js"
+import _ from "lodash"
+import { IdentityInterface } from "./IdentityInterface.js"
+import { SchemaBuildersInterface } from "./SchemaBuildersInterface.js"
+import { ResultsInterface } from "./ResultsInterface.js"
+import { PipelineInterface } from "./PipelineInterface.js"
 
 export interface PipePropsInterface<
     M extends IdentityInterface = IdentityInterface,

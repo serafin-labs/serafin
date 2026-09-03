@@ -1,9 +1,9 @@
-import * as _ from "lodash"
-import { PipelineAbstract } from "./PipelineAbstract"
-import { QueryTemplate } from "./QueryTemplate"
-import { IdentityInterface } from "./IdentityInterface"
-import { ReadOnlyPipelineInterface } from "./PipelineInterface"
-import { RelationType } from "./RelationType"
+import _ from "lodash"
+import { PipelineAbstract } from "./PipelineAbstract.js"
+import { QueryTemplate } from "./QueryTemplate.js"
+import { IdentityInterface } from "./IdentityInterface.js"
+import { ReadOnlyPipelineInterface } from "./PipelineInterface.js"
+import { RelationType } from "./RelationType.js"
 
 /**
  * Represents a Relation for the given pipeline

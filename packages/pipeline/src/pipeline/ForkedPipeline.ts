@@ -1,8 +1,8 @@
-import { IdentityInterface } from "../IdentityInterface"
-import { ResultsInterface } from "../ResultsInterface"
-import { PipelineAbstract } from "../PipelineAbstract"
-import { Relation } from "../Relation"
-import { RelationType } from "../RelationType"
+import { IdentityInterface } from "../IdentityInterface.js"
+import { ResultsInterface } from "../ResultsInterface.js"
+import { PipelineAbstract } from "../PipelineAbstract.js"
+import { Relation } from "../Relation.js"
+import { RelationType } from "../RelationType.js"
 
 /**
  * Forked version of a pipeline.

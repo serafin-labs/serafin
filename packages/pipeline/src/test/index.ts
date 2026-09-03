@@ -1,2 +1,3 @@
 import * as chai from "chai"
-chai.use(require("chai-as-promised"))
+import chaiAsPromised from "chai-as-promised"
+chai.use(chaiAsPromised)

@@ -1,5 +1,5 @@
 import { expect } from "chai"
-import { QueryTemplate } from "../QueryTemplate"
+import { QueryTemplate } from "../QueryTemplate.js"
 
 describe("QueryTemplate", function () {
     it("should return separately the templated and non-templated parts of a relation query", function () {

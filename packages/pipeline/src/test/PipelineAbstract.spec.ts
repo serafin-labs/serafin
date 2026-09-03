@@ -1,15 +1,16 @@
 import * as chai from "chai"
+import chaiAsPromised from "chai-as-promised"
 import { expect } from "chai"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { PipelineAbstract } from "../PipelineAbstract"
-import { defaultSchemaBuilders, SchemaBuildersInterface } from "../SchemaBuildersInterface"
-import { IdentityInterface } from "../IdentityInterface"
-import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, PipeReadNext } from "../PipeInterface"
-import { Relation } from "../Relation"
-import { ResultsInterface } from "../ResultsInterface"
-import { ReadOnlyPipelineInterface } from "../PipelineInterface"
+import { PipelineAbstract } from "../PipelineAbstract.js"
+import { defaultSchemaBuilders, SchemaBuildersInterface } from "../SchemaBuildersInterface.js"
+import { IdentityInterface } from "../IdentityInterface.js"
+import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, PipeReadNext } from "../PipeInterface.js"
+import { Relation } from "../Relation.js"
+import { ResultsInterface } from "../ResultsInterface.js"
+import { ReadOnlyPipelineInterface } from "../PipelineInterface.js"
 
-chai.use(require("chai-as-promised"))
+chai.use(chaiAsPromised)
 
 const modelSchema = SchemaBuilder.emptySchema().addString("id").addString("method")
 const schemas = { ...defaultSchemaBuilders(modelSchema), context: SchemaBuilder.emptySchema().addBoolean("_private", {}, false) }

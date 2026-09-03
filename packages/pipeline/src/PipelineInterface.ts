@@ -1,6 +1,6 @@
-import { IdentityInterface } from "./IdentityInterface"
-import { ResultsInterface } from "./ResultsInterface"
-import { SchemaBuildersInterface } from "./SchemaBuildersInterface"
+import { IdentityInterface } from "./IdentityInterface.js"
+import { ResultsInterface } from "./ResultsInterface.js"
+import { SchemaBuildersInterface } from "./SchemaBuildersInterface.js"
 
 /**
  * List of action methods used by a pipeline

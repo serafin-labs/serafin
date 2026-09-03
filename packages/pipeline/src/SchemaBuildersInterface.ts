@@ -1,5 +1,5 @@
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { IdentityInterface } from "./IdentityInterface"
+import { IdentityInterface } from "./IdentityInterface.js"
 
 export interface SchemaBuildersInterface<
     M extends IdentityInterface = IdentityInterface,

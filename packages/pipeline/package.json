@@ -3,8 +3,25 @@
     "version": "0.19.4",
     "description": "CRUD data access library with a functional approach",
     "main": "./lib/cjs/index.js",
-    "exports": "./lib/cjs/index.js",
+    "module": "./lib/esm/index.js",
     "types": "./lib/cjs/index.d.ts",
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./lib/esm/index.d.ts",
+                "default": "./lib/esm/index.js"
+            },
+            "require": {
+                "types": "./lib/cjs/index.d.ts",
+                "default": "./lib/cjs/index.js"
+            }
+        }
+    },
+    "files": [
+        "lib",
+        "src"
+    ],
     "contributors": [
         {
             "name": "Sébastien de Saint Florent",
@@ -41,29 +58,26 @@
         "@types/verror": "^1.10.10",
         "chai": "^5.1.1",
         "chai-as-promised": "^7.1.2",
-        "clean-webpack-plugin": "^4.0.0",
+        "concurrently": "^8.2.2",
         "mocha": "^10.4.0",
         "nyc": "^15.1.0",
-        "source-map-support": "^0.5.21",
         "ts-lint": "^4.5.1",
-        "ts-loader": "^9.5.1",
-        "ts-node": "^10.9.2",
         "tslint-config-airbnb": "^5.11.2",
-        "typescript": "5.4.5",
-        "concurrently": "^8.2.2",
-        "tsx": "^4.10.2"
+        "tsx": "^4.10.2",
+        "typescript": "^6.0.3"
     },
     "scripts": {
         "test": "NODE_OPTIONS='--import tsx --no-warnings' mocha --recursive ./src/test/**/*.spec.ts",
         "predev": "npm install",
-        "dev": "concurrently -c auto -n '' npm:dev:cjs npm:dev:test",
+        "dev": "concurrently -c auto -n '' npm:dev:cjs npm:dev:esm npm:dev:test",
         "dev:cjs": "tsc --watch --preserveWatchOutput --project tsconfig.cjs.json",
         "dev:esm": "tsc --watch --preserveWatchOutput",
         "dev:test": "NODE_OPTIONS='--import tsx --no-warnings' mocha --reporter dot --watch --watch-files src --extension ts ./src/test/**/*.spec.ts",
-        "build": "npm run build:cjs",
+        "build": "npm run build:esm && npm run build:cjs && npm run fix",
         "build:cjs": "tsc --project tsconfig.cjs.json",
         "build:esm": "tsc",
         "fix": "echo '{ \"type\": \"module\" }' > lib/esm/package.json && echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json",
-        "prepublishOnly": "npm install && rm -rf ./lib && npm run build && npm test"
+        "check:exports": "node scripts/check-build-exports.mjs",
+        "prepublishOnly": "npm install && rm -rf ./lib && npm run build && npm test && npm run check:exports"
     }
 }

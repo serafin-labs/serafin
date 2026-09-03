@@ -1,11 +1,11 @@
-import * as _ from "lodash"
+import _ from "lodash"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { notImplementedError, error } from "./error"
-import { IdentityInterface } from "./IdentityInterface"
-import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface"
-import { Pipe, PipeActionsInterface } from "./PipeInterface"
-import { Relation } from "./Relation"
-import { ResultsInterface } from "./ResultsInterface"
+import { notImplementedError, error } from "./error.js"
+import { IdentityInterface } from "./IdentityInterface.js"
+import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
+import { Pipe, PipeActionsInterface } from "./PipeInterface.js"
+import { Relation } from "./Relation.js"
+import { ResultsInterface } from "./ResultsInterface.js"
 import {
     PipelineCreateFunction,
     PipelineDeleteFunction,
@@ -15,8 +15,8 @@ import {
     PipelineReadFunction,
     ReadOnlyPipelineInterface,
     pipelineMethods,
-} from "./PipelineInterface"
-import { RelationType } from "./RelationType"
+} from "./PipelineInterface.js"
+import { RelationType } from "./RelationType.js"
 
 export interface PipelineAbstractOptions {
     validationEnabled?: boolean

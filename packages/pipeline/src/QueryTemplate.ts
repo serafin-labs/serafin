@@ -1,4 +1,4 @@
-import * as _ from "lodash"
+import _ from "lodash"
 
 export class QueryTemplate {
     static hydrate(query: object, resource: any): object {

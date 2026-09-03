@@ -1,6 +1,6 @@
 import { PropertyAccessorResolver, createPropertyAccessor } from "@serafin/schema-builder"
-import { IdentityInterface } from "../IdentityInterface"
-import { PipeReadNext } from "../PipeInterface"
+import { IdentityInterface } from "../IdentityInterface.js"
+import { PipeReadNext } from "../PipeInterface.js"
 
 /**
  * Pipe that set the given read query parameter default value
