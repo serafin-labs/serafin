@@ -119,16 +119,70 @@ console.log(user.data[0] ? `User ${user.data[0].firstName} ${user.data[0].lastNa
 
 ### Relations
 
-**Relations** between **pipelines** can be defined using the **pipeline .addRelation** method.
+**Relations** between **pipelines** can be defined using the **pipeline .addRelationWithOne** and **.addRelationWithMany** methods.
 
 ```Example
 let addressPipeline = new PipelineInMemory(addressSchema);
-let userPipeline = new PipelineInMemory(userSchema);
+let userPipeline = new PipelineInMemory(userSchema)
     .addRelationWithOne("address", addressPipeline, { "id": ":addressId" });
 ```
 
-**Relations** are simply one-direction links resolved at runtime.
+**Relations** are one-direction links resolved at runtime.
 
-The **.addRelationWithOne** and **.addRelationWithMany** arguments are the **relation name**, a pipeline, and an optional **query**.
+The arguments are the **relation name**, a pipeline, and a **query**. The query can be **templated**: a value beginning with `:` is replaced at runtime by the value of that field on the resource. A literal value starting with `:` can be escaped as `\:`.
 
-The provided query can be a **templated query**: if a query value begins by `:`, its value will be replaced at runtime by the _resource value_ correspond to this _model field_.
+#### Requesting a relation
+
+Declaring a relation adds a `with<Name>` option to _read_, _create_, _patch_ and _delete_. Relations are **only** resolved when asked for:
+
+```Example
+await userPipeline.read({});                        // no address is fetched
+await userPipeline.read({ withAddress: true });     // address is fetched
+```
+
+The option also accepts a query for the related pipeline, which narrows the related read and can carry the target's own `with<Name>` options to nest a level deeper:
+
+```Example
+await userPipeline.read({ withAddress: { country: "FR", withCity: true } });
+```
+
+Nesting is bounded by `maximumRelationDepth` (10).
+
+#### Where the result goes
+
+Related resources are returned **normalized, in `meta.relations`** — not inlined into each resource:
+
+```
+{
+    data: [
+        { id: "1", addressId: "a1" },
+        { id: "2", addressId: "a1" }
+    ],
+    meta: {
+        relations: {
+            address: {
+                type: "one",
+                data:  { a1: { id: "a1", city: "Paris" } },
+                index: { "1": "a1", "2": "a1" }
+            }
+        }
+    }
+}
+```
+
+`data` holds each related resource **once**, keyed by its own id. `index` maps a holding resource's id to the related id — an array of ids for a _many_ relation. This keeps a shared target from being repeated per resource, lets cyclic graphs be represented at all, and makes the result straightforward to merge into a client-side cache.
+
+A whole page is resolved in a **single read** when the relation is keyed on one templated field that the target declares on its model and accepts as an array on its read query. Otherwise it falls back to one read per distinct target, still de-duplicated.
+
+To get the previous shape, with each related resource hanging off the resource that points at it, apply `inlineRelations`. It is a pure function over the result — no reads — so it can be used at the edge and skipped on hot paths:
+
+```Example
+import { inlineRelations } from "@serafin/pipeline";
+
+const users = inlineRelations(await userPipeline.read({ withAddress: true }));
+console.log(users.data[0].address.city);
+```
+
+#### Shared meta
+
+`meta` is declared by a dedicated `meta` schema builder shared by all four actions, so the meta an action returns is `META & CM | RM | PM | DM`. Anything cross-cutting — relations, timings, request identifiers — is declared once rather than four times. Relations are namespaced under the reserved `relations` key.

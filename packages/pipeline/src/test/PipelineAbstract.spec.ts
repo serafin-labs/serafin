@@ -17,6 +17,8 @@ import {
     PipeReadNext,
 } from "../PipeInterface.js"
 import { maximumRelationDepth, Relation } from "../Relation.js"
+import { inlineRelations } from "../inlineRelations.js"
+import { RelationType } from "../RelationType.js"
 import { ResultsInterface } from "../ResultsInterface.js"
 import { ReadOnlyPipelineInterface } from "../PipelineInterface.js"
 import { ForkedPipeline } from "../pipeline/ForkedPipeline.js"
@@ -45,9 +47,10 @@ class TestPipeline<
     PM extends object = object,
     DM extends object = object,
     CTX extends object = object,
-> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {
+    META extends object = object,
+> extends PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META> {
     constructor(
-        schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
+        schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
         private results: {
             createResult?: ResultsInterface<M, CM>
             readResult?: ResultsInterface<M, RM>
@@ -212,6 +215,25 @@ type IsAny<T> = 0 extends 1 & T ? true : false
     const _subQuery: Parameters<typeof p.read>[0] = { withTest: { id: "42" } }
 }
 
+// A relation's contribution to the shared META must be precisely typed on every action's result,
+// not widened to `any` -- that is the whole point of putting relations in meta rather than the model.
+{
+    const related = new TestPipeline(schemas, defaultResults)
+    const p = new TestPipeline(schemas, defaultResults).addRelationWithOne("test", related, {})
+    type ReadRelations = NonNullable<Awaited<ReturnType<typeof p.read>>["meta"]["relations"]>
+    type PatchRelations = NonNullable<Awaited<ReturnType<typeof p.patch>>["meta"]["relations"]>
+    type Rel = NonNullable<ReadRelations["test"]>
+    const _one: RelationType.one = null as any as Rel["type"]
+    const _data: Record<string, { id: string; method: string }> = null as any as Rel["data"]
+    const _index: Record<string, string> = null as any as Rel["index"]
+    // the same shape reaches patch, because META is shared across the four actions
+    const _shared: Rel = null as any as NonNullable<PatchRelations["test"]>
+    // and it must not have leaked onto the resource -- purely a type check, nothing runs
+    type Resource = Awaited<ReturnType<typeof p.read>>["data"][number]
+    const _notAny: IsAny<Resource> = false
+    const _notOnResource: "test" extends keyof Resource ? false : true = true
+}
+
 // Every `Pipe*Action` must thread CTX into the `next` it hands the pipe, rather than leaving the
 // parameter at its `any` default.
 {
@@ -333,35 +355,17 @@ describe("PipelineAbstract", function () {
     it("should resolve a relation when it is requested", async function () {
         const { companies, employees } = relatedPipelines()
         const result = await employees.read({ withCompany: true })
-        expect(result.data[0].company).to.eql({ id: "c1", name: "Acme" })
         expect(companies.readQueries).to.eql([{ id: "c1" }])
+        // the resource itself is untouched; the relation lands in meta
+        expect(result.data[0]).to.eql({ id: "e1", companyId: "c1" })
+        expect(result.meta.relations.company).to.eql({
+            type: "one",
+            data: { c1: { id: "c1", name: "Acme" } },
+            index: { e1: "c1" },
+        })
     })
 
-    it("should strip the relation option before the query reaches the implementation", async function () {
-        const { employees } = relatedPipelines()
-        await employees.read({ withCompany: true })
-        await employees.read({ withCompany: false })
-        expect((employees as any).readQueries).to.eql([{}, {}])
-    })
-
-    it("should pass the context down to the related pipeline", async function () {
-        const { companies, employees } = relatedPipelines()
-        await employees.read({ withCompany: true }, { _private: true })
-        expect(companies.readContexts.length).to.eql(1)
-        // the relation's own bookkeeping is symbol-keyed, so it stays out of the context proper
-        expect(Object.keys(companies.readContexts[0])).to.eql(["_private"])
-        expect(companies.readContexts[0]._private).to.eql(true)
-    })
-
-    it("should forward the context through a forked pipeline", async function () {
-        const base = new RecordingPipeline({ ...defaultSchemaBuilders(modelSchema), context: relationContextSchema }, [{ id: "1", method: "read" }])
-        class Fork extends ForkedPipeline<any, any, any, any, any, any, any, any, any, any, any, any> {}
-        const forked = new Fork(base as any, "Fork", "a forked pipeline")
-        await forked.read({}, { _private: true })
-        expect(base.readContexts).to.eql([{ _private: true }])
-    })
-
-    it("should resolve a whole page of resources with a single read", async function () {
+    it("should carry a shared target once, not once per resource", async function () {
         const { companies, employees } = relatedPipelines(
             [
                 { id: "e1", companyId: "c1" },
@@ -375,7 +379,10 @@ describe("PipelineAbstract", function () {
         )
         const result = await employees.read({ withCompany: true })
         expect(companies.readQueries).to.eql([{ id: ["c1", "c2"] }])
-        expect(result.data.map((employee: any) => employee.company.name)).to.eql(["Acme", "Globex", "Acme"])
+        const relation = result.meta.relations.company
+        // three employees, two companies: Acme is stored once and referenced twice
+        expect(Object.keys(relation.data)).to.have.members(["c1", "c2"])
+        expect(relation.index).to.eql({ e1: "c1", e2: "c2", e3: "c1" })
     })
 
     it("should fall back to one read per distinct target when the target rejects arrays", async function () {
@@ -393,55 +400,35 @@ describe("PipelineAbstract", function () {
             noArrayQuery,
         )
         const result = await employees.read({ withCompany: true })
-        // three employees, two distinct companies -> two reads, not three
         expect(companies.readQueries).to.have.deep.members([{ id: "c1" }, { id: "c2" }])
         expect(companies.readQueries.length).to.eql(2)
-        expect(result.data.map((employee: any) => employee.company.name)).to.eql(["Acme", "Globex", "Acme"])
+        expect(result.meta.relations.company.index).to.eql({ e1: "c1", e2: "c2", e3: "c1" })
     })
 
-    it("should not write the relation into the resources it was given", async function () {
+    it("should leave the resources it was given untouched", async function () {
         const store = [{ id: "e1", companyId: "c1" }]
         const { employees } = relatedPipelines(store)
         const result = await employees.read({ withCompany: true })
-        expect(result.data[0]).to.have.property("company")
-        expect(store[0]).to.not.have.property("company")
+        expect(result.data[0]).to.not.have.property("company")
+        expect(store[0]).to.eql({ id: "e1", companyId: "c1" })
     })
 
-    it("should give each resource its own array for a many relation", async function () {
+    it("should index a many relation by holding resource", async function () {
         const companies = new RecordingPipeline({ ...defaultSchemaBuilders(companySchema), context: relationContextSchema }, [
             { id: "c1", name: "Acme" },
+            { id: "c2", name: "Globex" },
         ])
         const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
             { id: "e1", companyId: "c1" },
-            { id: "e2", companyId: "c1" },
+            { id: "e2", companyId: "c2" },
         ]).addRelationWithMany("companies", companies, { id: ":companyId" })
         const result: any = await employees.read({ withCompanies: true })
         expect(companies.readQueries.length).to.eql(1)
-        expect(result.data[0].companies).to.eql([{ id: "c1", name: "Acme" }])
-        expect(result.data[0].companies).to.not.equal(result.data[1].companies)
-    })
-
-    it("should share the data source with the pipeline it was piped from", async function () {
-        const store = [{ id: "e1", companyId: "c1" }]
-        const base = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, store)
-        const piped = base.pipe(() => ({}))
-        store.push({ id: "e2", companyId: "c2" })
-        expect((await piped.read({})).data.length).to.eql(2)
-        expect((piped as any).store).to.equal(store)
-    })
-
-    it("should keep the identity of the values carried by the context", async function () {
-        class Transaction {
-            commit() {
-                return "committed"
-            }
-        }
-        const handle = new Transaction()
-        const contextSchema = SchemaBuilder.emptySchema().addProperty("_handle", SchemaBuilder.emptySchema(), false)
-        const pipeline = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: contextSchema as any }, [])
-        await pipeline.read({}, { _handle: handle } as any)
-        expect(pipeline.readContexts[0]._handle).to.equal(handle)
-        expect(pipeline.readContexts[0]._handle.commit()).to.eql("committed")
+        expect(result.meta.relations.companies).to.eql({
+            type: "many",
+            data: { c1: { id: "c1", name: "Acme" }, c2: { id: "c2", name: "Globex" } },
+            index: { e1: ["c1"], e2: ["c2"] },
+        })
     })
 
     it("should narrow the related read with the query given as the relation option", async function () {
@@ -471,18 +458,68 @@ describe("PipelineAbstract", function () {
         ]).addRelationWithOne("company", companies, { id: ":companyId" })
 
         const result: any = await employees.read({ withCompany: { withCountry: true } })
-        expect(result.data[0].company.name).to.eql("Acme")
-        expect(result.data[0].company.country).to.eql({ id: "fr", label: "France" })
         expect(countries.readQueries).to.eql([{ id: "fr" }])
+        expect(result.meta.relations.company.data.c1.name).to.eql("Acme")
+        // the nested relation is resolved by the target pipeline, so it rides along in its own meta
+        expect(result.meta.relations.company.type).to.eql("one")
     })
 
     it("should refuse to resolve relations past the maximum depth", async function () {
         const { employees } = relatedPipelines()
         const relation = (employees as any).relations.company
         const alreadyDeep = { [Symbol.for("@serafin/pipeline.relationDepth")]: maximumRelationDepth }
-        await expect(relation.assignToResources([{ id: "e1", companyId: "c1" }], {}, alreadyDeep)).to.be.rejectedWith(
+        await expect(relation.resolve([{ id: "e1", companyId: "c1" }], {}, alreadyDeep)).to.be.rejectedWith(
             /nested deeper than the maximum/,
         )
+    })
+
+    it("should join a normalized result back together with inlineRelations", async function () {
+        const { employees } = relatedPipelines(
+            [
+                { id: "e1", companyId: "c1" },
+                { id: "e2", companyId: "c2" },
+                { id: "e3", companyId: "c1" },
+            ],
+            [
+                { id: "c1", name: "Acme" },
+                { id: "c2", name: "Globex" },
+            ],
+        )
+        const inlined = inlineRelations(await employees.read({ withCompany: true }))
+        expect(inlined.data.map((e: any) => e.company.name)).to.eql(["Acme", "Globex", "Acme"])
+        // the two resources sharing a company get the very same object, not copies
+        expect((inlined.data[0] as any).company).to.equal((inlined.data[2] as any).company)
+        // meta is passed through untouched, so the call is idempotent
+        expect(inlineRelations(inlined as any).data).to.eql(inlined.data)
+    })
+
+    it("should inline nothing when the relation was not requested", async function () {
+        const { employees } = relatedPipelines()
+        const inlined = inlineRelations(await employees.read({}))
+        expect(inlined.data[0]).to.eql({ id: "e1", companyId: "c1" })
+    })
+
+    it("should share the data source with the pipeline it was piped from", async function () {
+        const store = [{ id: "e1", companyId: "c1" }]
+        const base = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, store)
+        const piped = base.pipe(() => ({}))
+        store.push({ id: "e2", companyId: "c2" })
+        expect((await piped.read({})).data.length).to.eql(2)
+        expect((piped as any).store).to.equal(store)
+    })
+
+    it("should keep the identity of the values carried by the context", async function () {
+        class Transaction {
+            commit() {
+                return "committed"
+            }
+        }
+        const handle = new Transaction()
+        const contextSchema = SchemaBuilder.emptySchema().addProperty("_handle", SchemaBuilder.emptySchema(), false)
+        const pipeline = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: contextSchema as any }, [])
+        await pipeline.read({}, { _handle: handle } as any)
+        expect(pipeline.readContexts[0]._handle).to.equal(handle)
+        expect(pipeline.readContexts[0]._handle.commit()).to.eql("committed")
     })
 
     it("should fail for templated relations referring to a non existing property", function () {

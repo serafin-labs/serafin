@@ -4,7 +4,7 @@ import { notImplementedError, error, validationError } from "./error.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
 import { Pipe, PipeActionsInterface } from "./PipeInterface.js"
-import { Relation } from "./Relation.js"
+import { Relation, RelationMeta } from "./Relation.js"
 import { ResultsInterface } from "./ResultsInterface.js"
 import {
     PipelineCreateFunction,
@@ -39,6 +39,14 @@ function relationQuery(params: any, relationOption: string): any | undefined {
     return typeof value === "object" ? value : {}
 }
 
+/**
+ * Merge one relation's contribution into a result's meta, under the reserved `relations` key.
+ * Pipes merge freely into meta, so relations are namespaced rather than sitting at the top.
+ */
+function withRelationMeta(result: any, name: string, relationMeta: any) {
+    return { ...result, meta: { ...result.meta, relations: { ...result.meta?.relations, [name]: relationMeta } } }
+}
+
 function withoutRelationOption(params: any, relationOption: string) {
     return params && relationOption in params ? _.omit(params, [relationOption]) : params
 }
@@ -56,8 +64,9 @@ export abstract class PipelineAbstract<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
-> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {
+> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META> {
     public relations: R = {} as R
 
     private pipes: PipeActionsInterface[] = []
@@ -65,7 +74,7 @@ export abstract class PipelineAbstract<
     private options: PipelineAbstractOptions
 
     constructor(
-        public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
+        public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
         options?: PipelineAbstractOptions,
     ) {
         this.options = { ...defaultPipelineAbstractOptions, ...options }
@@ -88,7 +97,8 @@ export abstract class PipelineAbstract<
         PM2 = PM,
         DM2 = DM,
         CTX2 = CTX,
-    >(pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>) {
+        META2 = META,
+    >(pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>) {
         // run the pipe
         const result =
             typeof pipe === "function"
@@ -99,7 +109,7 @@ export abstract class PipelineAbstract<
                       ...this.schemaBuilders,
                   })
         // combine schema modifications with the current schemas
-        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, R>
+        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2, R>
         const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
         if (Object.keys(modifiedSchemas).length > 0) {
             newPipeline.schemaBuilders = {
@@ -150,7 +160,12 @@ export abstract class PipelineAbstract<
         pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
         query: Partial<ReadQuery>,
     ) {
-        const relationSchema = SchemaBuilder.arraySchema(pipeline.schemaBuilders.model)
+        // What the relation contributes to meta: every related resource once, keyed by its own id,
+        // plus an index from each holding resource to the related id(s).
+        const relationMetaSchema = SchemaBuilder.emptySchema()
+            .addString("type")
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.arraySchema(SchemaBuilder.stringSchema())))
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
@@ -177,16 +192,22 @@ export abstract class PipelineAbstract<
                 PM,
                 DM,
                 CTX,
+                META,
                 R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> }
             >
         ).pipe((p) => {
-            const model = p.model.addProperty(name, relationSchema, false)
             const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
             const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
             const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
             const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            const existingRelations = (p.meta.schema as any)?.properties?.relations
+            const meta = (
+                existingRelations
+                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many> } }>
             return {
-                model,
+                meta,
                 readQuery,
                 createOptions,
                 patchQuery,
@@ -197,7 +218,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
@@ -205,7 +226,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
@@ -213,7 +234,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
@@ -221,7 +242,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
             }
         })
@@ -238,7 +259,12 @@ export abstract class PipelineAbstract<
         pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
         query: Partial<ReadQuery>,
     ) {
-        const relationSchema = pipeline.schemaBuilders.model
+        // What the relation contributes to meta: every related resource once, keyed by its own id,
+        // plus an index from each holding resource to the related id(s).
+        const relationMetaSchema = SchemaBuilder.emptySchema()
+            .addString("type")
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.stringSchema()))
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
@@ -259,16 +285,22 @@ export abstract class PipelineAbstract<
                 PM,
                 DM,
                 CTX,
+                META,
                 R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> }
             >
         ).pipe((p) => {
-            const model = p.model.addProperty(name, relationSchema, false)
             const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
             const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
             const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
             const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            const existingRelations = (p.meta.schema as any)?.properties?.relations
+            const meta = (
+                existingRelations
+                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one> } }>
             return {
-                model,
+                meta,
                 readQuery,
                 createOptions,
                 patchQuery,
@@ -279,7 +311,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
@@ -287,7 +319,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
@@ -295,7 +327,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
                 delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
@@ -303,7 +335,7 @@ export abstract class PipelineAbstract<
                     if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
                 },
             }
         })
@@ -318,7 +350,7 @@ export abstract class PipelineAbstract<
      * @param options Options that can alter the action behavior
      * @param context Context object
      */
-    async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>> {
+    async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, META & CM>> {
         resources = _.cloneDeep(resources)
         options = _.cloneDeep(options ?? ({} as CO))
         context = { ...(context ?? ({} as CTX)) }
@@ -343,7 +375,7 @@ export abstract class PipelineAbstract<
      * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
      */
     getCreateFunction() {
-        return this.create.bind(this) as PipelineCreateFunction<M, CV, CO, CM, CTX>
+        return this.create.bind(this) as PipelineCreateFunction<M, CV, CO, CM, CTX, META>
     }
 
     /**
@@ -352,7 +384,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for fetching the data
      * @param context Context object
      */
-    async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, RM>> {
+    async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, META & RM>> {
         query = _.cloneDeep(query)
         context = { ...(context ?? ({} as CTX)) }
 
@@ -375,7 +407,7 @@ export abstract class PipelineAbstract<
      * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
      */
     getReadFunction() {
-        return this.read.bind(this) as PipelineReadFunction<M, RQ, RM, CTX>
+        return this.read.bind(this) as PipelineReadFunction<M, RQ, RM, CTX, META>
     }
 
     /**
@@ -387,7 +419,7 @@ export abstract class PipelineAbstract<
      * @param values
      * @param context Context object
      */
-    async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, PM>> {
+    async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, META & PM>> {
         query = _.cloneDeep(query)
         values = _.cloneDeep(values)
         context = { ...(context ?? ({} as CTX)) }
@@ -412,7 +444,7 @@ export abstract class PipelineAbstract<
      * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
      */
     getPatchFunction() {
-        return this.patch.bind(this) as PipelinePatchFunction<M, PQ, PV, PM, CTX>
+        return this.patch.bind(this) as PipelinePatchFunction<M, PQ, PV, PM, CTX, META>
     }
 
     /**
@@ -420,7 +452,7 @@ export abstract class PipelineAbstract<
      * @param query The query filter to be used for selecting resources to delete
      * @param context Context object
      */
-    async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, DM>> {
+    async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, META & DM>> {
         query = _.cloneDeep(query)
         context = { ...(context ?? ({} as CTX)) }
 
@@ -443,7 +475,7 @@ export abstract class PipelineAbstract<
      * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
      */
     getDeleteFunction() {
-        return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX>
+        return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX, META>
     }
 
     private handleValidationOfData(method: string, valueName: string, schema: SchemaBuilder<any>, data: any, isArray: boolean = false) {

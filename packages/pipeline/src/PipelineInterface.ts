@@ -15,36 +15,36 @@ export type PipelineMethods = (typeof pipelineMethods)[number]
 /**
  * Read function interface of a pipeline
  */
-export type PipelineReadFunction<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> = (
+export type PipelineReadFunction<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any, META = any> = (
     query: RQ,
     context?: CTX,
-) => Promise<ResultsInterface<M, RM>>
+) => Promise<ResultsInterface<M, META & RM>>
 
 /**
  * Create function interface of a pipeline
  */
-export type PipelineCreateFunction<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> = (
+export type PipelineCreateFunction<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any, META = any> = (
     resources: CV[],
     options?: CO,
     context?: CTX,
-) => Promise<ResultsInterface<M, CM>>
+) => Promise<ResultsInterface<M, META & CM>>
 
 /**
  * Patch function interface of a pipeline
  */
-export type PipelinePatchFunction<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> = (
+export type PipelinePatchFunction<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any, META = any> = (
     query: PQ,
     values: PV,
     context?: CTX,
-) => Promise<ResultsInterface<M, PM>>
+) => Promise<ResultsInterface<M, META & PM>>
 
 /**
  * Delete function interface of a pipeline
  */
-export type PipelineDeleteFunction<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> = (
+export type PipelineDeleteFunction<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any, META = any> = (
     query: DQ,
     context?: CTX,
-) => Promise<ResultsInterface<M, DM>>
+) => Promise<ResultsInterface<M, META & DM>>
 
 /**
  * Interface of the important properties of a pipeline
@@ -62,42 +62,43 @@ export interface PipelineInterface<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
 > {
-    schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>
-    create: PipelineCreateFunction<M, CV, CO, CM, CTX>
-    read: PipelineReadFunction<M, RQ, RM, CTX>
-    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX>
-    delete: PipelineDeleteFunction<M, DQ, DM, CTX>
+    schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>
+    create: PipelineCreateFunction<M, CV, CO, CM, CTX, META>
+    read: PipelineReadFunction<M, RQ, RM, CTX, META>
+    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX, META>
+    delete: PipelineDeleteFunction<M, DQ, DM, CTX, META>
 }
 
 /**
  * Interface of the important properties of a pipeline for read only
  */
-export interface ReadOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> {
-    schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any, CTX>
-    read: PipelineReadFunction<M, RQ, RM, CTX>
+export interface ReadOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any, META = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, RQ, any, any, any, any, RM, any, any, CTX, META>
+    read: PipelineReadFunction<M, RQ, RM, CTX, META>
 }
 
 /**
  * Interface of the important properties of a pipeline for create only
  */
-export interface CreateOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> {
-    schemaBuilders: SchemaBuildersInterface<M, CV, CO, any, any, any, any, CM, any, any, any, CTX>
-    create: PipelineCreateFunction<M, CV, CO, CM, CTX>
+export interface CreateOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any, META = any> {
+    schemaBuilders: SchemaBuildersInterface<M, CV, CO, any, any, any, any, CM, any, any, any, CTX, META>
+    create: PipelineCreateFunction<M, CV, CO, CM, CTX, META>
 }
 
 /**
  * Interface of the important properties of a pipeline for patch only
  */
-export interface PatchOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> {
-    schemaBuilders: SchemaBuildersInterface<M, any, any, any, PQ, PV, any, any, any, PM, any, CTX>
-    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX>
+export interface PatchOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any, META = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, any, PQ, PV, any, any, any, PM, any, CTX, META>
+    patch: PipelinePatchFunction<M, PQ, PV, PM, CTX, META>
 }
 
 /**
  * Interface of the important properties of a pipeline
  */
-export interface DeleteOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> {
-    schemaBuilders: SchemaBuildersInterface<M, any, any, any, any, any, DQ, any, any, any, DM, CTX>
-    delete: PipelineDeleteFunction<M, DQ, DM, CTX>
+export interface DeleteOnlyPipelineInterface<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any, META = any> {
+    schemaBuilders: SchemaBuildersInterface<M, any, any, any, any, any, DQ, any, any, any, DM, CTX, META>
+    delete: PipelineDeleteFunction<M, DQ, DM, CTX, META>
 }

@@ -14,6 +14,7 @@ export interface SchemaBuildersInterface<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
 > {
     model: SchemaBuilder<M>
     createValues: SchemaBuilder<CV>
@@ -27,6 +28,11 @@ export interface SchemaBuildersInterface<
     patchMeta: SchemaBuilder<PM>
     deleteMeta: SchemaBuilder<DM>
     context: SchemaBuilder<CTX>
+    /**
+     * Meta shared by every action. The meta an action returns is `META & CM | RM | PM | DM`,
+     * so anything cross-cutting -- relations, timings, request identifiers -- is declared once.
+     */
+    meta: SchemaBuilder<META>
 }
 
 export const schemaBuildersInterfaceKeys = [
@@ -42,6 +48,7 @@ export const schemaBuildersInterfaceKeys = [
     "patchMeta",
     "deleteMeta",
     "context",
+    "meta",
 ] as const
 
 export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBuilder: SchemaBuilder<M>) {
@@ -58,5 +65,6 @@ export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBu
         patchMeta: SchemaBuilder.emptySchema(),
         deleteMeta: SchemaBuilder.emptySchema(),
         context: SchemaBuilder.emptySchema(),
+        meta: SchemaBuilder.emptySchema(),
     }
 }

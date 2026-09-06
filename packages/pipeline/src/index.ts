@@ -1,4 +1,5 @@
 export * from "./Relation.js"
+export * from "./inlineRelations.js"
 export * from "./RelationType.js"
 export * from "./IdentityInterface.js"
 export * from "./ResultsInterface.js"

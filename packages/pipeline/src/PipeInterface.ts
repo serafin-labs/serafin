@@ -18,29 +18,30 @@ export interface PipePropsInterface<
     PM = any,
     DM = any,
     CTX = any,
-> extends SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX> {}
+    META = any,
+> extends SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META> {}
 
-export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any> = (
+export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV = any, CO = any, CM = any, CTX = any, META = any> = (
     resources: CV[],
     options: CO,
     context: CTX,
-) => Promise<ResultsInterface<M, CM>>
+) => Promise<ResultsInterface<M, META & CM>>
 
-export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any> = (
+export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any, META = any> = (
     query: RQ,
     context: CTX,
-) => Promise<ResultsInterface<M, RM>>
+) => Promise<ResultsInterface<M, META & RM>>
 
-export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any> = (
+export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any, META = any> = (
     query: PQ,
     values: PV,
     context: CTX,
-) => Promise<ResultsInterface<M, PM>>
+) => Promise<ResultsInterface<M, META & PM>>
 
-export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any> = (
+export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any, META = any> = (
     query: DQ,
     context: CTX,
-) => Promise<ResultsInterface<M, DM>>
+) => Promise<ResultsInterface<M, META & DM>>
 
 export type PipeCreateAction<
     M extends IdentityInterface = IdentityInterface,
@@ -48,11 +49,13 @@ export type PipeCreateAction<
     CO = any,
     CM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
     CM2 = CM,
     CTX2 = CTX,
+    META2 = META,
     RQ = any,
     PQ = any,
     PV = any,
@@ -61,22 +64,24 @@ export type PipeCreateAction<
     PM = any,
     DM = any,
 > = (
-    next: PipeCreateNext<M, CV, CO, CM, CTX>,
+    next: PipeCreateNext<M, CV, CO, CM, CTX, META>,
     resources: CV2[],
     options: CO2,
     context: CTX2,
-    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
-) => Promise<ResultsInterface<M2, CM2>>
+    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+) => Promise<ResultsInterface<M2, META2 & CM2>>
 
 export type PipeReadAction<
     M extends IdentityInterface = IdentityInterface,
     RQ = any,
     RM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     RQ2 = RQ,
     RM2 = RM,
     CTX2 = CTX,
+    META2 = META,
     CV = any,
     CO = any,
     PQ = any,
@@ -86,11 +91,11 @@ export type PipeReadAction<
     PM = any,
     DM = any,
 > = (
-    next: PipeReadNext<M, RQ, RM, CTX>,
+    next: PipeReadNext<M, RQ, RM, CTX, META>,
     query: RQ2,
     context: CTX2,
-    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
-) => Promise<ResultsInterface<M2, RM2>>
+    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+) => Promise<ResultsInterface<M2, META2 & RM2>>
 
 export type PipePatchAction<
     M extends IdentityInterface = IdentityInterface,
@@ -98,11 +103,13 @@ export type PipePatchAction<
     PV = any,
     PM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     PQ2 = PQ,
     PV2 = PV,
     PM2 = PM,
     CTX2 = CTX,
+    META2 = META,
     CV = any,
     CO = any,
     RQ = any,
@@ -111,22 +118,24 @@ export type PipePatchAction<
     RM = any,
     DM = any,
 > = (
-    next: PipePatchNext<M, PQ, PV, PM, CTX>,
+    next: PipePatchNext<M, PQ, PV, PM, CTX, META>,
     query: PQ2,
     values: PV2,
     context: CTX2,
-    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
-) => Promise<ResultsInterface<M2, PM2>>
+    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+) => Promise<ResultsInterface<M2, META2 & PM2>>
 
 export type PipeDeleteAction<
     M extends IdentityInterface = IdentityInterface,
     DQ = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     DQ2 = DQ,
     DM2 = DM,
     CTX2 = CTX,
+    META2 = META,
     CV = any,
     CO = any,
     RQ = any,
@@ -136,11 +145,11 @@ export type PipeDeleteAction<
     RM = any,
     PM = any,
 > = (
-    next: PipeDeleteNext<M, DQ, DM, CTX>,
+    next: PipeDeleteNext<M, DQ, DM, CTX, META>,
     query: DQ2,
     context: CTX2,
-    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
-) => Promise<ResultsInterface<M2, DM2>>
+    pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+) => Promise<ResultsInterface<M2, META2 & DM2>>
 
 export interface PipeActionsInterface<
     M extends IdentityInterface = IdentityInterface,
@@ -155,6 +164,7 @@ export interface PipeActionsInterface<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -167,11 +177,12 @@ export interface PipeActionsInterface<
     PM2 = PM,
     DM2 = DM,
     CTX2 = CTX,
+    META2 = META,
 > {
-    create?: PipeCreateAction<M, CV, CO, CM, CTX, M2, CV2, CO2, CM2, CTX2, RQ, PQ, PV, DQ, RM, PM, DM>
-    read?: PipeReadAction<M, RQ, RM, CTX, M2, RQ2, RM2, CTX2, CV, CO, PQ, PV, DQ, CM, PM, DM>
-    patch?: PipePatchAction<M, PQ, PV, PM, CTX, M2, PQ2, PV2, PM2, CTX2, CV, CO, RQ, DQ, CM, RM, DM>
-    delete?: PipeDeleteAction<M, DQ, DM, CTX, M2, DQ2, DM2, CTX2, CV, CO, RQ, PQ, PV, CM, RM, PM>
+    create?: PipeCreateAction<M, CV, CO, CM, CTX, META, M2, CV2, CO2, CM2, CTX2, META2, RQ, PQ, PV, DQ, RM, PM, DM>
+    read?: PipeReadAction<M, RQ, RM, CTX, META, M2, RQ2, RM2, CTX2, META2, CV, CO, PQ, PV, DQ, CM, PM, DM>
+    patch?: PipePatchAction<M, PQ, PV, PM, CTX, META, M2, PQ2, PV2, PM2, CTX2, META2, CV, CO, RQ, DQ, CM, RM, DM>
+    delete?: PipeDeleteAction<M, DQ, DM, CTX, META, M2, DQ2, DM2, CTX2, META2, CV, CO, RQ, PQ, PV, CM, RM, PM>
 }
 
 export interface PipeResultsInterface<
@@ -187,6 +198,7 @@ export interface PipeResultsInterface<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -199,8 +211,9 @@ export interface PipeResultsInterface<
     PM2 = PM,
     DM2 = DM,
     CTX2 = CTX,
-> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>>,
-        PipeActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2> {}
+    META2 = META,
+> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>>,
+        PipeActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2> {}
 
 export type PipeFunction<
     M extends IdentityInterface = IdentityInterface,
@@ -215,6 +228,7 @@ export type PipeFunction<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -227,9 +241,10 @@ export type PipeFunction<
     PM2 = PM,
     DM2 = DM,
     CTX2 = any,
+    META2 = META,
 > = (
-    p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
-) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    p: PipePropsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+) => PipeResultsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
 
 export type PipeClassInstance<
     M extends IdentityInterface = IdentityInterface,
@@ -244,6 +259,7 @@ export type PipeClassInstance<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -256,8 +272,9 @@ export type PipeClassInstance<
     PM2 = PM,
     DM2 = DM,
     CTX2 = CTX,
+    META2 = META,
 > = {
-    transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    transform: PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
 }
 
 export interface PipeClass<
@@ -274,6 +291,7 @@ export interface PipeClass<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -286,8 +304,9 @@ export interface PipeClass<
     PM2 = PM,
     DM2 = DM,
     CTX2 = CTX,
+    META2 = META,
 > {
-    new (...params: P): PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    new (...params: P): PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
 }
 
 export type Pipe<
@@ -303,6 +322,7 @@ export type Pipe<
     PM = any,
     DM = any,
     CTX = any,
+    META = any,
     M2 extends IdentityInterface = M,
     CV2 = CV,
     CO2 = CO,
@@ -315,6 +335,7 @@ export type Pipe<
     PM2 = PM,
     DM2 = DM,
     CTX2 = CTX,
+    META2 = META,
 > =
-    | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
-    | PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2>
+    | PipeFunction<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
+    | PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>

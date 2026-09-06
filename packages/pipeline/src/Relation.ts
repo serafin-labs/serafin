@@ -36,6 +36,20 @@ function acceptsArray(schema: any): boolean {
 }
 
 /**
+ * What a relation contributes to `meta.relations`.
+ *
+ * `data` holds each related resource once, keyed by its own id, so a target shared by many
+ * resources is carried once instead of once per resource. `index` maps a holding resource's id to
+ * the related id (or ids, for a many relation) -- which is what makes a many relation joinable at
+ * all, since its key lives on the target rather than on the resource.
+ */
+export interface RelationMeta<R extends IdentityInterface, Type extends RelationType> {
+    type: Type
+    data: Record<string, R>
+    index: Record<string, Type extends RelationType.many ? string[] : string>
+}
+
+/**
  * How deep a chain of nested relations may go. A caller has to spell out each level of nesting, so
  * this only bites when the read query comes from somewhere untrusted.
  */
@@ -63,23 +77,26 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
         return this.pipeline.read(this.queryFor(resource, query), this.nestedContext(context))
     }
 
+    /**
+     * Fetch the relation for a single resource and return a copy carrying it inline.
+     * Pipelines put relations in `meta` instead; this stays for callers that hold a `Relation`.
+     */
     async assignToResource(resource: M, query?: Partial<ReadQuery>, context?: any) {
         const result = await this.fetch(resource, query, context)
         return this.assign(resource, result.data)
     }
 
     /**
-     * Resolve the relation for a page of resources.
+     * Resolve the relation for a page of resources and return what it contributes to `meta`.
      *
      * Resources whose hydrated query is identical share a single read. When the relation is keyed on
      * a single templated field and the target accepts an array for it, the whole page is resolved
      * with one read instead of one per resource.
-     *
-     * Returns new resources; the ones passed in are left untouched.
      */
-    async assignToResources(resources: M[], query?: Partial<ReadQuery>, context?: any) {
+    async resolve(resources: M[], query?: Partial<ReadQuery>, context?: any): Promise<RelationMeta<R, Type>> {
+        const meta: RelationMeta<R, Type> = { type: this.type, data: {}, index: {} }
         if (resources.length === 0) {
-            return []
+            return meta
         }
 
         // Group by hydrated query, so resources pointing at the same target are read once.
@@ -95,7 +112,6 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
             }
         }
 
-        const assigned = new Map<M, any>()
         const batchField = groups.size > 1 ? this.batchField() : undefined
         if (batchField !== undefined) {
             const batches = [...groups.values()]
@@ -115,24 +131,35 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
                 }
             }
             for (const group of batches) {
-                const data = related.get(keyOf(group.query[batchField])) ?? []
-                for (const resource of group.resources) {
-                    assigned.set(resource, this.assign(resource, data))
-                }
+                this.record(meta, group.resources, related.get(keyOf(group.query[batchField])) ?? [])
             }
         } else {
             const nested = this.nestedContext(context)
             await Promise.all(
                 [...groups.values()].map(async (group) => {
                     const result = await this.pipeline.read(group.query, nested)
-                    for (const resource of group.resources) {
-                        assigned.set(resource, this.assign(resource, result.data))
-                    }
+                    this.record(meta, group.resources, result.data)
                 }),
             )
         }
 
-        return resources.map((resource) => assigned.get(resource))
+        return meta
+    }
+
+    /**
+     * Add one group's related resources to the store, and point each holding resource at them.
+     */
+    private record(meta: RelationMeta<R, Type>, resources: M[], related: R[]) {
+        for (const entry of related) {
+            meta.data[entry.id] = entry
+        }
+        for (const resource of resources) {
+            if (this.type === RelationType.many) {
+                ;(meta.index as Record<string, string[]>)[resource.id] = related.map((entry) => entry.id)
+            } else if (related.length > 0) {
+                ;(meta.index as Record<string, string>)[resource.id] = related[0].id
+            }
+        }
     }
 
     /**
