@@ -1,6 +1,6 @@
 import _ from "lodash"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { notImplementedError, error } from "./error.js"
+import { notImplementedError, error, validationError } from "./error.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
 import { Pipe, PipeActionsInterface } from "./PipeInterface.js"
@@ -395,7 +395,24 @@ export abstract class PipelineAbstract<
         }
         try {
             if (isArray) {
-                schema.validateList(data)
+                // `SchemaBuilder` no longer exposes `validateList`. Validating each entry against the
+                // item schema reuses its already compiled validation function, rather than compiling a
+                // second one for the array wrapper.
+                if (!Array.isArray(data)) {
+                    throw validationError("data must be array")
+                }
+                if (data.length === 0) {
+                    throw validationError("data must NOT have fewer than 1 items")
+                }
+                data.forEach((entry: any, index: number) => {
+                    try {
+                        schema.validate(entry)
+                    } catch (e) {
+                        // The array schema used to report the failing index as part of the ajv path
+                        // (`data/0/...`). Validating entry by entry loses it, so carry it here.
+                        throw validationError(`entry at index ${index} is invalid`, { index }, e as Error)
+                    }
+                })
             } else {
                 schema.validate(data)
             }
