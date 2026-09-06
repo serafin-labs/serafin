@@ -301,7 +301,7 @@ export abstract class PipelineAbstract<
     async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, CM>> {
         resources = _.cloneDeep(resources)
         options = _.cloneDeep(options ?? ({} as CO))
-        context = _.cloneDeep(context ?? ({} as CTX))
+        context = { ...(context ?? ({} as CTX)) }
 
         this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources, true)
         this.handleValidationOfData("create", "options", this.schemaBuilders.createOptions, options)
@@ -334,7 +334,7 @@ export abstract class PipelineAbstract<
      */
     async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, RM>> {
         query = _.cloneDeep(query)
-        context = _.cloneDeep(context ?? ({} as CTX))
+        context = { ...(context ?? ({} as CTX)) }
 
         this.handleValidationOfData("read", "query", this.schemaBuilders.readQuery, query)
         this.handleValidationOfData("read", "context", this.schemaBuilders.context, context)
@@ -370,7 +370,7 @@ export abstract class PipelineAbstract<
     async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, PM>> {
         query = _.cloneDeep(query)
         values = _.cloneDeep(values)
-        context = _.cloneDeep(context ?? ({} as CTX))
+        context = { ...(context ?? ({} as CTX)) }
 
         this.handleValidationOfData("patch", "query", this.schemaBuilders.patchQuery, query)
         this.handleValidationOfData("patch", "values", this.schemaBuilders.patchValues, values)
@@ -402,7 +402,7 @@ export abstract class PipelineAbstract<
      */
     async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, DM>> {
         query = _.cloneDeep(query)
-        context = _.cloneDeep(context ?? ({} as CTX))
+        context = { ...(context ?? ({} as CTX)) }
 
         this.handleValidationOfData("delete", "query", this.schemaBuilders.deleteQuery, query)
         this.handleValidationOfData("delete", "context", this.schemaBuilders.context, context)
@@ -465,13 +465,18 @@ export abstract class PipelineAbstract<
         }
     }
 
+    /**
+     * A copy of this pipeline that can take a pipe without affecting the original.
+     *
+     * `relations`, `schemaBuilders` and `pipes` are the only members a pipe reassigns, so only they
+     * need their own copy. Everything else -- including whatever a concrete pipeline holds as its
+     * data source -- is shared, so piping a pipeline never forks its connection, cache or store.
+     */
     clone(): this {
-        let clonedPipeline = _.cloneDeepWith(this, (value: any, key: number | string | undefined) => {
-            if (key === "relations" || key === "schemaBuilders" || key === "pipes") {
-                // shallow clone
-                return _.clone(value)
-            }
-        })
+        const clonedPipeline = Object.assign(Object.create(Object.getPrototypeOf(this)), this) as this
+        clonedPipeline.relations = { ...this.relations }
+        clonedPipeline.schemaBuilders = { ...this.schemaBuilders }
+        ;(clonedPipeline as any).pipes = [...this.pipes]
         return clonedPipeline
     }
 }

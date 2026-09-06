@@ -415,6 +415,29 @@ describe("PipelineAbstract", function () {
         expect(result.data[0].companies).to.not.equal(result.data[1].companies)
     })
 
+    it("should share the data source with the pipeline it was piped from", async function () {
+        const store = [{ id: "e1", companyId: "c1" }]
+        const base = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, store)
+        const piped = base.pipe(() => ({}))
+        store.push({ id: "e2", companyId: "c2" })
+        expect((await piped.read({})).data.length).to.eql(2)
+        expect((piped as any).store).to.equal(store)
+    })
+
+    it("should keep the identity of the values carried by the context", async function () {
+        class Transaction {
+            commit() {
+                return "committed"
+            }
+        }
+        const handle = new Transaction()
+        const contextSchema = SchemaBuilder.emptySchema().addProperty("_handle", SchemaBuilder.emptySchema(), false)
+        const pipeline = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: contextSchema as any }, [])
+        await pipeline.read({}, { _handle: handle } as any)
+        expect(pipeline.readContexts[0]._handle).to.equal(handle)
+        expect(pipeline.readContexts[0]._handle.commit()).to.eql("committed")
+    })
+
     it("should fail for templated relations referring to a non existing property", function () {
         let p2 = new TestPipeline(schemas, defaultResults)
         let p1 = new TestPipeline(schemas, defaultResults).addRelationWithMany("p2", p2, { id: ":blabliblou" })
