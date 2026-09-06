@@ -29,8 +29,14 @@ export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validat
  * and it has to be removed before the query travels further down the chain: the pipes and the
  * concrete implementation below this one were built without it in their schemas.
  */
-function isRelationRequested(params: any, relationOption: string) {
-    return !!params?.[relationOption]
+function relationQuery(params: any, relationOption: string): any | undefined {
+    const value = params?.[relationOption]
+    if (!value) {
+        return undefined
+    }
+    // `true` asks for the relation as declared; an object additionally narrows the related read,
+    // and can carry the target's own `with<Name>` options to nest a level deeper.
+    return typeof value === "object" ? value : {}
 }
 
 function withoutRelationOption(params: any, relationOption: string) {
@@ -146,7 +152,10 @@ export abstract class PipelineAbstract<
     ) {
         const relationSchema = SchemaBuilder.arraySchema(pipeline.schemaBuilders.model)
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
-        const relationOptionSchema = SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` })
+        const relationOptionSchema = SchemaBuilder.oneOf(
+            SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
+            pipeline.schemaBuilders.readQuery,
+        )
         const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> = new Relation(
             this,
             name,
@@ -184,31 +193,35 @@ export abstract class PipelineAbstract<
                 deleteQuery,
                 create: async (next, resources, options: typeof createOptions.T, context) => {
                     const result = await next(resources, withoutRelationOption(options, relationOption), context)
-                    if (!isRelationRequested(options, relationOption)) {
+                    const subQuery = relationQuery(options, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
             }
         })
@@ -227,7 +240,10 @@ export abstract class PipelineAbstract<
     ) {
         const relationSchema = pipeline.schemaBuilders.model
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
-        const relationOptionSchema = SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` })
+        const relationOptionSchema = SchemaBuilder.oneOf(
+            SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
+            pipeline.schemaBuilders.readQuery,
+        )
         const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> = new Relation(this, name, pipeline, query, RelationType.one)
         const newPipeline = (
             this as any as PipelineAbstract<
@@ -259,31 +275,35 @@ export abstract class PipelineAbstract<
                 deleteQuery,
                 create: async (next, resources, options: typeof createOptions.T, context) => {
                     const result = await next(resources, withoutRelationOption(options, relationOption), context)
-                    if (!isRelationRequested(options, relationOption)) {
+                    const subQuery = relationQuery(options, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
                 delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
-                    if (!isRelationRequested(query, relationOption)) {
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
                         return result
                     }
-                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
+                    return { ...result, data: await relation.assignToResources(result.data, subQuery, context) }
                 },
             }
         })

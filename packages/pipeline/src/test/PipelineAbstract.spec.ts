@@ -16,7 +16,7 @@ import {
     PipeReadAction,
     PipeReadNext,
 } from "../PipeInterface.js"
-import { Relation } from "../Relation.js"
+import { maximumRelationDepth, Relation } from "../Relation.js"
 import { ResultsInterface } from "../ResultsInterface.js"
 import { ReadOnlyPipelineInterface } from "../PipelineInterface.js"
 import { ForkedPipeline } from "../pipeline/ForkedPipeline.js"
@@ -207,6 +207,9 @@ type IsAny<T> = 0 extends 1 & T ? true : false
     const _createOptions: Declares<NonNullable<Parameters<typeof p.create>[1]>> = true
     const _patchQuery: Declares<Parameters<typeof p.patch>[0]> = true
     const _deleteQuery: Declares<Parameters<typeof p.delete>[0]> = true
+    // and it must accept a query for the target, not only a boolean
+    const _boolean: Parameters<typeof p.read>[0] = { withTest: true }
+    const _subQuery: Parameters<typeof p.read>[0] = { withTest: { id: "42" } }
 }
 
 // Every `Pipe*Action` must thread CTX into the `next` it hands the pipe, rather than leaving the
@@ -344,7 +347,10 @@ describe("PipelineAbstract", function () {
     it("should pass the context down to the related pipeline", async function () {
         const { companies, employees } = relatedPipelines()
         await employees.read({ withCompany: true }, { _private: true })
-        expect(companies.readContexts).to.eql([{ _private: true }])
+        expect(companies.readContexts.length).to.eql(1)
+        // the relation's own bookkeeping is symbol-keyed, so it stays out of the context proper
+        expect(Object.keys(companies.readContexts[0])).to.eql(["_private"])
+        expect(companies.readContexts[0]._private).to.eql(true)
     })
 
     it("should forward the context through a forked pipeline", async function () {
@@ -436,6 +442,47 @@ describe("PipelineAbstract", function () {
         await pipeline.read({}, { _handle: handle } as any)
         expect(pipeline.readContexts[0]._handle).to.equal(handle)
         expect(pipeline.readContexts[0]._handle.commit()).to.eql("committed")
+    })
+
+    it("should narrow the related read with the query given as the relation option", async function () {
+        const { companies, employees } = relatedPipelines(
+            [{ id: "e1", companyId: "c1" }],
+            [
+                { id: "c1", name: "Acme" },
+                { id: "c2", name: "Globex" },
+            ],
+        )
+        await employees.read({ withCompany: { name: "Globex" } })
+        expect(companies.readQueries).to.eql([{ id: "c1", name: "Globex" }])
+    })
+
+    it("should resolve a relation nested inside another relation's query", async function () {
+        const countrySchema = SchemaBuilder.emptySchema().addString("id").addString("label")
+        const companyWithCountrySchema = SchemaBuilder.emptySchema().addString("id").addString("name").addString("countryId")
+        const countries = new RecordingPipeline({ ...defaultSchemaBuilders(countrySchema), context: relationContextSchema }, [
+            { id: "fr", label: "France" },
+        ])
+        const companies = new RecordingPipeline(
+            { ...defaultSchemaBuilders(companyWithCountrySchema), context: relationContextSchema },
+            [{ id: "c1", name: "Acme", countryId: "fr" }],
+        ).addRelationWithOne("country", countries, { id: ":countryId" })
+        const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
+            { id: "e1", companyId: "c1" },
+        ]).addRelationWithOne("company", companies, { id: ":companyId" })
+
+        const result: any = await employees.read({ withCompany: { withCountry: true } })
+        expect(result.data[0].company.name).to.eql("Acme")
+        expect(result.data[0].company.country).to.eql({ id: "fr", label: "France" })
+        expect(countries.readQueries).to.eql([{ id: "fr" }])
+    })
+
+    it("should refuse to resolve relations past the maximum depth", async function () {
+        const { employees } = relatedPipelines()
+        const relation = (employees as any).relations.company
+        const alreadyDeep = { [Symbol.for("@serafin/pipeline.relationDepth")]: maximumRelationDepth }
+        await expect(relation.assignToResources([{ id: "e1", companyId: "c1" }], {}, alreadyDeep)).to.be.rejectedWith(
+            /nested deeper than the maximum/,
+        )
     })
 
     it("should fail for templated relations referring to a non existing property", function () {

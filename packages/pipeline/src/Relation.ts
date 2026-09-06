@@ -1,4 +1,5 @@
 import _ from "lodash"
+import { validationError } from "./error.js"
 import { QueryTemplate } from "./QueryTemplate.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { ReadOnlyPipelineInterface } from "./PipelineInterface.js"
@@ -35,6 +36,18 @@ function acceptsArray(schema: any): boolean {
 }
 
 /**
+ * How deep a chain of nested relations may go. A caller has to spell out each level of nesting, so
+ * this only bites when the read query comes from somewhere untrusted.
+ */
+export const maximumRelationDepth = 10
+
+/**
+ * Carried on the context so nested reads can see how deep they already are. A symbol keeps it out of
+ * `Object.keys`, so it stays invisible to schema validation and to concrete pipeline implementations.
+ */
+const relationDepth = Symbol.for("@serafin/pipeline.relationDepth")
+
+/**
  * Represents a Relation for the given pipeline
  */
 export class Relation<M extends IdentityInterface, NameKey extends string, R extends IdentityInterface, ReadQuery, ReadMeta, Type extends RelationType> {
@@ -47,7 +60,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
     ) {}
 
     async fetch(resource: M, query?: Partial<ReadQuery>, context?: any) {
-        return this.pipeline.read(this.queryFor(resource, query), context)
+        return this.pipeline.read(this.queryFor(resource, query), this.nestedContext(context))
     }
 
     async assignToResource(resource: M, query?: Partial<ReadQuery>, context?: any) {
@@ -88,7 +101,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
             const batches = [...groups.values()]
             const result = await this.pipeline.read(
                 { ...batches[0].query, [batchField]: batches.map((group) => group.query[batchField]) } as any,
-                context,
+                this.nestedContext(context),
             )
             // Index the single result set by the field the relation is keyed on.
             const related = new Map<string, R[]>()
@@ -108,9 +121,10 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
                 }
             }
         } else {
+            const nested = this.nestedContext(context)
             await Promise.all(
                 [...groups.values()].map(async (group) => {
-                    const result = await this.pipeline.read(group.query, context)
+                    const result = await this.pipeline.read(group.query, nested)
                     for (const resource of group.resources) {
                         assigned.set(resource, this.assign(resource, result.data))
                     }
@@ -119,6 +133,17 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
         }
 
         return resources.map((resource) => assigned.get(resource))
+    }
+
+    /**
+     * The context to read the related pipeline with, one level deeper than the current one.
+     */
+    private nestedContext(context?: any) {
+        const depth = (context?.[relationDepth] ?? 0) + 1
+        if (depth > maximumRelationDepth) {
+            throw validationError(`relation '${this.name}' is nested deeper than the maximum of ${maximumRelationDepth}`, { relation: this.name, depth })
+        }
+        return { ...(context ?? {}), [relationDepth]: depth }
     }
 
     private queryFor(resource: M, query?: Partial<ReadQuery>) {
