@@ -5,7 +5,17 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { PipelineAbstract } from "../PipelineAbstract.js"
 import { defaultSchemaBuilders, SchemaBuildersInterface } from "../SchemaBuildersInterface.js"
 import { IdentityInterface } from "../IdentityInterface.js"
-import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, PipeReadNext } from "../PipeInterface.js"
+import {
+    PipeCreateAction,
+    PipeCreateNext,
+    PipeDeleteAction,
+    PipeDeleteNext,
+    PipePatchAction,
+    PipePatchNext,
+    PipePropsInterface,
+    PipeReadAction,
+    PipeReadNext,
+} from "../PipeInterface.js"
 import { Relation } from "../Relation.js"
 import { ResultsInterface } from "../ResultsInterface.js"
 import { ReadOnlyPipelineInterface } from "../PipelineInterface.js"
@@ -175,6 +185,35 @@ function relatedPipelines() {
         { id: "e1", companyId: "c1" },
     ])
     return { companies, employees: employees.addRelationWithOne("company", companies, { id: ":companyId" }) }
+}
+
+/**
+ * Compile-time guards. These have no runtime assertions -- they fail `npm run typecheck` instead.
+ */
+type IsAny<T> = 0 extends 1 & T ? true : false
+
+// The `with<Name>` option a relation installs must reach the static type of every action it hooks
+// into. Only `readQuery` used to, because only the `read` handler annotated its parameter and so
+// anchored inference; the other three fell back to their `= CO` / `= PQ` / `= DQ` defaults.
+{
+    const related = new TestPipeline(schemas, defaultResults)
+    const p = new TestPipeline(schemas, defaultResults).addRelationWithOne("test", related, {})
+    type Declares<T> = "withTest" extends keyof T ? true : false
+    const _readQuery: Declares<Parameters<typeof p.read>[0]> = true
+    const _createOptions: Declares<NonNullable<Parameters<typeof p.create>[1]>> = true
+    const _patchQuery: Declares<Parameters<typeof p.patch>[0]> = true
+    const _deleteQuery: Declares<Parameters<typeof p.delete>[0]> = true
+}
+
+// Every `Pipe*Action` must thread CTX into the `next` it hands the pipe, rather than leaving the
+// parameter at its `any` default.
+{
+    type Ctx = { _private?: boolean }
+    type NextCtx<A> = A extends (next: infer N, ...rest: any[]) => any ? (N extends (...args: infer P) => any ? P[P["length"] extends 3 ? 2 : 1] : never) : never
+    const _create: IsAny<NextCtx<PipeCreateAction<IdentityInterface, {}, {}, {}, Ctx>>> = false
+    const _read: IsAny<NextCtx<PipeReadAction<IdentityInterface, {}, {}, Ctx>>> = false
+    const _patch: IsAny<NextCtx<PipePatchAction<IdentityInterface, {}, {}, {}, Ctx>>> = false
+    const _delete: IsAny<NextCtx<PipeDeleteAction<IdentityInterface, {}, {}, Ctx>>> = false
 }
 
 describe("PipelineAbstract", function () {

@@ -61,7 +61,7 @@ export type PipeCreateAction<
     PM = any,
     DM = any,
 > = (
-    next: PipeCreateNext<M, CV, CO, CM>,
+    next: PipeCreateNext<M, CV, CO, CM, CTX>,
     resources: CV2[],
     options: CO2,
     context: CTX2,
@@ -86,7 +86,7 @@ export type PipeReadAction<
     PM = any,
     DM = any,
 > = (
-    next: PipeReadNext<M, RQ, RM>,
+    next: PipeReadNext<M, RQ, RM, CTX>,
     query: RQ2,
     context: CTX2,
     pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,
@@ -111,7 +111,7 @@ export type PipePatchAction<
     RM = any,
     DM = any,
 > = (
-    next: PipePatchNext<M, PQ, PV, PM>,
+    next: PipePatchNext<M, PQ, PV, PM, CTX>,
     query: PQ2,
     values: PV2,
     context: CTX2,
@@ -136,7 +136,7 @@ export type PipeDeleteAction<
     RM = any,
     PM = any,
 > = (
-    next: PipeReadNext<M, DQ, DM>,
+    next: PipeDeleteNext<M, DQ, DM, CTX>,
     query: DQ2,
     context: CTX2,
     pipeline: PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX>,

@@ -182,7 +182,7 @@ export abstract class PipelineAbstract<
                 createOptions,
                 patchQuery,
                 deleteQuery,
-                create: async (next, resources, options, context) => {
+                create: async (next, resources, options: typeof createOptions.T, context) => {
                     const result = await next(resources, withoutRelationOption(options, relationOption), context)
                     if (!isRelationRequested(options, relationOption)) {
                         return result
@@ -196,14 +196,14 @@ export abstract class PipelineAbstract<
                     }
                     return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
-                patch: async (next, query, values, context) => {
+                patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
                     if (!isRelationRequested(query, relationOption)) {
                         return result
                     }
                     return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
-                delete: async (next, query, context) => {
+                delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
                     if (!isRelationRequested(query, relationOption)) {
                         return result
@@ -257,7 +257,7 @@ export abstract class PipelineAbstract<
                 createOptions,
                 patchQuery,
                 deleteQuery,
-                create: async (next, resources, options, context) => {
+                create: async (next, resources, options: typeof createOptions.T, context) => {
                     const result = await next(resources, withoutRelationOption(options, relationOption), context)
                     if (!isRelationRequested(options, relationOption)) {
                         return result
@@ -271,14 +271,14 @@ export abstract class PipelineAbstract<
                     }
                     return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
-                patch: async (next, query, values, context) => {
+                patch: async (next, query: typeof patchQuery.T, values, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), values, context)
                     if (!isRelationRequested(query, relationOption)) {
                         return result
                     }
                     return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
-                delete: async (next, query, context) => {
+                delete: async (next, query: typeof deleteQuery.T, context) => {
                     const result = await next(withoutRelationOption(query, relationOption), context)
                     if (!isRelationRequested(query, relationOption)) {
                         return result
