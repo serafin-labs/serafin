@@ -64,3 +64,5 @@ typings/
 /.DS_Store
 !/.gitkeep
 docker-compose.my.yml
+/.scratch
+
