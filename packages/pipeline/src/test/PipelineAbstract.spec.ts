@@ -175,15 +175,19 @@ class RecordingPipeline extends PipelineAbstract<any, any, any, any, any, any, a
 
 const relationContextSchema = SchemaBuilder.emptySchema().addBoolean("_private", {}, false)
 
-function relatedPipelines() {
-    const companySchema = SchemaBuilder.emptySchema().addString("id").addString("name")
-    const employeeSchema = SchemaBuilder.emptySchema().addString("id").addString("companyId")
-    const companies = new RecordingPipeline({ ...defaultSchemaBuilders(companySchema), context: relationContextSchema }, [
-        { id: "c1", name: "Acme" },
-    ])
-    const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
-        { id: "e1", companyId: "c1" },
-    ])
+const companySchema = SchemaBuilder.emptySchema().addString("id").addString("name")
+const employeeSchema = SchemaBuilder.emptySchema().addString("id").addString("companyId")
+
+function relatedPipelines(
+    employeeStore: any[] = [{ id: "e1", companyId: "c1" }],
+    companyStore: any[] = [{ id: "c1", name: "Acme" }],
+    companySchemaBuilders?: any,
+) {
+    const companies = new RecordingPipeline(
+        { ...(companySchemaBuilders ?? defaultSchemaBuilders(companySchema)), context: relationContextSchema },
+        companyStore,
+    )
+    const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, employeeStore)
     return { companies, employees: employees.addRelationWithOne("company", companies, { id: ":companyId" }) }
 }
 
@@ -349,6 +353,66 @@ describe("PipelineAbstract", function () {
         const forked = new Fork(base as any, "Fork", "a forked pipeline")
         await forked.read({}, { _private: true })
         expect(base.readContexts).to.eql([{ _private: true }])
+    })
+
+    it("should resolve a whole page of resources with a single read", async function () {
+        const { companies, employees } = relatedPipelines(
+            [
+                { id: "e1", companyId: "c1" },
+                { id: "e2", companyId: "c2" },
+                { id: "e3", companyId: "c1" },
+            ],
+            [
+                { id: "c1", name: "Acme" },
+                { id: "c2", name: "Globex" },
+            ],
+        )
+        const result = await employees.read({ withCompany: true })
+        expect(companies.readQueries).to.eql([{ id: ["c1", "c2"] }])
+        expect(result.data.map((employee: any) => employee.company.name)).to.eql(["Acme", "Globex", "Acme"])
+    })
+
+    it("should fall back to one read per distinct target when the target rejects arrays", async function () {
+        const noArrayQuery = { ...defaultSchemaBuilders(companySchema), readQuery: companySchema.toOptionals() }
+        const { companies, employees } = relatedPipelines(
+            [
+                { id: "e1", companyId: "c1" },
+                { id: "e2", companyId: "c2" },
+                { id: "e3", companyId: "c1" },
+            ],
+            [
+                { id: "c1", name: "Acme" },
+                { id: "c2", name: "Globex" },
+            ],
+            noArrayQuery,
+        )
+        const result = await employees.read({ withCompany: true })
+        // three employees, two distinct companies -> two reads, not three
+        expect(companies.readQueries).to.have.deep.members([{ id: "c1" }, { id: "c2" }])
+        expect(companies.readQueries.length).to.eql(2)
+        expect(result.data.map((employee: any) => employee.company.name)).to.eql(["Acme", "Globex", "Acme"])
+    })
+
+    it("should not write the relation into the resources it was given", async function () {
+        const store = [{ id: "e1", companyId: "c1" }]
+        const { employees } = relatedPipelines(store)
+        const result = await employees.read({ withCompany: true })
+        expect(result.data[0]).to.have.property("company")
+        expect(store[0]).to.not.have.property("company")
+    })
+
+    it("should give each resource its own array for a many relation", async function () {
+        const companies = new RecordingPipeline({ ...defaultSchemaBuilders(companySchema), context: relationContextSchema }, [
+            { id: "c1", name: "Acme" },
+        ])
+        const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
+            { id: "e1", companyId: "c1" },
+            { id: "e2", companyId: "c1" },
+        ]).addRelationWithMany("companies", companies, { id: ":companyId" })
+        const result: any = await employees.read({ withCompanies: true })
+        expect(companies.readQueries.length).to.eql(1)
+        expect(result.data[0].companies).to.eql([{ id: "c1", name: "Acme" }])
+        expect(result.data[0].companies).to.not.equal(result.data[1].companies)
     })
 
     it("should fail for templated relations referring to a non existing property", function () {
