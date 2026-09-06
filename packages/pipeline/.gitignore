@@ -65,4 +65,6 @@ typings/
 !/.gitkeep
 docker-compose.my.yml
 /.scratch
+/.coverage
+/.coverage-build
 

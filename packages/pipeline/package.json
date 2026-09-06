@@ -49,18 +49,17 @@
         "lodash": "^4.17.21"
     },
     "devDependencies": {
-        "@istanbuljs/nyc-config-typescript": "^1.0.2",
         "@types/chai": "^4.3.16",
         "@types/chai-as-promised": "^7.1.8",
         "@types/lodash": "^4.17.1",
         "@types/mocha": "^10.0.6",
         "@types/node": "^24.13.3",
         "@types/verror": "^1.10.10",
+        "c8": "^12.0.0",
         "chai": "^5.1.1",
         "chai-as-promised": "^7.1.2",
         "concurrently": "^8.2.2",
         "mocha": "^10.4.0",
-        "nyc": "^15.1.0",
         "ts-lint": "^4.5.1",
         "tslint-config-airbnb": "^5.11.2",
         "tsx": "^4.10.2",
@@ -79,6 +78,7 @@
         "fix": "echo '{ \"type\": \"module\" }' > lib/esm/package.json && echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json",
         "check:exports": "node scripts/check-build-exports.mjs",
         "typecheck": "tsc --project tsconfig.typecheck.json",
-        "prepublishOnly": "npm install && rm -rf ./lib && npm run build && npm run typecheck && npm test && npm run check:exports"
+        "coverage": "rm -rf .coverage-build && tsc --project tsconfig.coverage.json && echo '{ \"type\": \"module\" }' > .coverage-build/package.json && c8 mocha --recursive '.coverage-build/test/**/*.spec.js'",
+        "prepublishOnly": "npm install && rm -rf ./lib && npm run build && npm run typecheck && npm test && npm run coverage && npm run check:exports"
     }
 }

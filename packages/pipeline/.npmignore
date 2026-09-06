@@ -6,7 +6,10 @@
 /.npmignore
 /.history
 /.nyc_output
-/.nycrc
+/.c8rc.json
+/.coverage
+/.coverage-build
+/.scratch
 /.prettierrc.json
 /node_modules
 /npm-debug.log
