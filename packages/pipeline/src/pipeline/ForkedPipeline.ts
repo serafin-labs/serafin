@@ -33,18 +33,18 @@ export abstract class ForkedPipeline<
         super({ ...basePipeline.schemaBuilders, model: newModelSchema }, { validationEnabled })
     }
 
-    protected async _create(resources: CV[], options: CO): Promise<ResultsInterface<M, CM>> {
-        return this.basePipeline.create(resources, options)
+    protected async _create(resources: CV[], options: CO, context: CTX): Promise<ResultsInterface<M, CM>> {
+        return this.basePipeline.create(resources, options, context)
     }
-    protected async _read(query: RQ): Promise<ResultsInterface<M, RM>> {
-        return this.basePipeline.read(query)
-    }
-
-    protected async _patch(query: PQ, values: PV): Promise<ResultsInterface<M, PM>> {
-        return this.basePipeline.patch(query, values)
+    protected async _read(query: RQ, context: CTX): Promise<ResultsInterface<M, RM>> {
+        return this.basePipeline.read(query, context)
     }
 
-    protected async _delete(query: DQ): Promise<ResultsInterface<M, DM>> {
-        return this.basePipeline.delete(query)
+    protected async _patch(query: PQ, values: PV, context: CTX): Promise<ResultsInterface<M, PM>> {
+        return this.basePipeline.patch(query, values, context)
+    }
+
+    protected async _delete(query: DQ, context: CTX): Promise<ResultsInterface<M, DM>> {
+        return this.basePipeline.delete(query, context)
     }
 }

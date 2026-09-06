@@ -24,6 +24,19 @@ export interface PipelineAbstractOptions {
 }
 export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validationEnabled: true }
 
+/**
+ * A relation installs a `with<Name>` option on the actions it hooks into. It gates the resolution,
+ * and it has to be removed before the query travels further down the chain: the pipes and the
+ * concrete implementation below this one were built without it in their schemas.
+ */
+function isRelationRequested(params: any, relationOption: string) {
+    return !!params?.[relationOption]
+}
+
+function withoutRelationOption(params: any, relationOption: string) {
+    return params && relationOption in params ? _.omit(params, [relationOption]) : params
+}
+
 export abstract class PipelineAbstract<
     M extends IdentityInterface = IdentityInterface,
     CV = any,
@@ -170,20 +183,32 @@ export abstract class PipelineAbstract<
                 patchQuery,
                 deleteQuery,
                 create: async (next, resources, options, context) => {
-                    const result = await next(resources, options, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(resources, withoutRelationOption(options, relationOption), context)
+                    if (!isRelationRequested(options, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
-                    const result = await next(query, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 patch: async (next, query, values, context) => {
-                    const result = await next(query, values, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), values, context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 delete: async (next, query, context) => {
-                    const result = await next(query, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
             }
         })
@@ -233,20 +258,32 @@ export abstract class PipelineAbstract<
                 patchQuery,
                 deleteQuery,
                 create: async (next, resources, options, context) => {
-                    const result = await next(resources, options, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(resources, withoutRelationOption(options, relationOption), context)
+                    if (!isRelationRequested(options, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 read: async (next, query: typeof readQuery.T, context) => {
-                    const result = await next(query, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 patch: async (next, query, values, context) => {
-                    const result = await next(query, values, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), values, context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
                 delete: async (next, query, context) => {
-                    const result = await next(query, context)
-                    return { ...result, data: await relation.assignToResources(result.data) }
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    if (!isRelationRequested(query, relationOption)) {
+                        return result
+                    }
+                    return { ...result, data: await relation.assignToResources(result.data, undefined, context) }
                 },
             }
         })

@@ -4,11 +4,13 @@ export class QueryTemplate {
     static hydrate(query: object, resource: any): object {
         return _.mapValues(query, (o: string, key) => {
             if (QueryTemplate.isTemplated(o)) {
-                if (!resource[o.substring(1)]) {
-                    throw new Error(`Resource field ${o.substring(1)} not found`)
-                } else {
-                    return resource[o.substring(1)]
+                const field = o.substring(1)
+                // Only an absent value is an error. `false`, `0`, `""` and `null` are legitimate
+                // keys for a relation and must be forwarded as-is.
+                if (resource[field] === undefined) {
+                    throw new Error(`Resource field ${field} not found`)
                 }
+                return resource[field]
             } else {
                 return QueryTemplate.escape(o)
             }

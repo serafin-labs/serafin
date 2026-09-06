@@ -9,6 +9,7 @@ import { PipeCreateNext, PipeDeleteNext, PipePatchNext, PipePropsInterface, Pipe
 import { Relation } from "../Relation.js"
 import { ResultsInterface } from "../ResultsInterface.js"
 import { ReadOnlyPipelineInterface } from "../PipelineInterface.js"
+import { ForkedPipeline } from "../pipeline/ForkedPipeline.js"
 
 chai.use(chaiAsPromised)
 
@@ -136,6 +137,46 @@ function TestPipe<
     }
 }
 
+/**
+ * Records what actually reaches the concrete implementation, and filters on array-valued
+ * query keys so relations can be resolved against it.
+ */
+class RecordingPipeline extends PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any> {
+    public readQueries: any[] = []
+    public readContexts: any[] = []
+    constructor(
+        schemaBuilders: any,
+        public store: any[] = [],
+    ) {
+        super(schemaBuilders)
+    }
+    protected override async _read(query: any, context: any) {
+        this.readQueries.push(query)
+        this.readContexts.push(context)
+        const keys = Object.keys(query)
+        return {
+            data: this.store.filter((resource) =>
+                keys.every((key) => (Array.isArray(query[key]) ? query[key].includes(resource[key]) : resource[key] === query[key])),
+            ),
+            meta: {},
+        }
+    }
+}
+
+const relationContextSchema = SchemaBuilder.emptySchema().addBoolean("_private", {}, false)
+
+function relatedPipelines() {
+    const companySchema = SchemaBuilder.emptySchema().addString("id").addString("name")
+    const employeeSchema = SchemaBuilder.emptySchema().addString("id").addString("companyId")
+    const companies = new RecordingPipeline({ ...defaultSchemaBuilders(companySchema), context: relationContextSchema }, [
+        { id: "c1", name: "Acme" },
+    ])
+    const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
+        { id: "e1", companyId: "c1" },
+    ])
+    return { companies, employees: employees.addRelationWithOne("company", companies, { id: ":companyId" }) }
+}
+
 describe("PipelineAbstract", function () {
     it("should be implemented by a concrete class", function () {
         let p = new TestPipeline(schemas, defaultResults)
@@ -234,6 +275,41 @@ describe("PipelineAbstract", function () {
         let p2 = new TestPipeline(schemas2, { readResult })
         let p1 = new TestPipeline(schemas, defaultResults).addRelationWithMany("p2", p2, { test: [{ hop: "la" }] })
         return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.eventually.deep.equal(readResult)
+    })
+
+    it("should not resolve a relation unless it is requested", async function () {
+        const { companies, employees } = relatedPipelines()
+        expect((await employees.read({})).data[0]).to.not.have.property("company")
+        expect((await employees.read({ withCompany: false })).data[0]).to.not.have.property("company")
+        expect(companies.readQueries).to.eql([])
+    })
+
+    it("should resolve a relation when it is requested", async function () {
+        const { companies, employees } = relatedPipelines()
+        const result = await employees.read({ withCompany: true })
+        expect(result.data[0].company).to.eql({ id: "c1", name: "Acme" })
+        expect(companies.readQueries).to.eql([{ id: "c1" }])
+    })
+
+    it("should strip the relation option before the query reaches the implementation", async function () {
+        const { employees } = relatedPipelines()
+        await employees.read({ withCompany: true })
+        await employees.read({ withCompany: false })
+        expect((employees as any).readQueries).to.eql([{}, {}])
+    })
+
+    it("should pass the context down to the related pipeline", async function () {
+        const { companies, employees } = relatedPipelines()
+        await employees.read({ withCompany: true }, { _private: true })
+        expect(companies.readContexts).to.eql([{ _private: true }])
+    })
+
+    it("should forward the context through a forked pipeline", async function () {
+        const base = new RecordingPipeline({ ...defaultSchemaBuilders(modelSchema), context: relationContextSchema }, [{ id: "1", method: "read" }])
+        class Fork extends ForkedPipeline<any, any, any, any, any, any, any, any, any, any, any, any> {}
+        const forked = new Fork(base as any, "Fork", "a forked pipeline")
+        await forked.read({}, { _private: true })
+        expect(base.readContexts).to.eql([{ _private: true }])
     })
 
     it("should fail for templated relations referring to a non existing property", function () {

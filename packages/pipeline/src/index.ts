@@ -9,5 +9,8 @@ export * from "./QueryTemplate.js"
 export * from "./SchemaBuildersInterface.js"
 export * from "./error.js"
 
+// common pipes
+export * from "./pipe/SetQueryParameterDefaultValue.js"
+
 // common pipelines
 export * from "./pipeline/ForkedPipeline.js"
