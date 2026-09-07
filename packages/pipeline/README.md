@@ -1,402 +1,89 @@
-<p align="center"><img src="https://serafin-labs.github.io/images/logo-serafin-with-text-1080.png" width="300"/></p>
+<p align="center"><img src="./docs/public/logo.png" width="300"/></p>
 
-[**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) is a [**Typescript**](https://www.typescriptlang.org/) CRUD data access library with a functional approach.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@serafin/pipeline"><img src="https://img.shields.io/npm/v/@serafin/pipeline.svg" alt="npm version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/@serafin/pipeline.svg" alt="license"></a>
+</p>
 
-# Concepts
+Serafin Pipeline is a TypeScript CRUD data access library with a functional approach. A **pipeline**
+gives access to data through four actions — `create`, `read`, `patch`, `delete` — and **pipes** wrap
+behaviour around it: permissions, timestamps, soft deletes, caching, parameter translation.
 
-[**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) is a library that allow access to data through the **CRUD methods** (_create_, _read_, _patch_, _replace_ and _delete_) of a data **pipeline**.
+What makes a pipe more than middleware is that **it carries schema changes, not just behaviour**. A
+pipe that adds a query parameter changes the pipeline's JSON Schema and its TypeScript type together,
+so the interface of your data access layer is _derived_ from the pieces it is built out of rather
+than written down beside them.
 
-A **pipeline** is an element that performs operations over a data source through these 5 methods. Its behavior can be extended in a functional way, by adding **pipes**, elements that perform data processing or transformation over any of these 5 methods.
+## Installation
 
-The [**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) library is designed to take advantage of the [**Typescript**](https://www.typescriptlang.org/) language, thus providing compilation-time checks and auto-completion.
-
-## Methods
-
-**Serafin Pipeline** provides data access through 4 methods: **create**, **read**, **patch** and **delete**.
-
-### Entry parameters
-
-These methods take different entry parameters, according to their nature.
-
-They almost all accept **query** and **context** parameters. **query** (or **options**) represent model-related parameters, that filter the result set or alter the action behavior, while **context** represent **pipeline** related parameters that influence the behavior of any action.
-
-The parameters are:
-
--   **create**:
-    -   _values_: an array of resources to create
-    -   _options_: parameters affecting the create behavior
-    -   _context_: parameters affecting the pipeline behavior
--   **read**:
-    -   _query_: filtering parameters
-    -   _context_: parameters affecting the pipeline behavior
--   **patch**:
-    -   _query_: filtering parameters
-    -   _values_: the resources values to set
-    -   _context_: parameters affecting the pipeline behavior
--   **delete**:
-    -   _query_: filtering parameters
-    -   _context_: parameters affecting the pipeline behavior
-
-#### Undefined properties
-
-Every action drops properties whose value is `undefined` from its inputs, before validating them.
-`undefined` has no JSON representation, so it can only ever come from code, never from a transport —
-and left in place it means two things at once: the validator reads it as an absent property, while an
-implementation iterating `Object.keys` or testing `"field" in query` reads it as a present one.
-
-Queries, values, options and create resources are cleaned at every depth. Arrays keep their length,
-since removing an element would shift the ones after it, and anything that is not a plain object — a
-`Date`, a `RegExp`, a class instance — is left as it is. The **context** is cleaned one level only:
-it is shallow-copied rather than cloned so that what it carries stays the same object all the way
-down, and reaching into it would mean deleting keys from objects the caller still holds.
-
-For **patch**, this makes `undefined` mean *leave this property alone*, per
-[RFC 7396](https://tools.ietf.org/html/rfc7396). Clearing a property is `null`, which `patchValues`
-declares through `toNullable()`. Implementations that assign values onto a resource used to treat
-`{ name: undefined }` as erasing `name`; it now leaves it untouched.
-
-### Return value
-
-All methods return a **Results** object with
-
--   **meta**: an object containing metadata fields
--   **data**: an array containing the returned resources
-
-```
-{
-    data: [{
-            id: "1",
-            firstName: "Nico"
-            lastName: "Degardin"
-        }, {
-            id: "2",
-            firstName: "Seb"
-            lastName: "De Saint-Florent"
-        }],
-    meta: {
-        count: 2
-    }
-}
+```sh
+npm i @serafin/pipeline @serafin/schema-builder
 ```
 
-## Pipelines and Pipes
+## A quick example
 
-A **pipeline** is an object that handles these four methods, operates over a data source, and whose behavior and model can be extended by plugging **pipes** to it.
+```typescript
+import { SchemaBuilder } from "@serafin/schema-builder"
+import { MemoryPipeline } from "@serafin/pipeline"
 
-### Pipeline
-
-At instantiation, the **pipeline** constructor takes a model argument.
-
-The model is defined by passing a [**SchemaBuilder**](https://github.com/serafin-labs/schema-builder) object. Thanks to this library, the model can be defined by providing a [**JSON Schema**](http://json-schema.org/) representation object, or by building the schema using the [**SchemaBuilder**](https://github.com/serafin-labs/schema-builder) functional syntax.
-
-```Example
-let myPipeline = new MemoryPipeline(
-    SchemaBuilder.objectSchema({
-        id: SchemaBuilder.stringSchema({ description: "id" }),
-        firstName: SchemaBuilder.stringSchema({ description: "user first name" }),
-        lastName: SchemaBuilder.stringSchema({ description: "user last name" })
-    })
+const userSchema = SchemaBuilder.objectSchema(
+    { title: "User" },
+    {
+        id: SchemaBuilder.stringSchema(),
+        firstName: SchemaBuilder.stringSchema(),
+        lastName: SchemaBuilder.stringSchema(),
+        age: [SchemaBuilder.integerSchema(), undefined], // optional
+    },
 )
+
+const users = new MemoryPipeline(userSchema)
+
+// `id` is optional on create -- the pipeline hands one out
+await users.create([{ firstName: "Nico", lastName: "Degardin" }])
+
+// an array on a property means "any of these values"
+const result = await users.read({ lastName: ["Degardin"] })
+
+result.data // the users that matched
+result.meta // everything else: counts, relations, whatever a pipe added
 ```
 
-### Pipe
+Every schema an action uses — what `create` accepts, what `read` filters on, what `patch` writes — is
+derived from that one model, and available as a JSON Schema at runtime:
 
-A **pipe** is a generic element that can be plugged to a **pipeline** by using the **.pipe** method, to extend its behavior.
-
-A **pipe** can alter the **pipeline** model and do virtually anything as long as it returns the expected **result** structure (or an error): it can filter or transform data, add parameters to the query, perform checks, etc...
-
-```Example
-let userSchema = ...
-let myPipeline = new MemoryPipeline(userSchema)
-    .pipe(new PipeUpdateTime())
-    .pipe(new PipeMemcached())
-    .pipe(new PipeSomeSecurity())
+```typescript
+users.schemaBuilders.readQuery.schema // feed it to OpenAPI, to an MCP tool definition, to a form
 ```
 
-#### Capabilities
+Wrap behaviour around it with `.pipe()`, which returns a new pipeline:
 
-Nothing revalidates a `next` call. That is what lets a pipe hand something down without declaring it
-on its own schemas -- a pipe can turn a `minSize` query parameter into a `{ $gt: 4 }` condition the
-implementation below understands, while the public schema keeps saying `size` is a number. It also
-means the pipe and that implementation agree by convention rather than by type.
-
-A pipe can state the convention, and a pipeline can state what it honours:
-
-```Example
-const GreaterThan = (property, queryProperty) => (p) => ({
-    requires: ["$gt"],
-    readQuery: p.readQuery.addNumber(queryProperty, {}, false),
-    read: async (next, query, context) => { ... }
-});
-
-new MemoryPipeline(userSchema).pipe(GreaterThan("age", "minAge"));   // checked here
+```typescript
+const visibleUsers = users.pipe(Cache()).pipe(SoftDelete()).pipe(OnlyVisibleTo())
 ```
 
-`pipe()` refuses a pipe whose `requires` the pipeline does not declare, at the moment it is
-attached, rather than leaving the mismatch to surface as a plausible page of the wrong resources.
-A pipe that implements something itself declares it as `provides`, which answers for the pipes
-attached after it -- those are the ones above it in the chain.
+And link pipelines to each other with relations, resolved per request:
 
-The check runs only when the pipeline declared its own `capabilities`, so adding `requires` to a
-pipe never breaks a pipeline that has said nothing about what it can do: undeclared is not
-incapable. The names are free-form and shared by the two sides; `queryOperators` and
-`updateOperators` are the ones a pipeline built on this library's query matcher declares.
+```typescript
+const usersWithAddress = users.addRelationWithOne("address", addresses, { id: ":addressId" })
 
-Types cannot carry this. A pipe emitting `{ $gt: value }` is passing something that is not `RQ` but
-a widening of it with no name, so those pipes type `next` loosely and cast. `requires` is the same
-statement made where it can be checked.
-
-#### The type of what goes down
-
-`requires` says *which* operators travel down. `SourceQuery<RQ>` and `SourceValues<PV>` say what they
-look like, so a pipe that sends one does not have to cast its way past the type system:
-
-```Example
-read: async (next: PipeReadNext<User, ReadQuery, ...>, query, context) => {
-    const { minAge, ...rest } = query;
-    return next(minAge === undefined ? rest : { ...rest, age: { $gt: minAge } }, context);
-}
+await usersWithAddress.read({ withAddress: true })
 ```
 
-`PipeReadNext`, `PipePatchNext` and `PipeDeleteNext` accept `RQ | SourceQuery<RQ>`, which is what
-the runtime always accepted -- a plain `RQ` still passes, and so does a condition carrying an
-operator. Before, the type said `RQ` and only `RQ`, so every pipe that widened a query typed `next`
-loosely to get past it, which hid its other mistakes along with the intended one.
+## Documentation
 
-The widening is not a licence to pass anything. It keeps each property's own type, so
-`{ age: { $gt: "40" } }` is still an error, and it keeps rejecting a property the model does not
-declare -- `{ minAge: 4 }` reaching `next` is the mistake worth catching, since that is a pipe
-that was meant to translate its parameter and didn't. What it cannot check is a dotted path:
-`"address.city"` is accepted with an unknown value type, because the paths a model allows cannot
-be enumerated from the query type alone.
+📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/pipeline](https://serafin-labs.github.io/pipeline/).**
 
-Both types describe the vocabulary in `queryOperators`, `logicalQueryOperators` and
-`updateOperators`. Neither says whether the implementation below understands a given operator --
-that is what the previous section is for. `MemoryPipeline` is the worked example: its `_read`,
-`_patch` and `_delete` declare these types, which is how a source states that it accepts more than
-its schemas promise.
+It covers the four actions and the schemas they derive, writing and ordering pipes, the
+pipe/implementation contract (`requires`, `capabilities`, `SourceQuery`), relations, request-scoped
+caching, the in-memory pipeline with its mongodb-style query and update operators, writing a pipeline
+of your own, and the complete API reference.
 
-### Conventions
+## What's next?
 
-Inside **pipes** and **pipelines**, the **context** properties that begin by a `_` are considered as _private_: any remote API that rely on [**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) must trim them from the \*user-provided values\*. These **context** properties correspond to security parameters or other \*internal **options\*** that would be supplied internally by the transport.
+`pipeline` is a component of the **Serafin** framework, alongside
+[`schema-builder`](https://github.com/serafin-labs/schema-builder). Learn more at
+[github.com/serafin-labs/serafin](https://github.com/serafin-labs/serafin).
 
-### Data access
+## License
 
-A **pipeline**, wether it has been extended or not, can be called by using one of the _CRUD operations_ it owns.
-
-All _CRUD operations_ are _asynchronous_ (and return **Promises**). Also, all operations return an array of results.
-
-```Example
-let userSchema = ...
-let myPipeline = new MemoryPipeline(userSchema)
-    .pipe(new PipeUpdateTime())
-    .pipe(new PipeMemcached())
-    .pipe(new PipeSomeSecurity())
-    ;
-
-let user = await myPipeline.read({"id":"1"});
-console.log(user.data[0] ? `User ${user.data[0].firstName} ${user.data[0].lastName}` : "User with id '1' not found");
-```
-
-### Relations
-
-**Relations** between **pipelines** can be defined using the **pipeline .addRelationWithOne** and **.addRelationWithMany** methods.
-
-```Example
-let addressPipeline = new MemoryPipeline(addressSchema);
-let userPipeline = new MemoryPipeline(userSchema)
-    .addRelationWithOne("address", addressPipeline, { "id": ":addressId" });
-```
-
-**Relations** are one-direction links resolved at runtime.
-
-The arguments are the **relation name**, a pipeline, and a **query**. The query can be **templated**: a value beginning with `:` is replaced at runtime by the value of that field on the resource. A literal value starting with `:` can be escaped as `\:`.
-
-#### Requesting a relation
-
-Declaring a relation adds a `with<Name>` option to _read_, _create_, _patch_ and _delete_. Relations are **only** resolved when asked for:
-
-```Example
-await userPipeline.read({});                        // no address is fetched
-await userPipeline.read({ withAddress: true });     // address is fetched
-```
-
-The option also accepts a query for the related pipeline, which narrows the related read and can carry the target's own `with<Name>` options to nest a level deeper:
-
-```Example
-await userPipeline.read({ withAddress: { country: "FR", withCity: true } });
-```
-
-Nesting is bounded by `maximumRelationDepth` (10).
-
-#### Where the result goes
-
-Related resources are returned **normalized, in `meta.relations`** — not inlined into each resource:
-
-```
-{
-    data: [
-        { id: "1", addressId: "a1" },
-        { id: "2", addressId: "a1" }
-    ],
-    meta: {
-        relations: {
-            address: {
-                type: "one",
-                data:  { a1: { id: "a1", city: "Paris" } },
-                index: { "1": "a1", "2": "a1" }
-            }
-        }
-    }
-}
-```
-
-`data` holds each related resource **once**, keyed by its own id. `index` maps a holding resource's id to the related id — an array of ids for a _many_ relation. This keeps a shared target from being repeated per resource, lets cyclic graphs be represented at all, and makes the result straightforward to merge into a client-side cache.
-
-A whole page is resolved in a **single read** when the relation is keyed on one templated field that the target declares on its model and accepts as an array on its read query. Otherwise it falls back to one read per distinct target, still de-duplicated.
-
-To get the previous shape, with each related resource hanging off the resource that points at it, apply `inlineRelations`. It is a pure function over the result — no reads — so it can be used at the edge and skipped on hot paths:
-
-```Example
-import { inlineRelations } from "@serafin/pipeline";
-
-const users = inlineRelations(await userPipeline.read({ withAddress: true }));
-console.log(users.data[0].address.city);
-```
-
-#### Shared meta
-
-`meta` is declared by a dedicated `meta` schema builder shared by all four actions, so the meta an action returns is `META & CM | RM | PM | DM`. Anything cross-cutting — relations, timings, request identifiers — is declared once rather than four times. Relations are namespaced under the reserved `relations` key.
-
-### In-memory pipeline
-
-`MemoryPipeline` keeps its resources in a `Map`. It is the pipeline to prototype against, the one to
-write tests on, and a reasonable place for data whose loss when the process exits is acceptable.
-
-```Example
-import { MemoryPipeline } from "@serafin/pipeline";
-
-let userPipeline = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico" }] });
-
-await userPipeline.create([{ firstName: "Seb" }]);          // an id is generated when none is given
-await userPipeline.read({ firstName: ["Nico", "Seb"] });    // an array on a property means "any of"
-await userPipeline.read({ sort: { firstName: 1 }, limit: 10, withCount: true });
-```
-
-Its read query carries `skip`, `limit`, `sort` and `withCount`, and its read meta carries `count`,
-under the same names and with the same meaning a mongodb source gives them. Moving a prototype onto
-a database is meant to be a change of pipeline and nothing else.
-
-`snapshot()`, `restore()`, `clear()` and `size` are there for tests. `initialData` seeds the store,
-`generateId` replaces the random UUID with something easier to read, and `validationEnabled: false`
-turns off the check that a patched resource still satisfies the model.
-
-#### Query and update operators
-
-Queries accept the mongo operators `$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$in` `$nin` `$exists`
-`$regex` `$mod` `$size` `$all` `$elemMatch` `$type` `$not`, and `$and` `$or` `$nor` at the top level.
-Patch values accept `$set` `$unset` `$rename` `$inc` `$mul` `$min` `$max` `$push` `$addToSet` `$pull`
-`$pullAll` `$pop`, with `$each` on the two that add. Property paths can be dotted, and a path through
-an array applies to each of its elements.
-
-That vocabulary is what a pipe written against a mongodb source emits, so such a pipe works here
-unchanged. An operator outside the lists is an **error**, not a no-op: a query operator a source
-silently drops returns a plausible page of the wrong resources.
-
-Patch values are an update document when every key is an operator, and a
-[JSON merge patch](https://tools.ietf.org/html/rfc7396) otherwise -- `null` deletes, an absent
-property is left alone. Mixing the two in one patch is rejected, as it is in mongo.
-
-#### When a pipe forgets to translate
-
-A query property the model does not declare is an **error**, not an empty page. It is the signature
-of a pipe that is missing or attached in the wrong order: its public parameter reaches the
-implementation untranslated, matches no resource, and the request comes back looking like a
-legitimate empty result. Only the first segment of a dotted path names a model property, and the
-query `$elemMatch` carries is left alone -- it applies to the elements of an array, not to the model.
-
-`MemoryPipeline` also declares `memoryCapabilities`, so a pipe that needs an operator it does not
-implement is refused when it is attached.
-
-#### Where it differs from mongodb, on purpose
-
--   **An array on a property means "any of".** `{ id: ["1", "2"] }` matches either id, which is what
-    `transformPropertiesToArray` builds the read query for and what relation resolution sends. Mongo
-    reads the same query as equality with that exact array; ask for that with `{ $eq: [...] }`.
--   **Comparisons are same-type only.** `$gt` and friends answer no match across types rather than
-    inventing an order, so `{ age: { $gt: 5 } }` never matches an age someone stored as a string.
--   **`sort` orders by type first, then by value.** It is not BSON order. Sorting a property that
-    holds one type is well defined; a mixed one is grouped by type, stably.
--   **Multiple conditions on an array property may be satisfied by different elements**, as in mongo.
-    `$elemMatch` is how you require one element to satisfy all of them.
--   Not implemented at all: positional update operators (`$`, `$[]`), `$where`, aggregation,
-    collation, and indexes other than the one on `id`.
-
-#### What it does with your resources
-
-Resources are deep copied on the way in and on the way out, so a caller that mutates what it read
-cannot corrupt the store. `{ clone: false }` turns that off and shares them instead, which is sound
-only where everything holding a resource treats it as immutable.
-
-Each action mutates the store synchronously, which makes it atomic: an action either applies to
-every resource it matched or, if one of them fails validation, to none of them. A create checks the
-whole batch for id conflicts before writing any of it.
-
-A read that filters on `id` alone is served from the `Map` rather than by a scan -- the shape
-relation resolution uses for a whole page. Every other query is a full scan.
-
-### Caching
-
-Two pipes in the same sequence often end up reading the same resource from the same pipeline, with
-nothing modifying it in between. `Cache` makes that a single read.
-
-```Example
-let userPipeline = new MemoryPipeline(userSchema)
-    .pipe(Cache())
-    .pipe(new PipeSomeSecurity());
-
-let context = openCacheScope({ user: currentUser });
-await userPipeline.read({ id: "1" }, context);
-await userPipeline.read({ id: "1" }, context); // served from the scope, the source is not touched
-```
-
-Add `Cache()` as the **first** pipe. `pipe()` prepends, so the first pipe added is the last to run,
-which puts the cache immediately above the concrete implementation: it sees the query after defaults
-have been applied and after relation options have been stripped, and every pipe above it — checking
-permissions, stamping meta, writing an audit trail — still runs on a cache hit.
-
-#### Scopes
-
-Nothing is cached until a scope is open, so adding `Cache()` to a pipeline changes nothing until a
-caller asks for it. Open one per request; leave it out of anything that must see fresh data.
-
-The scope lives on the context under a symbol, so it is invisible to context validation, and every
-pipeline and every nested relation read below it shares the one scope — a relation resolving through
-a target pipeline that carries `Cache()` is deduplicated against everything else in the request.
-Opening a scope on a context that already has one nests it, starting empty.
-
-A context that is *deep* copied gets a duplicate of the scope, and duplicates diverge — a write
-flushing one would leave the other serving what it just invalidated. Such a copy is ignored and
-treated as no scope, so `_.cloneDeep(context)` in a pipe costs the caching but is never unsound.
-
-#### Invalidation
-
-Any write going through a `Cache()` pipe empties the whole scope, not just that pipeline's entries.
-Which cached queries a written resource would have matched cannot be known here — read queries mean
-whatever the concrete implementation makes them mean — so the only sound answer is to keep nothing.
-A write that throws empties the scope too, since it may still have changed something.
-`flushCacheScope(context)` does the same by hand, for data changed some other way.
-
-#### What it does not do
-
-Only structurally identical queries share an entry: `{ id: "1" }` and `{ id: ["1"] }` are two reads.
-Property order does not matter, nesting does, and a property set to `undefined` is already gone by
-the time the cache sees the query.
-
-Results are shared. Each caller gets its own `data` array and `meta` object, so pushing to one or
-stamping the other stays local, but the resources inside are the same objects for everyone — deep
-copying a page on every hit routinely costs more than the read it saved. Treat resources coming out
-of a cached read as immutable.
-
-A scope grows until it is dropped. Request-scoped use bounds itself; a scope held open by a worker
-or a long-lived connection does not.
+[MIT](./LICENSE)

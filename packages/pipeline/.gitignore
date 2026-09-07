@@ -68,3 +68,7 @@ docker-compose.my.yml
 /.coverage
 /.coverage-build
 
+
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache

@@ -49,6 +49,7 @@
         "lodash": "^4.17.21"
     },
     "devDependencies": {
+        "@shikijs/vitepress-twoslash": "^4.4.3",
         "@types/chai": "^4.3.16",
         "@types/chai-as-promised": "^7.1.8",
         "@types/lodash": "^4.17.1",
@@ -63,7 +64,9 @@
         "ts-lint": "^4.5.1",
         "tslint-config-airbnb": "^5.11.2",
         "tsx": "^4.10.2",
-        "typescript": "^6.0.3"
+        "twoslash": "^0.3.9",
+        "typescript": "^6.0.3",
+        "vitepress": "^1.6.4"
     },
     "scripts": {
         "test": "NODE_OPTIONS='--import tsx --no-warnings' mocha --recursive ./src/test/**/*.spec.ts",
@@ -79,6 +82,11 @@
         "check:exports": "node scripts/check-build-exports.mjs",
         "typecheck": "tsc --project tsconfig.typecheck.json",
         "coverage": "rm -rf .coverage-build && tsc --project tsconfig.coverage.json && echo '{ \"type\": \"module\" }' > .coverage-build/package.json && c8 mocha --recursive '.coverage-build/test/**/*.spec.js'",
+        "predocs:dev": "npm run build:esm",
+        "docs:dev": "vitepress dev docs",
+        "predocs:build": "npm run build:esm",
+        "docs:build": "vitepress build docs",
+        "docs:preview": "vitepress preview docs",
         "prepublishOnly": "npm install && rm -rf ./lib && npm run build && npm run typecheck && npm test && npm run coverage && npm run check:exports"
     }
 }
