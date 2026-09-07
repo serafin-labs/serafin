@@ -186,3 +186,58 @@ console.log(users.data[0].address.city);
 #### Shared meta
 
 `meta` is declared by a dedicated `meta` schema builder shared by all four actions, so the meta an action returns is `META & CM | RM | PM | DM`. Anything cross-cutting — relations, timings, request identifiers — is declared once rather than four times. Relations are namespaced under the reserved `relations` key.
+
+### Caching
+
+Two pipes in the same sequence often end up reading the same resource from the same pipeline, with
+nothing modifying it in between. `Cache` makes that a single read.
+
+```Example
+let userPipeline = new PipelineInMemory(userSchema)
+    .pipe(Cache())
+    .pipe(new PipeSomeSecurity());
+
+let context = openCacheScope({ user: currentUser });
+await userPipeline.read({ id: "1" }, context);
+await userPipeline.read({ id: "1" }, context); // served from the scope, the source is not touched
+```
+
+Add `Cache()` as the **first** pipe. `pipe()` prepends, so the first pipe added is the last to run,
+which puts the cache immediately above the concrete implementation: it sees the query after defaults
+have been applied and after relation options have been stripped, and every pipe above it — checking
+permissions, stamping meta, writing an audit trail — still runs on a cache hit.
+
+#### Scopes
+
+Nothing is cached until a scope is open, so adding `Cache()` to a pipeline changes nothing until a
+caller asks for it. Open one per request; leave it out of anything that must see fresh data.
+
+The scope lives on the context under a symbol, so it is invisible to context validation, and every
+pipeline and every nested relation read below it shares the one scope — a relation resolving through
+a target pipeline that carries `Cache()` is deduplicated against everything else in the request.
+Opening a scope on a context that already has one nests it, starting empty.
+
+A context that is *deep* copied gets a duplicate of the scope, and duplicates diverge — a write
+flushing one would leave the other serving what it just invalidated. Such a copy is ignored and
+treated as no scope, so `_.cloneDeep(context)` in a pipe costs the caching but is never unsound.
+
+#### Invalidation
+
+Any write going through a `Cache()` pipe empties the whole scope, not just that pipeline's entries.
+Which cached queries a written resource would have matched cannot be known here — read queries mean
+whatever the concrete implementation makes them mean — so the only sound answer is to keep nothing.
+A write that throws empties the scope too, since it may still have changed something.
+`flushCacheScope(context)` does the same by hand, for data changed some other way.
+
+#### What it does not do
+
+Only structurally identical queries share an entry: `{ id: "1" }` and `{ id: ["1"] }` are two reads.
+Property order does not matter, nesting does.
+
+Results are shared. Each caller gets its own `data` array and `meta` object, so pushing to one or
+stamping the other stays local, but the resources inside are the same objects for everyone — deep
+copying a page on every hit routinely costs more than the read it saved. Treat resources coming out
+of a cached read as immutable.
+
+A scope grows until it is dropped. Request-scoped use bounds itself; a scope held open by a worker
+or a long-lived connection does not.

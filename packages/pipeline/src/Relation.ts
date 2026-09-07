@@ -4,22 +4,7 @@ import { QueryTemplate } from "./QueryTemplate.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { ReadOnlyPipelineInterface } from "./PipelineInterface.js"
 import { RelationType } from "./RelationType.js"
-
-/**
- * A stable string for any query value, so equal queries collapse onto the same key.
- */
-function keyOf(value: any): string {
-    if (value === null || typeof value !== "object") {
-        return `${typeof value}:${String(value)}`
-    }
-    if (Array.isArray(value)) {
-        return `[${value.map(keyOf).join(",")}]`
-    }
-    return `{${Object.keys(value)
-        .sort()
-        .map((key) => `${JSON.stringify(key)}:${keyOf(value[key])}`)
-        .join(",")}}`
-}
+import { stableKey } from "./stableKey.js"
 
 /**
  * Whether a JSON schema admits an array, directly or through one of its combination keywords.
@@ -103,7 +88,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
         const groups = new Map<string, { query: any; resources: M[] }>()
         for (const resource of resources) {
             const resourceQuery = this.queryFor(resource, query)
-            const key = keyOf(resourceQuery)
+            const key = stableKey(resourceQuery)
             const group = groups.get(key)
             if (group) {
                 group.resources.push(resource)
@@ -122,7 +107,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
             // Index the single result set by the field the relation is keyed on.
             const related = new Map<string, R[]>()
             for (const entry of result.data) {
-                const key = keyOf((entry as any)[batchField])
+                const key = stableKey((entry as any)[batchField])
                 const bucket = related.get(key)
                 if (bucket) {
                     bucket.push(entry)
@@ -131,7 +116,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
                 }
             }
             for (const group of batches) {
-                this.record(meta, group.resources, related.get(keyOf(group.query[batchField])) ?? [])
+                this.record(meta, group.resources, related.get(stableKey(group.query[batchField])) ?? [])
             }
         } else {
             const nested = this.nestedContext(context)
