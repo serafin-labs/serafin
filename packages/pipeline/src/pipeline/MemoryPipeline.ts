@@ -4,6 +4,7 @@ import { conflictError, error, validationError } from "../error.js"
 import { IdentityInterface } from "../IdentityInterface.js"
 import { PipelineAbstract, PipelineAbstractOptions } from "../PipelineAbstract.js"
 import { ResultsInterface } from "../ResultsInterface.js"
+import { SourceQuery, SourceValues } from "../SourceQuery.js"
 import { defaultSchemaBuilders } from "../SchemaBuildersInterface.js"
 import { assertQueryProperties, compareForSort, logicalQueryOperators, matchQuery, queryOperators } from "./memory/matchQuery.js"
 import { applyPatch, updateOperators } from "./memory/applyPatch.js"
@@ -64,6 +65,8 @@ export function memorySchemaBuilders<M extends IdentityInterface>(model: SchemaB
 
 type MemorySchemaBuilders<M extends IdentityInterface> = ReturnType<typeof memorySchemaBuilders<M>>
 
+type TypeOf<M extends IdentityInterface, K extends keyof MemorySchemaBuilders<M>> = MemorySchemaBuilders<M>[K]["T"]
+
 export interface MemoryPipelineOptions<M extends IdentityInterface> extends PipelineAbstractOptions {
     /** Resources to start from. Copied, so the array given here is never written to. */
     initialData?: M[]
@@ -91,25 +94,30 @@ const randomId = () => (globalThis as unknown as { crypto: { randomUUID(): strin
  *
  * Queries and patch values accept the mongo operators listed in `queryOperators` and
  * `updateOperators`, so the pipes that talk to a mongo source in that vocabulary work here
- * unchanged. An operator outside those lists is an error rather than a silent no-op.
+ * unchanged. An operator outside those lists is an error rather than a silent no-op, and so is a
+ * query property the model does not declare.
+ *
+ * `_read`, `_patch` and `_delete` declare `SourceQuery` and `SourceValues` rather than the schema
+ * types, which is how an implementation states in the type that it accepts more than its schemas
+ * promise. @see SourceQuery
  *
  * Every action mutates the store synchronously, so each one is atomic: nothing interleaves with a
  * create that is still assigning ids or a patch that is still writing.
  */
 export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstract<
     M,
-    MemorySchemaBuilders<M>["createValues"]["T"],
-    MemorySchemaBuilders<M>["createOptions"]["T"],
-    MemorySchemaBuilders<M>["readQuery"]["T"],
-    MemorySchemaBuilders<M>["patchQuery"]["T"],
-    MemorySchemaBuilders<M>["patchValues"]["T"],
-    MemorySchemaBuilders<M>["deleteQuery"]["T"],
-    MemorySchemaBuilders<M>["createMeta"]["T"],
-    MemorySchemaBuilders<M>["readMeta"]["T"],
-    MemorySchemaBuilders<M>["patchMeta"]["T"],
-    MemorySchemaBuilders<M>["deleteMeta"]["T"],
-    MemorySchemaBuilders<M>["context"]["T"],
-    MemorySchemaBuilders<M>["meta"]["T"]
+    TypeOf<M, "createValues">,
+    TypeOf<M, "createOptions">,
+    TypeOf<M, "readQuery">,
+    TypeOf<M, "patchQuery">,
+    TypeOf<M, "patchValues">,
+    TypeOf<M, "deleteQuery">,
+    TypeOf<M, "createMeta">,
+    TypeOf<M, "readMeta">,
+    TypeOf<M, "patchMeta">,
+    TypeOf<M, "deleteMeta">,
+    TypeOf<M, "context">,
+    TypeOf<M, "meta">
 > {
     // A `Map` rather than an object: ids come from whoever writes to the store, and `__proto__` as
     // a key of a plain object is not a key at all.
@@ -241,10 +249,10 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
     }
 
     protected override async _create(
-        resources: MemorySchemaBuilders<M>["createValues"]["T"][],
-        options: MemorySchemaBuilders<M>["createOptions"]["T"],
-        context: MemorySchemaBuilders<M>["context"]["T"],
-    ): Promise<ResultsInterface<M, MemorySchemaBuilders<M>["createMeta"]["T"]>> {
+        resources: TypeOf<M, "createValues">[],
+        options: TypeOf<M, "createOptions">,
+        context: TypeOf<M, "context">,
+    ): Promise<ResultsInterface<M, TypeOf<M, "createMeta">>> {
         // Ids are assigned and conflicts are checked for the whole batch before anything is written,
         // so a create either happens completely or leaves the store as it was.
         // `createValues` is the model with an optional id, so a resource that passed the action's own
@@ -265,9 +273,9 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
     }
 
     protected override async _read(
-        query: MemorySchemaBuilders<M>["readQuery"]["T"],
-        context: MemorySchemaBuilders<M>["context"]["T"],
-    ): Promise<ResultsInterface<M, MemorySchemaBuilders<M>["readMeta"]["T"]>> {
+        query: SourceQuery<TypeOf<M, "readQuery">>,
+        context: TypeOf<M, "context">,
+    ): Promise<ResultsInterface<M, TypeOf<M, "readMeta">>> {
         const { skip, limit, withCount, sort } = query as any
         const matched = this.sort(this.select(query), sort)
         const meta: any = {}
@@ -282,10 +290,10 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
     }
 
     protected override async _patch(
-        query: MemorySchemaBuilders<M>["patchQuery"]["T"],
-        values: MemorySchemaBuilders<M>["patchValues"]["T"],
-        context: MemorySchemaBuilders<M>["context"]["T"],
-    ): Promise<ResultsInterface<M, MemorySchemaBuilders<M>["patchMeta"]["T"]>> {
+        query: SourceQuery<TypeOf<M, "patchQuery">>,
+        values: SourceValues<TypeOf<M, "patchValues">>,
+        context: TypeOf<M, "context">,
+    ): Promise<ResultsInterface<M, TypeOf<M, "patchMeta">>> {
         const matched = this.select(query)
         // Patch every match, then write: an update that fails validation on the third resource
         // leaves the first two alone.
@@ -304,9 +312,9 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
     }
 
     protected override async _delete(
-        query: MemorySchemaBuilders<M>["deleteQuery"]["T"],
-        context: MemorySchemaBuilders<M>["context"]["T"],
-    ): Promise<ResultsInterface<M, MemorySchemaBuilders<M>["deleteMeta"]["T"]>> {
+        query: SourceQuery<TypeOf<M, "deleteQuery">>,
+        context: TypeOf<M, "context">,
+    ): Promise<ResultsInterface<M, TypeOf<M, "deleteMeta">>> {
         const matched = this.select(query)
         for (const resource of matched) {
             this.store.delete(resource.id)

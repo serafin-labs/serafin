@@ -4,6 +4,7 @@ import { IdentityInterface } from "./IdentityInterface.js"
 import { SchemaBuildersInterface } from "./SchemaBuildersInterface.js"
 import { ResultsInterface } from "./ResultsInterface.js"
 import { PipelineInterface } from "./PipelineInterface.js"
+import { SourceQuery, SourceValues } from "./SourceQuery.js"
 
 export interface PipePropsInterface<
     M extends IdentityInterface = IdentityInterface,
@@ -27,19 +28,28 @@ export type PipeCreateNext<M extends IdentityInterface = IdentityInterface, CV =
     context: CTX,
 ) => Promise<ResultsInterface<M, META & CM>>
 
+/**
+ * Calling `next` revalidates nothing, so a pipe may hand down a query the schemas do not describe:
+ * a condition carrying an operator where the schema declares a value. `SourceQuery<RQ>` names that
+ * widening, so a pipe doing it says so in the type instead of casting `next` to something loose --
+ * which is what the pipes doing it had to resort to, and which hid their other mistakes too.
+ *
+ * The union keeps a plain `RQ` valid, and neither half says whether the implementation below
+ * understands a given operator: that is `requires` and `capabilities`. @see PipeCapabilitiesInterface
+ */
 export type PipeReadNext<M extends IdentityInterface = IdentityInterface, RQ = any, RM = any, CTX = any, META = any> = (
-    query: RQ,
+    query: RQ | SourceQuery<RQ>,
     context: CTX,
 ) => Promise<ResultsInterface<M, META & RM>>
 
 export type PipePatchNext<M extends IdentityInterface = IdentityInterface, PQ = any, PV = any, PM = any, CTX = any, META = any> = (
-    query: PQ,
-    values: PV,
+    query: PQ | SourceQuery<PQ>,
+    values: PV | SourceValues<PV>,
     context: CTX,
 ) => Promise<ResultsInterface<M, META & PM>>
 
 export type PipeDeleteNext<M extends IdentityInterface = IdentityInterface, DQ = any, DM = any, CTX = any, META = any> = (
-    query: DQ,
+    query: DQ | SourceQuery<DQ>,
     context: CTX,
 ) => Promise<ResultsInterface<M, META & DM>>
 

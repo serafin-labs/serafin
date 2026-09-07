@@ -9,6 +9,7 @@ export * from "./PipeInterface.js"
 export * from "./QueryTemplate.js"
 export * from "./stableKey.js"
 export * from "./SchemaBuildersInterface.js"
+export * from "./SourceQuery.js"
 export * from "./error.js"
 
 // common pipes

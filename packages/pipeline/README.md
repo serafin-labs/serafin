@@ -146,6 +146,36 @@ Types cannot carry this. A pipe emitting `{ $gt: value }` is passing something t
 a widening of it with no name, so those pipes type `next` loosely and cast. `requires` is the same
 statement made where it can be checked.
 
+#### The type of what goes down
+
+`requires` says *which* operators travel down. `SourceQuery<RQ>` and `SourceValues<PV>` say what they
+look like, so a pipe that sends one does not have to cast its way past the type system:
+
+```Example
+read: async (next: PipeReadNext<User, ReadQuery, ...>, query, context) => {
+    const { minAge, ...rest } = query;
+    return next(minAge === undefined ? rest : { ...rest, age: { $gt: minAge } }, context);
+}
+```
+
+`PipeReadNext`, `PipePatchNext` and `PipeDeleteNext` accept `RQ | SourceQuery<RQ>`, which is what
+the runtime always accepted -- a plain `RQ` still passes, and so does a condition carrying an
+operator. Before, the type said `RQ` and only `RQ`, so every pipe that widened a query typed `next`
+loosely to get past it, which hid its other mistakes along with the intended one.
+
+The widening is not a licence to pass anything. It keeps each property's own type, so
+`{ age: { $gt: "40" } }` is still an error, and it keeps rejecting a property the model does not
+declare -- `{ minAge: 4 }` reaching `next` is the mistake worth catching, since that is a pipe
+that was meant to translate its parameter and didn't. What it cannot check is a dotted path:
+`"address.city"` is accepted with an unknown value type, because the paths a model allows cannot
+be enumerated from the query type alone.
+
+Both types describe the vocabulary in `queryOperators`, `logicalQueryOperators` and
+`updateOperators`. Neither says whether the implementation below understands a given operator --
+that is what the previous section is for. `MemoryPipeline` is the worked example: its `_read`,
+`_patch` and `_delete` declare these types, which is how a source states that it accepts more than
+its schemas promise.
+
 ### Conventions
 
 Inside **pipes** and **pipelines**, the **context** properties that begin by a `_` are considered as _private_: any remote API that rely on [**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) must trim them from the \*user-provided values\*. These **context** properties correspond to security parameters or other \*internal **options\*** that would be supplied internally by the transport.
