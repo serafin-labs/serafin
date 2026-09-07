@@ -1,4 +1,4 @@
-import { SchemaBuilder } from "@serafin/schema-builder"
+import { DeepPartial, Nullable, SchemaBuilder } from "@serafin/schema-builder"
 import { IdentityInterface } from "./IdentityInterface.js"
 
 export interface SchemaBuildersInterface<
@@ -51,14 +51,25 @@ export const schemaBuildersInterfaceKeys = [
     "meta",
 ] as const
 
+/**
+ * The type of `patchValues`, named rather than inferred.
+ *
+ * `omitProperties().toNullable().toDeepOptionals()` infers a stack of homomorphic mapped types that
+ * TypeScript cannot emit into a `.d.ts`: the declaration it writes references a type parameter of an
+ * `infer` it did not carry over, so the published declarations do not compile for consumers. Naming
+ * the result keeps the emit to this alias.
+ */
+export type DefaultPatchValues<M extends IdentityInterface> = DeepPartial<Nullable<Omit<M, "id">>>
+
 export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBuilder: SchemaBuilder<M>) {
+    const patchValues: SchemaBuilder<DefaultPatchValues<M>> = modelSchemaBuilder.omitProperties(["id"]).toNullable().toDeepOptionals()
     return {
         model: modelSchemaBuilder,
         createValues: modelSchemaBuilder.setOptionalProperties(["id"]),
         createOptions: SchemaBuilder.emptySchema(),
         readQuery: modelSchemaBuilder.transformPropertiesToArray().toOptionals(),
         patchQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
-        patchValues: modelSchemaBuilder.omitProperties(["id"]).toNullable().toDeepOptionals(),
+        patchValues,
         deleteQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
         readMeta: SchemaBuilder.emptySchema(),
         createMeta: SchemaBuilder.emptySchema(),
