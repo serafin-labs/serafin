@@ -90,7 +90,7 @@ At instantiation, the **pipeline** constructor takes a model argument.
 The model is defined by passing a [**SchemaBuilder**](https://github.com/serafin-labs/schema-builder) object. Thanks to this library, the model can be defined by providing a [**JSON Schema**](http://json-schema.org/) representation object, or by building the schema using the [**SchemaBuilder**](https://github.com/serafin-labs/schema-builder) functional syntax.
 
 ```Example
-let myPipeline = new PipelineInMemory(
+let myPipeline = new MemoryPipeline(
     SchemaBuilder.objectSchema({
         id: SchemaBuilder.stringSchema({ description: "id" }),
         firstName: SchemaBuilder.stringSchema({ description: "user first name" }),
@@ -107,7 +107,7 @@ A **pipe** can alter the **pipeline** model and do virtually anything as long as
 
 ```Example
 let userSchema = ...
-let myPipeline = new PipelineInMemory(userSchema)
+let myPipeline = new MemoryPipeline(userSchema)
     .pipe(new PipeUpdateTime())
     .pipe(new PipeMemcached())
     .pipe(new PipeSomeSecurity())
@@ -125,7 +125,7 @@ All _CRUD operations_ are _asynchronous_ (and return **Promises**). Also, all op
 
 ```Example
 let userSchema = ...
-let myPipeline = new PipelineInMemory(userSchema)
+let myPipeline = new MemoryPipeline(userSchema)
     .pipe(new PipeUpdateTime())
     .pipe(new PipeMemcached())
     .pipe(new PipeSomeSecurity())
@@ -140,8 +140,8 @@ console.log(user.data[0] ? `User ${user.data[0].firstName} ${user.data[0].lastNa
 **Relations** between **pipelines** can be defined using the **pipeline .addRelationWithOne** and **.addRelationWithMany** methods.
 
 ```Example
-let addressPipeline = new PipelineInMemory(addressSchema);
-let userPipeline = new PipelineInMemory(userSchema)
+let addressPipeline = new MemoryPipeline(addressSchema);
+let userPipeline = new MemoryPipeline(userSchema)
     .addRelationWithOne("address", addressPipeline, { "id": ":addressId" });
 ```
 
@@ -205,13 +205,79 @@ console.log(users.data[0].address.city);
 
 `meta` is declared by a dedicated `meta` schema builder shared by all four actions, so the meta an action returns is `META & CM | RM | PM | DM`. Anything cross-cutting — relations, timings, request identifiers — is declared once rather than four times. Relations are namespaced under the reserved `relations` key.
 
+### In-memory pipeline
+
+`MemoryPipeline` keeps its resources in a `Map`. It is the pipeline to prototype against, the one to
+write tests on, and a reasonable place for data whose loss when the process exits is acceptable.
+
+```Example
+import { MemoryPipeline } from "@serafin/pipeline";
+
+let userPipeline = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico" }] });
+
+await userPipeline.create([{ firstName: "Seb" }]);          // an id is generated when none is given
+await userPipeline.read({ firstName: ["Nico", "Seb"] });    // an array on a property means "any of"
+await userPipeline.read({ sort: { firstName: 1 }, limit: 10, withCount: true });
+```
+
+Its read query carries `skip`, `limit`, `sort` and `withCount`, and its read meta carries `count`,
+under the same names and with the same meaning a mongodb source gives them. Moving a prototype onto
+a database is meant to be a change of pipeline and nothing else.
+
+`snapshot()`, `restore()`, `clear()` and `size` are there for tests. `initialData` seeds the store,
+`generateId` replaces the random UUID with something easier to read, and `validationEnabled: false`
+turns off the check that a patched resource still satisfies the model.
+
+#### Query and update operators
+
+Queries accept the mongo operators `$eq` `$ne` `$gt` `$gte` `$lt` `$lte` `$in` `$nin` `$exists`
+`$regex` `$mod` `$size` `$all` `$elemMatch` `$type` `$not`, and `$and` `$or` `$nor` at the top level.
+Patch values accept `$set` `$unset` `$rename` `$inc` `$mul` `$min` `$max` `$push` `$addToSet` `$pull`
+`$pullAll` `$pop`, with `$each` on the two that add. Property paths can be dotted, and a path through
+an array applies to each of its elements.
+
+That vocabulary is what a pipe written against a mongodb source emits, so such a pipe works here
+unchanged. An operator outside the lists is an **error**, not a no-op: a query operator a source
+silently drops returns a plausible page of the wrong resources.
+
+Patch values are an update document when every key is an operator, and a
+[JSON merge patch](https://tools.ietf.org/html/rfc7396) otherwise -- `null` deletes, an absent
+property is left alone. Mixing the two in one patch is rejected, as it is in mongo.
+
+#### Where it differs from mongodb, on purpose
+
+-   **An array on a property means "any of".** `{ id: ["1", "2"] }` matches either id, which is what
+    `transformPropertiesToArray` builds the read query for and what relation resolution sends. Mongo
+    reads the same query as equality with that exact array; ask for that with `{ $eq: [...] }`.
+-   **Comparisons are same-type only.** `$gt` and friends answer no match across types rather than
+    inventing an order, so `{ age: { $gt: 5 } }` never matches an age someone stored as a string.
+-   **`sort` orders by type first, then by value.** It is not BSON order. Sorting a property that
+    holds one type is well defined; a mixed one is grouped by type, stably.
+-   **Multiple conditions on an array property may be satisfied by different elements**, as in mongo.
+    `$elemMatch` is how you require one element to satisfy all of them.
+-   Not implemented at all: positional update operators (`$`, `$[]`), `$where`, aggregation,
+    collation, and indexes other than the one on `id`.
+
+#### What it does with your resources
+
+Resources are deep copied on the way in and on the way out, so a caller that mutates what it read
+cannot corrupt the store. `{ clone: false }` turns that off and shares them instead, which is sound
+only where everything holding a resource treats it as immutable.
+
+Each action mutates the store synchronously, which makes it atomic: an action either applies to
+every resource it matched or, if one of them fails validation, to none of them. A create checks the
+whole batch for id conflicts before writing any of it.
+
+A read that filters on `id` alone is served from the `Map` rather than by a scan -- the shape
+relation resolution uses for a whole page. Every other query is a full scan.
+
 ### Caching
 
 Two pipes in the same sequence often end up reading the same resource from the same pipeline, with
 nothing modifying it in between. `Cache` makes that a single read.
 
 ```Example
-let userPipeline = new PipelineInMemory(userSchema)
+let userPipeline = new MemoryPipeline(userSchema)
     .pipe(Cache())
     .pipe(new PipeSomeSecurity());
 

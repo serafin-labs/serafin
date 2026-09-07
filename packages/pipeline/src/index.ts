@@ -17,3 +17,7 @@ export * from "./pipe/SetQueryParameterDefaultValue.js"
 
 // common pipelines
 export * from "./pipeline/ForkedPipeline.js"
+export * from "./pipeline/MemoryPipeline.js"
+export * from "./pipeline/memory/matchQuery.js"
+export * from "./pipeline/memory/applyPatch.js"
+export * from "./pipeline/memory/path.js"
