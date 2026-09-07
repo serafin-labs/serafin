@@ -51,6 +51,50 @@ function withoutRelationOption(params: any, relationOption: string) {
     return params && relationOption in params ? _.omit(params, [relationOption]) : params
 }
 
+/**
+ * Remove properties whose value is `undefined`, in place.
+ *
+ * `undefined` has no JSON representation, so it can never reach a pipeline from a transport, only
+ * from code. Left in place it means two things at once: ajv reads it as an absent property, while an
+ * implementation iterating `Object.keys` or testing `"field" in query` reads it as a present one.
+ * Dropping it at the boundary leaves a single meaning, and makes an in-process call look like one
+ * that arrived as JSON.
+ *
+ * Only plain objects and arrays are walked, so a `Date`, a `RegExp` or a class instance a caller
+ * passes through is left as it is. Array elements keep their position: dropping one would shift
+ * every index after it.
+ */
+function stripUndefined<T>(value: T): T {
+    if (Array.isArray(value)) {
+        value.forEach((entry) => stripUndefined(entry))
+    } else if (_.isPlainObject(value)) {
+        for (const key of Object.keys(value as any)) {
+            if ((value as any)[key] === undefined) {
+                delete (value as any)[key]
+            } else {
+                stripUndefined((value as any)[key])
+            }
+        }
+    }
+    return value
+}
+
+/**
+ * The same, but only the object's own properties.
+ *
+ * Used for the context, which is shallow-copied rather than cloned so that what it carries -- a
+ * transaction, a logger, a cache scope -- stays the same object all the way down. Recursing here
+ * would delete keys from objects the caller still holds.
+ */
+function stripOwnUndefined<T>(value: T): T {
+    for (const key of Object.keys(value as any)) {
+        if ((value as any)[key] === undefined) {
+            delete (value as any)[key]
+        }
+    }
+    return value
+}
+
 export abstract class PipelineAbstract<
     M extends IdentityInterface = IdentityInterface,
     CV = any,
@@ -351,9 +395,9 @@ export abstract class PipelineAbstract<
      * @param context Context object
      */
     async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, META & CM>> {
-        resources = _.cloneDeep(resources)
-        options = _.cloneDeep(options ?? ({} as CO))
-        context = { ...(context ?? ({} as CTX)) }
+        resources = stripUndefined(_.cloneDeep(resources))
+        options = stripUndefined(_.cloneDeep(options ?? ({} as CO)))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
 
         this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources, true)
         this.handleValidationOfData("create", "options", this.schemaBuilders.createOptions, options)
@@ -385,8 +429,8 @@ export abstract class PipelineAbstract<
      * @param context Context object
      */
     async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, META & RM>> {
-        query = _.cloneDeep(query)
-        context = { ...(context ?? ({} as CTX)) }
+        query = stripUndefined(_.cloneDeep(query))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
 
         this.handleValidationOfData("read", "query", this.schemaBuilders.readQuery, query)
         this.handleValidationOfData("read", "context", this.schemaBuilders.context, context)
@@ -420,9 +464,9 @@ export abstract class PipelineAbstract<
      * @param context Context object
      */
     async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, META & PM>> {
-        query = _.cloneDeep(query)
-        values = _.cloneDeep(values)
-        context = { ...(context ?? ({} as CTX)) }
+        query = stripUndefined(_.cloneDeep(query))
+        values = stripUndefined(_.cloneDeep(values))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
 
         this.handleValidationOfData("patch", "query", this.schemaBuilders.patchQuery, query)
         this.handleValidationOfData("patch", "values", this.schemaBuilders.patchValues, values)
@@ -453,8 +497,8 @@ export abstract class PipelineAbstract<
      * @param context Context object
      */
     async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, META & DM>> {
-        query = _.cloneDeep(query)
-        context = { ...(context ?? ({} as CTX)) }
+        query = stripUndefined(_.cloneDeep(query))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
 
         this.handleValidationOfData("delete", "query", this.schemaBuilders.deleteQuery, query)
         this.handleValidationOfData("delete", "context", this.schemaBuilders.context, context)

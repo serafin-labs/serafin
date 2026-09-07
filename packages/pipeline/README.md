@@ -37,6 +37,24 @@ The parameters are:
     -   _query_: filtering parameters
     -   _context_: parameters affecting the pipeline behavior
 
+#### Undefined properties
+
+Every action drops properties whose value is `undefined` from its inputs, before validating them.
+`undefined` has no JSON representation, so it can only ever come from code, never from a transport —
+and left in place it means two things at once: the validator reads it as an absent property, while an
+implementation iterating `Object.keys` or testing `"field" in query` reads it as a present one.
+
+Queries, values, options and create resources are cleaned at every depth. Arrays keep their length,
+since removing an element would shift the ones after it, and anything that is not a plain object — a
+`Date`, a `RegExp`, a class instance — is left as it is. The **context** is cleaned one level only:
+it is shallow-copied rather than cloned so that what it carries stays the same object all the way
+down, and reaching into it would mean deleting keys from objects the caller still holds.
+
+For **patch**, this makes `undefined` mean *leave this property alone*, per
+[RFC 7396](https://tools.ietf.org/html/rfc7396). Clearing a property is `null`, which `patchValues`
+declares through `toNullable()`. Implementations that assign values onto a resource used to treat
+`{ name: undefined }` as erasing `name`; it now leaves it untouched.
+
 ### Return value
 
 All methods return a **Results** object with
@@ -232,7 +250,8 @@ A write that throws empties the scope too, since it may still have changed somet
 #### What it does not do
 
 Only structurally identical queries share an entry: `{ id: "1" }` and `{ id: ["1"] }` are two reads.
-Property order does not matter, nesting does.
+Property order does not matter, nesting does, and a property set to `undefined` is already gone by
+the time the cache sees the query.
 
 Results are shared. Each caller gets its own `data` array and `meta` object, so pushing to one or
 stamping the other stays local, but the resources inside are the same objects for everyone — deep
