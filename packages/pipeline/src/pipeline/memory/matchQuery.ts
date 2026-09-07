@@ -272,3 +272,39 @@ export function matchQuery(query: any, resource: any): boolean {
 export function matchValue(condition: any, value: any): boolean {
     return matchCondition(condition, [value])
 }
+
+/**
+ * Refuse a query that filters on something the model does not declare.
+ *
+ * The failure this catches is a pipe that should have translated a query property and didn't --
+ * a missing pipe, or one attached in the wrong order -- leaving a public parameter like `minSize`
+ * to reach the implementation as a filter on a property no resource has. Matching would answer no
+ * for every resource, so the request comes back as an empty page that looks like a legitimate one.
+ *
+ * Walked once per action rather than per resource, so an empty store rejects a bad query too. Field
+ * conditions are not descended into: the query `$elemMatch` carries applies to the elements of an
+ * array, whose properties are not the model's.
+ */
+export function assertQueryProperties(query: any, isKnown: (property: string) => boolean, describe: (property: string) => string): void {
+    if (!_.isPlainObject(query)) {
+        return
+    }
+    for (const key of Object.keys(query)) {
+        if (key === "$and" || key === "$or" || key === "$nor") {
+            const clauses = query[key]
+            if (Array.isArray(clauses)) {
+                clauses.forEach((clause) => assertQueryProperties(clause, isKnown, describe))
+            }
+            continue
+        }
+        if (key.startsWith("$")) {
+            // A stray operator at the top level is `matchQuery`'s to reject, with a better message.
+            continue
+        }
+        // Only the first segment names a model property; the rest is inside whatever it holds.
+        const property = parsePath(key)[0]
+        if (!isKnown(property)) {
+            throw validationError(describe(property))
+        }
+    }
+}

@@ -529,3 +529,65 @@ describe("PipelineAbstract", function () {
         return expect(p1.relations.p2.fetch({ id: "1", method: "read" })).to.be.rejected
     })
 })
+
+describe("pipe capabilities", function () {
+    class Source extends PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any> {
+        constructor(capabilities?: readonly string[]) {
+            super(schemas as any, capabilities ? { capabilities } : {})
+        }
+        protected override async _read() {
+            return readResult as any
+        }
+    }
+
+    const passThrough = { read: async (next: any, query: any, context: any) => next(query, context) }
+    const needing = (requires: readonly string[], provides?: readonly string[]) => () => ({ requires, provides, ...passThrough })
+
+    it("should attach a pipe whose requirements the pipeline declares", async function () {
+        const p = new Source(["$gt", "$in"]).pipe(needing(["$gt"]) as any)
+        expect((await p.read({})).data).to.eql(readResult.data)
+        expect([...p.capabilities!]).to.eql(["$gt", "$in"])
+    })
+
+    it("should refuse a pipe that needs something the pipeline does not declare", function () {
+        expect(() => new Source(["$gt"]).pipe(needing(["$gt", "$push", "$pull"]) as any)).to.throw(/needs '\$push', '\$pull', which Source does not declare/)
+    })
+
+    it("should not check a pipeline that has declared nothing", function () {
+        const p = new Source()
+        expect(p.capabilities).to.eql(undefined)
+        expect(() => p.pipe(needing(["$anything"]) as any)).to.not.throw()
+    })
+
+    it("should name the pipe in the error, however it was written", function () {
+        function OperatorPipe() {
+            return { requires: ["$push"], ...passThrough }
+        }
+        class ClassPipe {
+            transform() {
+                return { requires: ["$push"], ...passThrough }
+            }
+        }
+        expect(() => new Source([]).pipe(OperatorPipe as any)).to.throw(/^OperatorPipe needs/)
+        expect(() => new Source([]).pipe(new ClassPipe() as any)).to.throw(/^ClassPipe needs/)
+        expect(() => new Source([]).pipe((() => ({ requires: ["$push"], ...passThrough })) as any)).to.throw(/^The pipe needs/)
+    })
+
+    it("should let a pipe answer for what it implements itself", function () {
+        const withSort = new Source(["$gt"]).pipe(needing([], ["sort"]) as any)
+        expect([...withSort.capabilities!]).to.eql(["$gt", "sort"])
+        // the pipe attached after it is the one above it in the chain, so it may rely on that
+        expect(() => withSort.pipe(needing(["sort"]) as any)).to.not.throw()
+        // and the pipeline it was attached to is left alone
+        expect([...new Source(["$gt"]).capabilities!]).to.eql(["$gt"])
+    })
+
+    it("should ignore what a pipe provides when the pipeline declared nothing", function () {
+        expect(new Source().pipe(needing([], ["sort"]) as any).capabilities).to.eql(undefined)
+    })
+
+    it("should ignore an empty requires or provides", function () {
+        const p = new Source(["$gt"]).pipe((() => ({ requires: [], provides: [], ...passThrough })) as any)
+        expect([...p.capabilities!]).to.eql(["$gt"])
+    })
+})

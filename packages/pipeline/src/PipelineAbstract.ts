@@ -3,7 +3,7 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error, validationError } from "./error.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
-import { Pipe, PipeActionsInterface } from "./PipeInterface.js"
+import { Pipe, PipeActionsInterface, PipeCapabilitiesInterface } from "./PipeInterface.js"
 import { Relation, RelationMeta } from "./Relation.js"
 import { ResultsInterface } from "./ResultsInterface.js"
 import {
@@ -21,6 +21,15 @@ import { RelationType } from "./RelationType.js"
 export interface PipelineAbstractOptions {
     validationEnabled?: boolean
     name?: string
+    /**
+     * What this pipeline's implementation understands of what a pipe hands down to it -- typically
+     * the query and update operators it interprets below the pipes.
+     *
+     * Leave it out and a pipe's `requires` is not checked: a pipeline that has not declared its
+     * capabilities is undeclared, not incapable. Declare it and attaching a pipe that needs
+     * something absent fails immediately, rather than at the first request that uses it.
+     */
+    capabilities?: readonly string[]
 }
 export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validationEnabled: true }
 
@@ -113,6 +122,12 @@ export abstract class PipelineAbstract<
 > implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META> {
     public relations: R = {} as R
 
+    /**
+     * Names the implementation below the pipes understands, or `undefined` when this pipeline has
+     * not declared any. @see PipeCapabilitiesInterface
+     */
+    public capabilities?: ReadonlySet<string>
+
     private pipes: PipeActionsInterface[] = []
 
     private options: PipelineAbstractOptions
@@ -122,6 +137,7 @@ export abstract class PipelineAbstract<
         options?: PipelineAbstractOptions,
     ) {
         this.options = { ...defaultPipelineAbstractOptions, ...options }
+        this.capabilities = options?.capabilities ? new Set(options.capabilities) : undefined
     }
 
     public get modelSchemaBuilder() {
@@ -152,8 +168,14 @@ export abstract class PipelineAbstract<
                 : pipe.transform({
                       ...this.schemaBuilders,
                   })
+        this.checkCapabilities(pipe, result)
         // combine schema modifications with the current schemas
         const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2, R>
+        if (this.capabilities && result.provides?.length) {
+            // A pipe that implements something itself answers for it on behalf of the pipes attached
+            // after it, which are the only ones above it in the chain.
+            newPipeline.capabilities = new Set([...this.capabilities, ...result.provides])
+        }
         const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
         if (Object.keys(modifiedSchemas).length > 0) {
             newPipeline.schemaBuilders = {
@@ -176,6 +198,29 @@ export abstract class PipelineAbstract<
         }
 
         return newPipeline
+    }
+
+    /**
+     * Refuse a pipe that needs something the implementation below it has not declared.
+     *
+     * Only checked when this pipeline declared its capabilities, so adding a `requires` to a pipe
+     * never breaks a pipeline that has said nothing about what it can do.
+     */
+    private checkCapabilities(pipe: any, result: PipeCapabilitiesInterface) {
+        if (!this.capabilities || !result.requires?.length) {
+            return
+        }
+        const missing = result.requires.filter((capability) => !this.capabilities!.has(capability))
+        if (missing.length > 0) {
+            const pipeName = typeof pipe === "function" ? pipe.name : Object.getPrototypeOf(pipe).constructor.name
+            throw error(
+                "SerafinCapabilityError",
+                `${pipeName || "The pipe"} needs '${missing.join("', '")}', which ${
+                    Object.getPrototypeOf(this).constructor.name
+                } does not declare`,
+                { missing, declared: [...this.capabilities] },
+            )
+        }
     }
 
     /**

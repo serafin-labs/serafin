@@ -113,6 +113,39 @@ let myPipeline = new MemoryPipeline(userSchema)
     .pipe(new PipeSomeSecurity())
 ```
 
+#### Capabilities
+
+Nothing revalidates a `next` call. That is what lets a pipe hand something down without declaring it
+on its own schemas -- a pipe can turn a `minSize` query parameter into a `{ $gt: 4 }` condition the
+implementation below understands, while the public schema keeps saying `size` is a number. It also
+means the pipe and that implementation agree by convention rather than by type.
+
+A pipe can state the convention, and a pipeline can state what it honours:
+
+```Example
+const GreaterThan = (property, queryProperty) => (p) => ({
+    requires: ["$gt"],
+    readQuery: p.readQuery.addNumber(queryProperty, {}, false),
+    read: async (next, query, context) => { ... }
+});
+
+new MemoryPipeline(userSchema).pipe(GreaterThan("age", "minAge"));   // checked here
+```
+
+`pipe()` refuses a pipe whose `requires` the pipeline does not declare, at the moment it is
+attached, rather than leaving the mismatch to surface as a plausible page of the wrong resources.
+A pipe that implements something itself declares it as `provides`, which answers for the pipes
+attached after it -- those are the ones above it in the chain.
+
+The check runs only when the pipeline declared its own `capabilities`, so adding `requires` to a
+pipe never breaks a pipeline that has said nothing about what it can do: undeclared is not
+incapable. The names are free-form and shared by the two sides; `queryOperators` and
+`updateOperators` are the ones a pipeline built on this library's query matcher declares.
+
+Types cannot carry this. A pipe emitting `{ $gt: value }` is passing something that is not `RQ` but
+a widening of it with no name, so those pipes type `next` loosely and cast. `requires` is the same
+statement made where it can be checked.
+
 ### Conventions
 
 Inside **pipes** and **pipelines**, the **context** properties that begin by a `_` are considered as _private_: any remote API that rely on [**Serafin Pipeline**](https://github.com/serafin-labs/pipeline) must trim them from the \*user-provided values\*. These **context** properties correspond to security parameters or other \*internal **options\*** that would be supplied internally by the transport.
@@ -243,6 +276,17 @@ silently drops returns a plausible page of the wrong resources.
 Patch values are an update document when every key is an operator, and a
 [JSON merge patch](https://tools.ietf.org/html/rfc7396) otherwise -- `null` deletes, an absent
 property is left alone. Mixing the two in one patch is rejected, as it is in mongo.
+
+#### When a pipe forgets to translate
+
+A query property the model does not declare is an **error**, not an empty page. It is the signature
+of a pipe that is missing or attached in the wrong order: its public parameter reaches the
+implementation untranslated, matches no resource, and the request comes back looking like a
+legitimate empty result. Only the first segment of a dotted path names a model property, and the
+query `$elemMatch` carries is left alone -- it applies to the elements of an array, not to the model.
+
+`MemoryPipeline` also declares `memoryCapabilities`, so a pipe that needs an operator it does not
+implement is refused when it is attached.
 
 #### Where it differs from mongodb, on purpose
 

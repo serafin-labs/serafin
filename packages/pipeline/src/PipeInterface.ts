@@ -213,7 +213,27 @@ export interface PipeResultsInterface<
     CTX2 = CTX,
     META2 = META,
 > extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>>,
-        PipeActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2> {}
+        PipeActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>,
+        PipeCapabilitiesInterface {}
+
+/**
+ * What a pipe needs of what sits below it, and what it adds to it.
+ *
+ * Nothing revalidates a `next` call, which is how a pipe hands an operator down without declaring it
+ * on its own schemas -- and why the pipe and the implementation below it agree by convention rather
+ * than by type. Declaring that convention lets `pipe()` check it once, when the pipe is attached,
+ * instead of leaving a mismatch to surface as a plausible page of the wrong resources.
+ *
+ * Both are free-form names that the two sides agree on. The operator names a pipeline understands
+ * are the obvious ones, and a source built on this library's query matcher declares exactly the
+ * contents of `queryOperators` and `updateOperators`.
+ */
+export interface PipeCapabilitiesInterface {
+    /** Names this pipe hands down to whatever is below it. */
+    requires?: readonly string[]
+    /** Names this pipe implements itself, on behalf of the pipes attached after it. */
+    provides?: readonly string[]
+}
 
 export type PipeFunction<
     M extends IdentityInterface = IdentityInterface,

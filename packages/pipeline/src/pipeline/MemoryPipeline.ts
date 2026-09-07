@@ -5,8 +5,8 @@ import { IdentityInterface } from "../IdentityInterface.js"
 import { PipelineAbstract, PipelineAbstractOptions } from "../PipelineAbstract.js"
 import { ResultsInterface } from "../ResultsInterface.js"
 import { defaultSchemaBuilders } from "../SchemaBuildersInterface.js"
-import { compareForSort, matchQuery } from "./memory/matchQuery.js"
-import { applyPatch } from "./memory/applyPatch.js"
+import { assertQueryProperties, compareForSort, logicalQueryOperators, matchQuery, queryOperators } from "./memory/matchQuery.js"
+import { applyPatch, updateOperators } from "./memory/applyPatch.js"
 import { parsePath, valuesAtPath } from "./memory/path.js"
 
 /**
@@ -33,6 +33,21 @@ export const memoryReadMetaSchemaBuilder = SchemaBuilder.emptySchema().addIntege
 )
 
 const readOptionKeys = ["skip", "limit", "withCount", "sort"] as const
+
+/**
+ * What a `MemoryPipeline` understands of what a pipe hands down to it. A pipe that declares
+ * `requires` is checked against this when it is attached. @see PipeCapabilitiesInterface
+ */
+export const memoryCapabilities: readonly string[] = [
+    ...queryOperators,
+    ...logicalQueryOperators,
+    ...updateOperators,
+    // `$push` and `$addToSet` take it, and it is what a pipe adding several elements at once emits
+    "$each",
+    "dotted-paths",
+    ...readOptionKeys,
+    "count",
+]
 
 /**
  * The schema builders a `MemoryPipeline` runs on: the defaults derived from the model, with the read
@@ -106,8 +121,14 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
 
     private generateId: () => string
 
+    // The model's own property names, to tell a query that filters on something no resource can
+    // have from one that simply matches nothing. `defaultSchemaBuilders` only accepts a model that
+    // forbids additional properties, so this is the complete set of what a resource can hold.
+    private modelProperties: Set<string>
+
     constructor(model: SchemaBuilder<M>, options: MemoryPipelineOptions<M> = {}) {
-        super(memorySchemaBuilders(model) as any, options)
+        super(memorySchemaBuilders(model) as any, { capabilities: memoryCapabilities, ...options })
+        this.modelProperties = new Set(Object.keys((model.schema as any).properties))
         this.cloneResources = options.clone ?? true
         this.validateResources = options.validationEnabled ?? true
         this.generateId = options.generateId ?? randomId
@@ -178,6 +199,14 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
      */
     private select(query: any): M[] {
         const filter = _.omit(query, readOptionKeys)
+        assertQueryProperties(
+            filter,
+            (property) => this.modelProperties.has(property),
+            (property) =>
+                `'${property}' is not a property of ${
+                    (this.schemaBuilders.model.schema as any).title ?? "the model"
+                }. A pipe that should have translated it is missing, or attached in the wrong order.`,
+        )
         const keys = Object.keys(filter)
         if (keys.length === 1 && keys[0] === "id") {
             const ids = filter.id

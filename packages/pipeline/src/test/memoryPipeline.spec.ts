@@ -2,7 +2,7 @@ import * as chai from "chai"
 import { expect } from "chai"
 import chaiAsPromised from "chai-as-promised"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { MemoryPipeline } from "../pipeline/MemoryPipeline.js"
+import { MemoryPipeline, memoryCapabilities } from "../pipeline/MemoryPipeline.js"
 import { matchQuery, matchValue, compareValues, compareForSort } from "../pipeline/memory/matchQuery.js"
 import { applyPatch, isUpdateDocument } from "../pipeline/memory/applyPatch.js"
 import { getAtPath, hasAtPath, parsePath, setAtPath, unsetAtPath, valuesAtPath } from "../pipeline/memory/path.js"
@@ -539,6 +539,55 @@ describe("MemoryPipeline", function () {
             const p = pipeline().pipe(AsGreaterThan("size"))
             expect((await p.read({ size: 3 })).data.map((w) => w.id)).to.eql(["2"])
             expect((await p.read({})).data.length).to.eql(3)
+        })
+
+        it("should refuse a query property the model does not declare", async function () {
+            // the shape of a pipe that was forgotten, or attached in the wrong order: its public
+            // parameter reaches the implementation untranslated
+            const Untranslated = () => () => ({ read: async (next: any, query: any, context: any) => next({ ...query, minSize: 4 }, context) })
+            const p = pipeline().pipe(Untranslated() as any)
+            await expect(p.read({})).to.be.rejectedWith(/'minSize' is not a property of Widget/)
+            await expect(p.read({})).to.be.rejectedWith(/attached in the wrong order/)
+        })
+
+        it("should refuse an unknown property inside a logical operator, and at the first segment of a path", async function () {
+            const Inject = (query: any) => () => () => ({ read: async (next: any, _q: any, context: any) => next(query, context) })
+            const reads = (query: any) => pipeline().pipe(Inject(query)() as any).read({})
+            await expect(reads({ $or: [{ name: "nut" }, { minSize: 4 }] })).to.be.rejectedWith(/'minSize' is not a property/)
+            await expect(reads({ "missing.deep": 1 })).to.be.rejectedWith(/'missing' is not a property/)
+            await expect(reads({ "owner.company": "acme" })).to.eventually.have.nested.property("data[0].id", "1")
+            // a stray operator at the top level is the matcher's to reject, with its own message
+            await expect(reads({ $where: "true" })).to.be.rejectedWith(/not valid at the top level/)
+            // a query on the elements of an array is not the model's to declare
+            await expect(reads({ parts: { $elemMatch: { sku: "a" } } })).to.eventually.have.nested.property("data[0].id", "2")
+            // clauses that are all fine are left to the matcher
+            expect((await reads({ $or: [{ name: "nut" }, { name: "bolt" }] })).data.map((w: any) => w.id)).to.eql(["1", "2"])
+            // and so is a malformed one, which the matcher reports better than this check could
+            await expect(reads({ $or: "nope" })).to.be.rejectedWith(/'\$or' expects an array/)
+            await expect(reads({ $or: [{ name: "nut" }, "nope"] })).to.be.rejectedWith(/must be an object/)
+        })
+
+        it("should fall back to naming the model generically when it has no title", async function () {
+            const untitled = new MemoryPipeline(SchemaBuilder.emptySchema().addString("id"), { initialData: [{ id: "1" }] })
+            const Inject = () => () => ({ read: async (next: any, _q: any, context: any) => next({ nope: 1 }, context) })
+            await expect(untitled.pipe(Inject() as any).read({})).to.be.rejectedWith(/'nope' is not a property of the model/)
+        })
+
+        it("should check the same on a patch and a delete query", async function () {
+            const Inject = () => () => ({
+                patch: async (next: any, _q: any, values: any, context: any) => next({ minSize: 4 }, values, context),
+                delete: async (next: any, _q: any, context: any) => next({ minSize: 4 }, context),
+            })
+            const p = pipeline().pipe(Inject() as any)
+            await expect(p.patch({ id: "1" }, { name: "x" })).to.be.rejectedWith(/'minSize' is not a property/)
+            await expect(p.delete({ id: "1" })).to.be.rejectedWith(/'minSize' is not a property/)
+        })
+
+        it("should declare the operators it understands, and refuse a pipe needing more", function () {
+            expect(memoryCapabilities).to.include.members(["$gt", "$elemMatch", "$addToSet", "$each", "sort", "dotted-paths"])
+            const needing = (requires: readonly string[]) => () => ({ requires, read: async (next: any, q: any, c: any) => next(q, c) })
+            expect(() => pipeline().pipe(needing(["$gt", "$push"]) as any)).to.not.throw()
+            expect(() => pipeline().pipe(needing(["$bitsAllSet"]) as any)).to.throw(/needs '\$bitsAllSet', which MemoryPipeline does not declare/)
         })
 
         it("should deduplicate reads under a cache scope", async function () {
