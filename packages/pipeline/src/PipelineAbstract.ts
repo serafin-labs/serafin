@@ -4,7 +4,7 @@ import { notImplementedError, error, validationError } from "./error.js"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
 import { Pipe, PipeActionsInterface, PipeCapabilitiesInterface } from "./PipeInterface.js"
-import { Relation, RelationMeta } from "./Relation.js"
+import { NestedRelations, Relation, RelationMeta } from "./Relation.js"
 import { ResultsInterface } from "./ResultsInterface.js"
 import {
     PipelineCreateFunction,
@@ -54,6 +54,15 @@ function relationQuery(params: any, relationOption: string): any | undefined {
  */
 function withRelationMeta(result: any, name: string, relationMeta: any) {
     return { ...result, meta: { ...result.meta, relations: { ...result.meta?.relations, [name]: relationMeta } } }
+}
+
+/**
+ * The schema of the relations a target's read can resolve in turn, which a relation to it carries one
+ * level down when its option nests the target's own `with<Name>` options.
+ */
+function nestedRelationsSchema(pipeline: ReadOnlyPipelineInterface<any, any, any>) {
+    const relations = (pipeline.schemaBuilders.meta.schema as any).properties?.relations
+    return relations ? new SchemaBuilder(relations) : SchemaBuilder.emptySchema()
 }
 
 function withoutRelationOption(params: any, relationOption: string) {
@@ -244,9 +253,9 @@ export abstract class PipelineAbstract<
      * Add a many relation to the pipeline.
      * A query parameter is added to the all actions to conditionally fetch the related entities.
      */
-    public addRelationWithMany<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
+    public addRelationWithMany<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, RelationMETA = {}>(
         name: NameKey,
-        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta, any, RelationMETA>,
         query: Partial<ReadQuery>,
     ) {
         // What the relation contributes to meta: every related resource once, keyed by its own id,
@@ -255,6 +264,7 @@ export abstract class PipelineAbstract<
             .addString("type")
             .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
             .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.arraySchema(SchemaBuilder.stringSchema())))
+            .addProperty("relations", nestedRelationsSchema(pipeline), false)
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
@@ -294,7 +304,7 @@ export abstract class PipelineAbstract<
                 existingRelations
                     ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
                     : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
-            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many> } }>
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many, NestedRelations<RelationMETA>> } }>
             return {
                 meta,
                 readQuery,
@@ -343,9 +353,9 @@ export abstract class PipelineAbstract<
      * Add a one relation to the pipeline.
      * A query parameter is added to the all actions to conditionally fetch the related entity.
      */
-    public addRelationWithOne<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta>(
+    public addRelationWithOne<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, RelationMETA = {}>(
         name: NameKey,
-        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta>,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta, any, RelationMETA>,
         query: Partial<ReadQuery>,
     ) {
         // What the relation contributes to meta: every related resource once, keyed by its own id,
@@ -354,6 +364,7 @@ export abstract class PipelineAbstract<
             .addString("type")
             .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
             .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.stringSchema()))
+            .addProperty("relations", nestedRelationsSchema(pipeline), false)
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
@@ -387,7 +398,7 @@ export abstract class PipelineAbstract<
                 existingRelations
                     ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
                     : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
-            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one> } }>
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one, NestedRelations<RelationMETA>> } }>
             return {
                 meta,
                 readQuery,

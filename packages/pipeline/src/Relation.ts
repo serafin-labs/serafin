@@ -27,11 +27,42 @@ function acceptsArray(schema: any): boolean {
  * resources is carried once instead of once per resource. `index` maps a holding resource's id to
  * the related id (or ids, for a many relation) -- which is what makes a many relation joinable at
  * all, since its key lives on the target rather than on the resource.
+ *
+ * `relations` holds what the related read resolved in turn, when the relation option carried the
+ * target's own `with<Name>` options. It nests rather than merging into the top level: each level's
+ * `index` is keyed by the ids of that level's holding resources, and two levels may well use the same
+ * relation name for different targets.
  */
-export interface RelationMeta<R extends IdentityInterface, Type extends RelationType> {
+export interface RelationMeta<R extends IdentityInterface, Type extends RelationType, Relations = {}> {
     type: Type
     data: Record<string, R>
     index: Record<string, Type extends RelationType.many ? string[] : string>
+    relations?: Relations
+}
+
+/**
+ * The relations a pipeline's meta declares, which a relation to it can carry one level down.
+ */
+export type NestedRelations<META> = META extends { relations?: infer REL } ? REL : {}
+
+type AnyRelations = Record<string, RelationMeta<any, any, any>>
+
+/**
+ * Merge nested relations into an accumulator. Groups read separately can return the same nested
+ * resources, so a relation already present is merged into rather than replaced. Copies are made, so
+ * a read result shared through a cache is never mutated.
+ */
+function mergeRelations(into: AnyRelations, from: AnyRelations) {
+    for (const name of Object.keys(from)) {
+        const source = from[name]
+        const target = (into[name] ??= { type: source.type, data: {}, index: {} })
+        Object.assign(target.data, source.data)
+        Object.assign(target.index, source.index)
+        if (source.relations) {
+            target.relations = mergeRelations(target.relations ?? {}, source.relations)
+        }
+    }
+    return into
 }
 
 /**
@@ -78,8 +109,8 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
      * a single templated field and the target accepts an array for it, the whole page is resolved
      * with one read instead of one per resource.
      */
-    async resolve(resources: M[], query?: Partial<ReadQuery>, context?: any): Promise<RelationMeta<R, Type>> {
-        const meta: RelationMeta<R, Type> = { type: this.type, data: {}, index: {} }
+    async resolve(resources: M[], query?: Partial<ReadQuery>, context?: any): Promise<RelationMeta<R, Type, AnyRelations>> {
+        const meta: RelationMeta<R, Type, AnyRelations> = { type: this.type, data: {}, index: {} }
         if (resources.length === 0) {
             return meta
         }
@@ -118,12 +149,14 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
             for (const group of batches) {
                 this.record(meta, group.resources, related.get(stableKey(group.query[batchField])) ?? [])
             }
+            this.recordNested(meta, result.meta)
         } else {
             const nested = this.nestedContext(context)
             await Promise.all(
                 [...groups.values()].map(async (group) => {
                     const result = await this.pipeline.read(group.query, nested)
                     this.record(meta, group.resources, result.data)
+                    this.recordNested(meta, result.meta)
                 }),
             )
         }
@@ -134,7 +167,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
     /**
      * Add one group's related resources to the store, and point each holding resource at them.
      */
-    private record(meta: RelationMeta<R, Type>, resources: M[], related: R[]) {
+    private record(meta: RelationMeta<R, Type, unknown>, resources: M[], related: R[]) {
         for (const entry of related) {
             meta.data[entry.id] = entry
         }
@@ -144,6 +177,16 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
             } else if (related.length > 0) {
                 ;(meta.index as Record<string, string>)[resource.id] = related[0].id
             }
+        }
+    }
+
+    /**
+     * Carry the relations a related read resolved in turn, when its query nested `with<Name>` options.
+     */
+    private recordNested(meta: RelationMeta<R, Type, AnyRelations>, readMeta: ReadMeta) {
+        const relations = (readMeta as any).relations
+        if (relations) {
+            meta.relations = mergeRelations(meta.relations ?? {}, relations)
         }
     }
 

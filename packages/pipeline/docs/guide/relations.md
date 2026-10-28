@@ -109,6 +109,53 @@ result.data[0].address?.city // "Paris"
 It is a **pure function** over the result — no reads — so it can be applied at the edge and skipped on
 hot paths. `meta` is returned untouched, which makes applying it twice harmless.
 
+## Nesting a level deeper
+
+A relation option that is a read query of the target can carry the target's own `with<Name>`
+options. The nested relations come back **inside the relation that reached them**, under its own
+`relations`, normalized the same way:
+
+```ts twoslash
+import { SchemaBuilder as SB } from "@serafin/schema-builder"
+import { MemoryPipeline, inlineRelations } from "@serafin/pipeline"
+// ---cut---
+const citySchema = SB.objectSchema({ title: "City" }, { id: SB.stringSchema(), name: SB.stringSchema() })
+const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), cityId: SB.stringSchema() })
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), addressId: SB.stringSchema() })
+
+const cities = new MemoryPipeline(citySchema, { initialData: [{ id: "paris", name: "Paris" }] })
+const addresses = new MemoryPipeline(addressSchema, { initialData: [{ id: "a1", cityId: "paris" }] }).addRelationWithOne("city", cities, { id: ":cityId" })
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", addressId: "a1" }] }).addRelationWithOne("address", addresses, { id: ":addressId" })
+
+const result = await users.read({ withAddress: { withCity: true } })
+result.meta.relations?.address?.relations?.city?.index // { a1: "paris" }
+
+inlineRelations(result).data[0].address?.city?.name // "Paris"
+```
+
+```ts
+meta: {
+    relations: {
+        address: {
+            type: "one",
+            data: { a1: { id: "a1", cityId: "paris" } },
+            index: { "1": "a1" },
+            relations: {
+                city: {
+                    type: "one",
+                    data: { paris: { id: "paris", name: "Paris" } },
+                    index: { a1: "paris" } // keyed by address, not by user
+                }
+            }
+        }
+    }
+}
+```
+
+Each level's `index` is keyed by the resources of the level above it, and two levels may use the same
+relation name for different targets, so levels nest rather than merge. `inlineRelations` joins every
+level back.
+
 ## One read for a whole page
 
 Resolving a relation over a page does **not** read once per resource. Resources whose hydrated query

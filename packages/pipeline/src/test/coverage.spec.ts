@@ -1,4 +1,5 @@
 import * as chai from "chai"
+import _ from "lodash"
 import { expect } from "chai"
 import chaiAsPromised from "chai-as-promised"
 import { SchemaBuilder } from "@serafin/schema-builder"
@@ -334,6 +335,70 @@ describe("QueryTemplate escaping", function () {
         expect(QueryTemplate.escape("\\:x")).to.eql(":x")
         expect(QueryTemplate.escape("plain")).to.eql("plain")
         expect(QueryTemplate.escape(42)).to.eql(42)
+    })
+})
+
+describe("Nested relations", function () {
+    // employees -> office -> city -> country, with the office read once per employee rather than batched
+    const nested = () => {
+        const countries = new Store(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id")), [{ id: "fr" }])
+        const cities = new Store(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id").addString("countryId")), [
+            { id: "paris", countryId: "fr" },
+        ]).addRelationWithOne("country", countries, { id: ":countryId" })
+        const officeSchema = SchemaBuilder.emptySchema().addString("id").addString("cityId")
+        const officeReads: any[] = []
+        const offices = new Store({ ...defaultSchemaBuilders(officeSchema), readQuery: SchemaBuilder.emptySchema().addString("id", {}, false) }, [
+            { id: "o1", cityId: "paris" },
+            { id: "o2", cityId: "paris" },
+        ])
+            .addRelationWithOne("city", cities, { id: ":cityId" })
+            .pipe(() => ({
+                read: async (next: any, query: any, context: any) => {
+                    const result = await next(query, context)
+                    officeReads.push({ result, snapshot: _.cloneDeep(result) })
+                    return result
+                },
+            }))
+        const staff: any = new Store(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id").addString("officeId")), [
+            { id: "e1", officeId: "o1" },
+            { id: "e2", officeId: "o2" },
+        ]).addRelationWithOne("office", offices, { id: ":officeId" })
+        return { staff, officeReads }
+    }
+
+    it("should merge the nested relations of groups read separately, at every level", async function () {
+        const { staff, officeReads } = nested()
+        const result = await staff.read({ withOffice: { withCity: { withCountry: true } } })
+        expect(officeReads.length).to.eql(2)
+        expect(result.meta.relations.office).to.eql({
+            type: RelationType.one,
+            data: { o1: { id: "o1", cityId: "paris" }, o2: { id: "o2", cityId: "paris" } },
+            index: { e1: "o1", e2: "o2" },
+            relations: {
+                city: {
+                    type: RelationType.one,
+                    data: { paris: { id: "paris", countryId: "fr" } },
+                    index: { o1: "paris", o2: "paris" },
+                    relations: { country: { type: RelationType.one, data: { fr: { id: "fr" } }, index: { paris: "fr" } } },
+                },
+            },
+        })
+    })
+
+    it("should not mutate the results the nested reads returned", async function () {
+        const { staff, officeReads } = nested()
+        await staff.read({ withOffice: { withCity: true } })
+        // what each office read returned is still what it returned, though the two were merged
+        expect(officeReads.map((read) => read.result)).to.eql(officeReads.map((read) => read.snapshot))
+        expect(officeReads.map((read) => read.result.meta.relations.city.index)).to.have.deep.members([{ o1: "paris" }, { o2: "paris" }])
+    })
+
+    it("should declare the target's relations under the relation's own meta schema", function () {
+        const { staff } = nested()
+        const office = (staff.schemaBuilders.meta.schema as any).properties.relations.properties.office
+        const city = office.properties.relations.properties.city
+        expect(city.properties.relations.properties).to.have.property("country")
+        expect(city.properties.relations.properties.country.properties.relations).to.eql(SchemaBuilder.emptySchema().schema)
     })
 })
 

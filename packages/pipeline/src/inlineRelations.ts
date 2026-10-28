@@ -1,3 +1,4 @@
+import _ from "lodash"
 import { IdentityInterface } from "./IdentityInterface.js"
 import { RelationMeta } from "./Relation.js"
 import { RelationType } from "./RelationType.js"
@@ -8,10 +9,10 @@ import { ResultsInterface } from "./ResultsInterface.js"
  */
 export type WithInlinedRelations<M, META> = META extends { relations?: infer REL }
     ? M & {
-          [K in keyof REL]?: NonNullable<REL[K]> extends RelationMeta<infer R, infer Type>
+          [K in keyof REL]?: NonNullable<REL[K]> extends RelationMeta<infer R, infer Type, infer Nested>
               ? Type extends RelationType.many
-                  ? R[]
-                  : R
+                  ? WithInlinedRelations<R, { relations?: Nested }>[]
+                  : WithInlinedRelations<R, { relations?: Nested }>
               : never
       }
     : M
@@ -30,28 +31,33 @@ export type WithInlinedRelations<M, META> = META extends { relations?: infer REL
 export function inlineRelations<M extends IdentityInterface, META>(
     result: ResultsInterface<M, META>,
 ): ResultsInterface<WithInlinedRelations<M, META>, META> {
-    const relations = (result.meta as any)?.relations as Record<string, RelationMeta<IdentityInterface, RelationType>> | undefined
-    if (!relations) {
+    const relations = (result.meta as any)?.relations as Record<string, RelationMeta<IdentityInterface, RelationType, any>> | undefined
+    if (!relations || Object.keys(relations).length === 0) {
         return result as any
     }
-    const names = Object.keys(relations)
-    if (names.length === 0) {
-        return result as any
-    }
-    return {
-        ...result,
-        data: result.data.map((resource) => {
-            const inlined = { ...resource } as Record<string, unknown>
-            for (const name of names) {
-                const relation = relations[name]
-                const key = relation.index?.[resource.id]
-                if (relation.type === RelationType.many) {
-                    inlined[name] = ((key as string[]) ?? []).map((id) => relation.data[id]).filter((entry) => entry !== undefined)
-                } else if (key !== undefined) {
-                    inlined[name] = relation.data[key as string]
-                }
+    return { ...result, data: inlineAll(result.data, relations) as unknown as WithInlinedRelations<M, META>[] }
+}
+
+/**
+ * Hang each relation's resources off the resources pointing at them, after joining the relations
+ * those resources hold in turn.
+ */
+function inlineAll(resources: IdentityInterface[], relations: Record<string, RelationMeta<IdentityInterface, RelationType, any>>) {
+    const joined = Object.keys(relations).map((name) => {
+        const relation = relations[name]
+        const data = relation.relations ? _.keyBy(inlineAll(Object.values(relation.data), relation.relations), "id") : relation.data
+        return { name, relation, data }
+    })
+    return resources.map((resource) => {
+        const inlined = { ...resource } as Record<string, unknown>
+        for (const { name, relation, data } of joined) {
+            const key = relation.index?.[resource.id]
+            if (relation.type === RelationType.many) {
+                inlined[name] = ((key as string[]) ?? []).map((id) => data[id]).filter((entry) => entry !== undefined)
+            } else if (key !== undefined) {
+                inlined[name] = data[key as string]
             }
-            return inlined as unknown as WithInlinedRelations<M, META>
-        }),
-    }
+        }
+        return inlined
+    })
 }

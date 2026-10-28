@@ -7,6 +7,7 @@ import { matchQuery, matchValue, compareValues, compareForSort } from "../pipeli
 import { applyPatch, isUpdateDocument } from "../pipeline/memory/applyPatch.js"
 import { getAtPath, hasAtPath, parsePath, setAtPath, unsetAtPath, valuesAtPath } from "../pipeline/memory/path.js"
 import { Cache, openCacheScope } from "../pipe/Cache.js"
+import { inlineRelations } from "../inlineRelations.js"
 
 chai.use(chaiAsPromised)
 
@@ -610,6 +611,52 @@ describe("MemoryPipeline", function () {
             const { meta } = await widgetsWithOwner.read({ withCompany: true })
             expect(meta.relations?.company?.data).to.eql({ acme: { id: "acme", label: "Acme" } })
             expect(meta.relations?.company?.index).to.eql({ "1": "acme", "2": "acme" })
+        })
+
+        it("should carry a nested relation's own relations one level down in meta", async function () {
+            const citySchema = SchemaBuilder.emptySchema({ title: "City" }).addString("id").addString("name")
+            const addressSchema = SchemaBuilder.emptySchema({ title: "Address" }).addString("id").addString("cityId")
+            const companySchema = SchemaBuilder.emptySchema({ title: "Company" }).addString("id").addString("addressId")
+            const userSchema = SchemaBuilder.emptySchema({ title: "User" }).addString("id").addString("addressId").addString("companyId")
+            const cities = new MemoryPipeline(citySchema, {
+                initialData: [
+                    { id: "paris", name: "Paris" },
+                    { id: "lyon", name: "Lyon" },
+                ],
+            })
+            const addresses = new MemoryPipeline(addressSchema, {
+                initialData: [
+                    { id: "a1", cityId: "paris" },
+                    { id: "a2", cityId: "lyon" },
+                    { id: "a3", cityId: "paris" },
+                ],
+            }).addRelationWithOne("city", cities, { id: ":cityId" })
+            const companies = new MemoryPipeline(companySchema, { initialData: [{ id: "acme", addressId: "a3" }] }).addRelationWithOne("address", addresses, {
+                id: ":addressId",
+            })
+            const users = new MemoryPipeline(userSchema, {
+                initialData: [
+                    { id: "1", addressId: "a1", companyId: "acme" },
+                    { id: "2", addressId: "a2", companyId: "acme" },
+                ],
+            })
+                .addRelationWithOne("address", addresses, { id: ":addressId" })
+                .addRelationWithOne("company", companies, { id: ":companyId" })
+
+            const result = await users.read({ withAddress: { withCity: true }, withCompany: { withAddress: { withCity: true } } })
+            const { address, company } = result.meta.relations ?? {}
+            expect(address?.index).to.eql({ "1": "a1", "2": "a2" })
+            expect(address?.relations?.city?.data).to.eql({ paris: { id: "paris", name: "Paris" }, lyon: { id: "lyon", name: "Lyon" } })
+            expect(address?.relations?.city?.index).to.eql({ a1: "paris", a2: "lyon" })
+            // the company's `address` relation shares the name but not the level, so neither overwrites the other
+            expect(company?.relations?.address?.index).to.eql({ acme: "a3" })
+            expect(company?.relations?.address?.relations?.city?.index).to.eql({ a3: "paris" })
+            // a relation asked for without nested options carries no `relations` key
+            expect((await users.read({ withAddress: true })).meta.relations?.address).to.not.have.property("relations")
+
+            const inlined = inlineRelations(result)
+            expect(inlined.data[0].address?.city?.name).to.eql("Paris")
+            expect(inlined.data[1].company?.address?.city?.name).to.eql("Paris")
         })
     })
 })
