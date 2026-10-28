@@ -1,30 +1,24 @@
-# SourceQuery & SourceValues
+# SourceQuery & Capabilities
 
-Nothing revalidates a `next` call. That is what lets a pipe hand an operator down without declaring
-it on its own schemas — the public schema keeps saying `age` is a number, while the value travelling
-down is `{ age: { $gt: 18 } }`.
+## Operators come from pipes
 
-The cost is that what goes down is no longer of type `RQ`. It is a **widening** of `RQ`, and before
-these types existed that widening had no name, so every pipe doing it typed `next` loosely and cast
-past the compiler — which hid its other mistakes along with the intended one.
-
-`SourceQuery<RQ>` and `SourceValues<PV>` are that name.
-
-## Using them
-
-You mostly don't have to. `PipeReadNext`, `PipePatchNext` and `PipeDeleteNext` are already declared
-as `RQ | SourceQuery<RQ>` and `PV | SourceValues<PV>`, so a pipe types `next` with the schema type it
-had and passes operators through it without a cast:
+The public schemas describe plain values: `readQuery` says `age` is an integer, so a caller sending
+`{ age: { $gte: 18 } }` is rejected before any pipe runs. Operators are an internal vocabulary. A pipe
+exposes a public parameter and translates it into an operator condition, handed down through `next`
+— and **nothing revalidates a `next` call**:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline, memorySchemaBuilders, PipeReadNext } from "@serafin/pipeline"
+
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), age: SB.integerSchema() })
+
 type User = typeof userSchema.T
 type Builders = ReturnType<typeof memorySchemaBuilders<User>>
 type ReadQuery = Builders["readQuery"]["T"]
-// ---cut---
-const MinAge = (p: Builders) => {
+
+/** A public `minAge` parameter, handed down as the `$gt` condition it means. */
+const MinAge = (p: { readQuery: SB<ReadQuery> }) => {
     const readQuery = p.readQuery.addNumber("minAge", { minimum: 0 }, false)
     return {
         requires: ["$gt"],
@@ -36,10 +30,20 @@ const MinAge = (p: Builders) => {
         },
     }
 }
+
+const users = new MemoryPipeline(userSchema).pipe(MinAge)
+await users.read({ minAge: 18 }) // public parameter in, operator down
 ```
 
-Import them directly when you want to name the widened query — passing one around, or building it in
-a helper:
+The public schema stays a clean description of what callers may ask for. What travels down is a
+**widening** of the read query, which raises two questions: is it well-formed (**`SourceQuery`**, in
+the types), and does the implementation understand it (**capabilities**, checked by `.pipe()`)?
+
+## SourceQuery and SourceValues
+
+`PipeReadNext`, `PipePatchNext` and `PipeDeleteNext` accept `RQ | SourceQuery<RQ>` and
+`PV | SourceValues<PV>`, so operators pass through `next` without a cast. Import the types to name a
+widened query yourself:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -53,10 +57,8 @@ function ageBetween(low: number, high: number): SourceQuery<ReadQuery> {
 }
 ```
 
-## The widening still bites
-
-This is the part that matters. `SourceQuery<RQ>` is not `any` with extra steps — it keeps every
-property's own type and rejects properties the model does not declare:
+`SourceQuery<RQ>` is not `any`: it keeps each property's type and rejects properties the model does
+not declare.
 
 ```ts twoslash
 // @errors: 2353 2322 2820
@@ -75,83 +77,19 @@ const notAProperty: SourceQuery<ReadQuery> = { minAge: 18 }
 const regexOnANumber: SourceQuery<ReadQuery> = { age: /18/ }
 ```
 
-`{ minAge: 18 }` is the one worth catching. A public parameter reaching the implementation
-untranslated is the signature of a pipe that was meant to translate it and didn't — or one attached
-in the wrong order — and at runtime it matches nothing, so the request comes back looking like a
-legitimate empty page.
+`{ minAge: 18 }` is the one worth catching: a public parameter reaching the implementation
+untranslated means the pipe meant to translate it is missing or misordered. **Dotted paths** cannot
+be enumerated from the type, so they are accepted with an `unknown` value through a template-literal
+index signature, `` { [path: `${string}.${string}`]: unknown } `` — which still rejects `minAge`.
 
-## What it cannot check
+`QueryOperators<V>` is what may stand in for a value of type `V`:
 
-**Dotted paths.** The set of paths a model allows cannot be enumerated from the query type, so a
-dotted path is accepted with an unknown value type:
+comparisons take the element type of an array (`$eq` and `$in` also accept the whole array),
+`$regex` is string-only, `$elemMatch` takes a `SourceQuery` of an object element, and `null` is
+allowed on `$eq`, `$ne`, `$in`, `$nin` and as a bare value.
 
-```ts twoslash
-import { SchemaBuilder as SB } from "@serafin/schema-builder"
-import { memorySchemaBuilders, SourceQuery } from "@serafin/pipeline"
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), address: SB.objectSchema({}, { city: SB.stringSchema() }) },
-)
-type User = typeof userSchema.T
-type ReadQuery = ReturnType<typeof memorySchemaBuilders<User>>["readQuery"]["T"]
-// ---cut---
-const fine: SourceQuery<ReadQuery> = { "address.city": "Paris" }
-const alsoAccepted: SourceQuery<ReadQuery> = { "address.city": 42 } // not caught here
-```
-
-The second one is caught at runtime by an implementation that compares types — `MemoryPipeline`
-answers no match rather than guessing an order across types.
-
-It is a template-literal index signature, `` { [path: `${string}.${string}`]: unknown } ``, not a
-plain one — which is precisely why `minAge` above is still rejected while `address.city` is not.
-
-**Whether the operator is understood.** `SourceQuery` describes the vocabulary in `queryOperators`
-and `logicalQueryOperators`. Whether the implementation below interprets `$gt` at all is
-[capabilities](./capabilities), not types.
-
-## Query operators, in types
-
-`QueryOperators<V>` is what may stand in for a value of type `V`. A few of its choices are worth
-calling out:
-
-- **Comparisons take the element type.** For `tags: string[]`, `$gt` takes a `string`, because that
-  is what a comparison is applied to. `$eq` and `$in` accept the whole array as well.
-- **`$regex` and a regex `$not` are string-only.** A regular expression against a number does not
-  compile.
-- **`$elemMatch` resolves by element type.** For an array of objects it is a `SourceQuery` of the
-  element; for an array of scalars it is `QueryOperators` of the element.
-- **`null` is always allowed** on `$eq`, `$ne`, `$in` and `$nin`, and as a bare value — matching an
-  absent property is a legitimate query.
-
-```ts twoslash
-import { SchemaBuilder as SB } from "@serafin/schema-builder"
-import { memorySchemaBuilders, SourceQuery } from "@serafin/pipeline"
-const widgetSchema = SB.objectSchema(
-    { title: "Widget" },
-    {
-        id: SB.stringSchema(),
-        size: [SB.numberSchema(), undefined],
-        tags: [SB.arraySchema(SB.stringSchema()), undefined],
-        parts: [SB.arraySchema(SB.objectSchema({}, { sku: SB.stringSchema(), qty: SB.numberSchema() })), undefined],
-    },
-)
-type Widget = typeof widgetSchema.T
-type ReadQuery = ReturnType<typeof memorySchemaBuilders<Widget>>["readQuery"]["T"]
-// ---cut---
-const queries: SourceQuery<ReadQuery>[] = [
-    { size: { $gt: 2, $lte: 10 } },
-    { size: null }, // absent, or explicitly null
-    { tags: { $all: ["metal", "small"] } },
-    { tags: { $size: 2 } },
-    { parts: { $elemMatch: { sku: "b", qty: { $gt: 4 } } } },
-    { $or: [{ size: { $gt: 5 } }, { tags: ["metal"] } ] },
-]
-```
-
-## Update operators, in types
-
-`SourceValues<PV>` is either a merge patch or an update document — never both, since an
-implementation decides which it was given by its shape:
+`SourceValues<PV>` is a merge patch or an update document, never both, since an implementation tells
+them apart by shape. The array operators only apply to array properties and keep the element type:
 
 ```ts twoslash
 // @errors: 2322 2820 2418 2353
@@ -167,47 +105,76 @@ type PatchValues = ReturnType<typeof memorySchemaBuilders<Widget>>["patchValues"
 const mergePatch: SourceValues<PatchValues> = { name: "screw", size: null }
 const updateDocument: SourceValues<PatchValues> = { $inc: { size: 1 }, $push: { tags: "large" } }
 
-// the array operators only apply to array properties
 const notAnArray: SourceValues<PatchValues> = { $push: { name: "x" } }
-
-// and they keep the element type
 const wrongElement: SourceValues<PatchValues> = { $push: { tags: { $each: [4] } } }
 ```
 
-`$push` and `$addToSet` take one element or `{ $each: [...] }`; `$pull` takes an element or a
-condition on elements; `$pullAll` takes elements matched by equality; `$pop` takes `1` or `-1`.
+## Capabilities
 
-## On an implementation
+The types say a condition is well-formed, not that the implementation interprets it. Hand `$gt` to a
+source that ignores what it does not recognise and you get every user; to one that compares it as a
+value, none. Either way, **a plausible page of the wrong resources**, with nothing to point at.
 
-The other side of the contract. A pipeline implementation declares these types on its protected
-methods, which is how it states — in the type — that it accepts more than its schemas promise:
+A pipe declares what it hands down with `requires`, as `MinAge` does. A pipeline declares what it
+understands with `capabilities`, and `.pipe()` compares the two **when the pipe is attached**:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
-import { IdentityInterface, PipelineAbstract, ResultsInterface, SourceQuery, defaultSchemaBuilders } from "@serafin/pipeline"
+import { PipelineAbstract, defaultSchemaBuilders } from "@serafin/pipeline"
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), age: SB.integerSchema() })
+const MinAge = (p: { readQuery: SB<any> }) => ({ requires: ["$gt"], readQuery: p.readQuery.addNumber("minAge", {}, false) })
 // ---cut---
-class MySource<M extends IdentityInterface> extends PipelineAbstract<M, any, any, any, any, any, any, any, any, any, any, any, any> {
-    // widened: `SourceQuery<RQ>` rather than the schema's `RQ`
-    protected override async _read(query: SourceQuery<any>, context: any): Promise<ResultsInterface<M, any>> {
+class ExactMatchSource extends PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any> {
+    constructor(model: SB<any>) {
+        super(defaultSchemaBuilders(model) as any, {
+            capabilities: ["$in", "$eq"], // matches values, cannot compare
+        })
+    }
+    protected override async _read(query: any) {
         return { data: [], meta: {} }
     }
 }
+
+new ExactMatchSource(userSchema).pipe(MinAge)
+// throws SerafinCapabilityError: MinAge needs '$gt', which ExactMatchSource does not declare
 ```
 
-A widened parameter on an override is allowed — TypeScript's method parameters are bivariant.
-`MemoryPipeline` is the worked example: its `_read`, `_patch` and `_delete` all declare these types.
+The error's `info` carries `{ missing, declared }`.
 
-::: info Why `next`'s type was widened in the library
-The obvious alternative was for a pipe to type `next` as `PipeReadNext<M, SourceQuery<RQ>>`. That
-cannot work: `next` is a function-typed parameter, so its own query parameter sits in a contravariant
-position, and a widened one is rejected — method bivariance does not reach a nested function
-parameter.
+**Undeclared is not incapable.** The check only runs when the pipeline declared capabilities; one
+that declares none accepts any pipe, and its `capabilities` is `undefined`. Adding `requires` to a
+pipe is therefore always safe, and adding `capabilities` to a pipeline turns checking on for the pipes
+attached to it.
 
-So the widening lives in `PipeReadNext` itself. Which is honest: the old type claimed a guarantee the
-runtime never made, and pipes were already casting past it.
-:::
+**`provides`** lets a pipe implement something on behalf of the pipes attached after it, which are the
+ones above it — sorting in memory for a source that cannot sort, say:
 
-## What's next
+```ts twoslash
+import { SchemaBuilder as SB } from "@serafin/schema-builder"
+import { MemoryPipeline, memorySchemaBuilders, PipeReadNext } from "@serafin/pipeline"
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), age: SB.integerSchema() })
+type User = typeof userSchema.T
+type Builders = ReturnType<typeof memorySchemaBuilders<User>>
+type ReadQuery = Builders["readQuery"]["T"]
+// ---cut---
+const SortHere = (p: Builders) => ({
+    provides: ["sort"],
+    read: async (next: PipeReadNext<User, ReadQuery>, query: ReadQuery, context: any) => {
+        const { sort, ...rest } = query
+        const result = await next(rest, context)
+        return sort ? { ...result, data: [...result.data].sort((a, b) => a.age - b.age) } : result
+    },
+})
 
-- [Capabilities](./capabilities) — the other half of the contract
-- [Query Operators](./query-operators) — what `MemoryPipeline` does with these at runtime
+const NeedsSort = (p: Builders) => ({ requires: ["sort"] })
+
+const users = new MemoryPipeline(userSchema).pipe(SortHere).pipe(NeedsSort) // satisfied by SortHere
+```
+
+**The names** are free-form strings both sides agree on: operator names, but also `dotted-paths`,
+read options such as `limit` — a pipe emitting `{ limit: 20 }` depends on them as much as one emitting
+`$gt` — or `"transactions"`. [`memoryCapabilities`](/api/memory-pipeline#read-options) is
+`MemoryPipeline`'s list.
+
+To declare these types and capabilities on a source of your own, see
+[Writing a Pipeline](./writing-a-pipeline#declare-what-you-accept).

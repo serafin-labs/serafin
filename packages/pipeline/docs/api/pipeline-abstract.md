@@ -7,7 +7,7 @@ implements the protected methods that touch the data.
 abstract class PipelineAbstract<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, R>
 ```
 
-The thirteen type parameters mirror the [thirteen schema builders](/guide/schema-builders), plus `R`
+The thirteen type parameters mirror the [thirteen schema builders](/guide/actions#the-thirteen-schema-builders), plus `R`
 for the declared relations. All of them default to `any`.
 
 ## Constructor
@@ -24,8 +24,8 @@ constructor(schemaBuilders: SchemaBuildersInterface<...>, options?: PipelineAbst
 | `name` | `string` | — | included in validation error messages |
 | `capabilities` | `readonly string[]` | — | what the implementation understands of what a pipe hands down |
 
-Leaving `capabilities` out means a pipe's `requires` is **not checked** — undeclared is not
-incapable. See [Capabilities](/guide/capabilities).
+Leaving `capabilities` out means a pipe's `requires` is **not checked**. See
+[Capabilities](/guide/source-query#capabilities).
 
 ## Actions
 
@@ -36,9 +36,7 @@ patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, META & 
 delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, META & DM>>
 ```
 
-Each one deep-copies its inputs, strips `undefined` properties, validates against the matching schema
-builder, shallow-copies the context, and then runs the pipe chain. See
-[create, read, patch, delete](/guide/actions).
+See [Actions & Schemas](/guide/actions).
 
 ## Methods to implement
 
@@ -49,12 +47,8 @@ protected _patch(query: PQ, values: PV, context: CTX): Promise<ResultsInterface<
 protected _delete(query: DQ, context: CTX): Promise<ResultsInterface<M, DM>>
 ```
 
-Each throws `SerafinNotImplementedError` unless overridden, so a read-only pipeline implements
-`_read` and nothing else.
-
-An implementation may **widen** these parameters to
-[`SourceQuery`](/guide/source-query)/`SourceValues` — a widened parameter on an override is allowed,
-and it is how a source states that it accepts more than its schemas promise.
+Each throws `SerafinNotImplementedError` unless overridden. An implementation may widen `_read`,
+`_patch` and `_delete` to [`SourceQuery`/`SourceValues`](/guide/source-query).
 
 ## `pipe(pipe)`
 
@@ -63,13 +57,11 @@ pipe<M2, CV2, ...>(pipe: Pipe<...>): PipelineAbstract<M2, CV2, ...>
 ```
 
 Runs the pipe, checks its `requires` against this pipeline's `capabilities`, and returns a **new**
-pipeline carrying the schemas the pipe produced and the pipe in its chain.
-
-`pipe()` **prepends**: the first pipe attached is the innermost, closest to the implementation.
-See [Order & Composition](/guide/pipe-order).
-
-Throws `SerafinCapabilityError` if the pipe requires something this pipeline has declared
-capabilities but not that one. The error's `info` carries `{ missing, declared }`.
+pipeline carrying the schemas the pipe produced and the pipe at the head of its chain — `pipe()`
+**prepends** ([Order & Composition](/guide/pipe-order)). Throws `SerafinCapabilityError`, with
+`{ missing, declared }` in its `info`, when the pipeline declared capabilities that do not cover the
+pipe's `requires`. Builders the pipe does not return are carried forward unchanged: replacing `model`
+does not re-derive the others.
 
 ## `addRelationWithOne` / `addRelationWithMany`
 
@@ -81,13 +73,9 @@ addRelationWithOne<NameKey, RelationModel, ReadQuery, ReadMeta>(
 )
 ```
 
-Both are implemented with `pipe()`, so both return a new pipeline. Declaring a relation adds a
-`with<Name>` option to all four actions, adds the relation to the `meta` schema under `relations`,
-and registers it on `relations[name]`.
-
-The query is a template: a value starting with `:` is replaced at runtime by that field of the
-holding resource, and a literal `:` is escaped as `\:`. See
-[Declaring Relations](/guide/relations).
+Implemented with `pipe()`: returns a new pipeline with a `with<Name>` option on all four actions, the
+relation in the `meta` schema under `relations`, and `relations[name]` set. A `:field` value in the
+query is replaced by that field of the holding resource. See [Relations](/guide/relations).
 
 ## Standalone action functions
 
@@ -98,8 +86,7 @@ getPatchFunction(): PipelinePatchFunction<M, PQ, PV, PM, CTX, META>
 getDeleteFunction(): PipelineDeleteFunction<M, DQ, DM, CTX, META>
 ```
 
-A bound function for one action, so a pipe can depend on one action of one pipeline without holding
-the pipeline itself.
+A bound function for one action.
 
 ## Properties
 
@@ -116,9 +103,8 @@ the pipeline itself.
 clone(): this
 ```
 
-A copy that can take a pipe without affecting the original. `relations`, `schemaBuilders` and the
-pipe chain get their own copy; **everything else is shared** — including whatever a concrete pipeline
-holds as its data source, so piping a pipeline never forks its connection, cache or store.
+A copy with its own `relations`, `schemaBuilders` and pipe chain; **everything else is shared**,
+including the data source, so piping a pipeline never forks its connection or store.
 
 ## ForkedPipeline
 

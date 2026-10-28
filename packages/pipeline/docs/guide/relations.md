@@ -1,29 +1,49 @@
-# Declaring Relations
+# Relations
 
-A relation is a one-directional link from one pipeline to another, resolved at runtime when a caller
-asks for it.
+A relation is a one-directional link from one pipeline to another, resolved when a caller asks for it.
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline } from "@serafin/pipeline"
 
-const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), city: SB.stringSchema() })
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), firstName: SB.stringSchema(), addressId: SB.stringSchema() },
-)
+const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), city: SB.stringSchema(), country: SB.stringSchema() })
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), addressId: SB.stringSchema() })
+const orderSchema = SB.objectSchema({ title: "Order" }, { id: SB.stringSchema(), userId: SB.stringSchema() })
 
 const addresses = new MemoryPipeline(addressSchema)
-const users = new MemoryPipeline(userSchema).addRelationWithOne("address", addresses, { id: ":addressId" })
+const orders = new MemoryPipeline(orderSchema)
+
+const users = new MemoryPipeline(userSchema)
+    .addRelationWithOne("address", addresses, { id: ":addressId" }) // the user carries the key
+    .addRelationWithMany("orders", orders, { userId: ":id" }) // the orders carry the key
+
+users.relations.address.type // "one"
 ```
 
-Three arguments: the **name** the relation is known by, the **target pipeline**, and a **query** to
-read it with.
+The arguments are the relation's **name**, the **target pipeline**, and a **query template**: a partial
+read query of the target in which a value starting with `:` is replaced by that field of the holding
+resource. Literal values may sit alongside — `{ userId: ":id", status: "paid" }` — and a literal that
+starts with `:` is escaped as `\:`. An absent field is an error (`Resource field addressId not found`);
+`false`, `0`, `""` and `null` are legitimate keys.
 
-## The query template
+**One** promises at most one related resource; **many**, any number. They read the same way and differ
+in their types and in the shape of the result.
 
-The query is a partial read query of the target, in which a value starting with `:` is replaced at
-runtime by that field of the holding resource.
+Declaring a relation:
+
+- adds a **`with<Name>` option** to all four actions — `withAddress`, `withOrders`;
+- adds the relation to the shared **`meta` schema**, under `relations`;
+- registers it on **`pipeline.relations`**;
+- returns a **new pipeline**: relations are implemented with `.pipe()`, so their
+  [position in the chain](./pipe-order#relations-are-pipes-too) matters.
+
+The target only has to be readable (`ReadOnlyPipelineInterface`), so it can sit over a different store.
+A relation is a query, evaluated when asked.
+
+## Reading them
+
+**A relation is only resolved when asked for.** The option is `true`, or a read query of the target
+that narrows the related read:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -31,77 +51,78 @@ import { MemoryPipeline } from "@serafin/pipeline"
 const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), city: SB.stringSchema(), country: SB.stringSchema() })
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), addressId: SB.stringSchema() })
 const addresses = new MemoryPipeline(addressSchema)
+const users = new MemoryPipeline(userSchema).addRelationWithOne("address", addresses, { id: ":addressId" })
 // ---cut---
-const users = new MemoryPipeline(userSchema)
-    // `:addressId` -> the user's own addressId
-    .addRelationWithOne("address", addresses, { id: ":addressId" })
-    // literal values are fine alongside templated ones
-    .addRelationWithMany("frenchAddresses", addresses, { id: ":addressId", country: "FR" })
+await users.read({}) // no address is fetched
+await users.read({ withAddress: true }) // every user's address
+await users.read({ withAddress: { country: "FR" } }) // only the French ones
+
+const result = await users.read({ withAddress: true })
+result.meta.relations?.address
+//                     ^?
 ```
 
-A literal value that really does start with `:` is escaped as `\:`.
+## The result
 
-An absent field is an error — `Resource field addressId not found`. `false`, `0`, `""` and `null` are
-legitimate keys and are passed through as they are.
+Related resources come back **normalized, in `meta.relations`**, not inlined into each resource:
 
-## One and many
+```ts
+{
+    data: [
+        { id: "1", addressId: "a1" },
+        { id: "2", addressId: "a1" }
+    ],
+    meta: {
+        relations: {
+            address: {
+                type: "one",
+                data: { a1: { id: "a1", city: "Paris" } },
+                index: { "1": "a1", "2": "a1" }
+            }
+        }
+    }
+}
+```
 
-`addRelationWithOne` and `addRelationWithMany` differ in what they promise, not in how they read.
+`data` holds each related resource **once**, keyed by its id; `index` maps each holding resource to
+the related id, or to an array of ids for a *many* relation. An address shared by a hundred users is
+carried once, in the shape a normalized client-side store wants.
 
-**One** means at most one related resource, keyed on the holding resource. `{ id: ":addressId" }` —
-the user carries the key.
-
-**Many** means any number, keyed on the target. `{ userId: ":id" }` — the addresses carry the key.
+`inlineRelations` joins it back, each related resource hanging off the resource pointing at it:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
-import { MemoryPipeline } from "@serafin/pipeline"
-const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema() })
-const orderSchema = SB.objectSchema({ title: "Order" }, { id: SB.stringSchema(), userId: SB.stringSchema(), total: SB.numberSchema() })
-const orders = new MemoryPipeline(orderSchema)
-// ---cut---
-const users = new MemoryPipeline(userSchema).addRelationWithMany("orders", orders, { userId: ":id" })
-```
-
-The difference shows up in the types and in the shape of the result: a *one* relation indexes to a
-single id, a *many* relation to an array of them.
-
-## What declaring one does
-
-`addRelationWithOne` and `addRelationWithMany` are implemented with `.pipe()`, so a relation is a
-pipe. Declaring it:
-
-- adds a **`with<Name>` option** to all four actions — `withAddress`, `withOrders`;
-- adds the relation to the **`meta` schema**, under `relations`;
-- registers it on **`pipeline.relations`**, so it can be reached programmatically;
-- returns a **new pipeline**, like any other `.pipe()`.
-
-```ts twoslash
-import { SchemaBuilder as SB } from "@serafin/schema-builder"
-import { MemoryPipeline } from "@serafin/pipeline"
+import { MemoryPipeline, inlineRelations } from "@serafin/pipeline"
 const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), city: SB.stringSchema() })
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), addressId: SB.stringSchema() })
-const addresses = new MemoryPipeline(addressSchema)
+const addresses = new MemoryPipeline(addressSchema, { initialData: [{ id: "a1", city: "Paris" }] })
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", addressId: "a1" }] }).addRelationWithOne("address", addresses, {
+    id: ":addressId",
+})
 // ---cut---
-const users = new MemoryPipeline(userSchema).addRelationWithOne("address", addresses, { id: ":addressId" })
+const result = inlineRelations(await users.read({ withAddress: true }))
 
-users.relations.address.type // "one"
-users.relations.address.pipeline // the addresses pipeline
+result.data[0].address?.city // "Paris"
+//             ^?
 ```
 
-Because it is a pipe, its **position matters**. A relation declared after a pipe that filters
-resources out only resolves for the survivors — see [Order & Composition](./pipe-order).
+It is a **pure function** over the result — no reads — so it can be applied at the edge and skipped on
+hot paths. `meta` is returned untouched, which makes applying it twice harmless.
 
-## Any pipeline will do
+## One read for a whole page
 
-The target only has to be readable. `ReadOnlyPipelineInterface` is what a relation asks for, so a
-relation can point at a pipeline that has no `create`, or at one over an entirely different store —
-a `MemoryPipeline` relating to a database-backed pipeline, or to an HTTP-backed one.
+Resolving a relation over a page does **not** read once per resource. Resources whose hydrated query
+is identical are grouped, and a whole page resolves in a **single read** when the relation is keyed
+on one templated field that the target declares on its model and accepts as an array — 100 users at
+40 addresses is one `{ id: [...40 ids] }` read. That is why a derived read query accepts an array on
+every property. Otherwise there is one read per distinct key, and a [cache scope](./caching) removes
+the duplicates left across relations and pipes.
 
-There is nothing bidirectional and nothing to keep in step: a relation is a query, evaluated when
-asked.
+## No cycles
 
-## Cycles are fine
+Pipelines are immutable, so a relation targets the pipeline **as it was when the relation was
+declared**, and its `with<Name>` option accepts that pipeline's read query as it stood then. Two
+pipelines cannot point at each other:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -115,10 +136,27 @@ const companies = new MemoryPipeline(companySchema).addRelationWithMany("employe
 const users = usersBase.addRelationWithOne("company", companies, { id: ":companyId" })
 ```
 
-Nothing is resolved until asked for, so a cycle costs nothing to declare. Nesting is bounded by
-`maximumRelationDepth`, which is 10 — a caller has to spell out each level, so it only bites when the
-read query comes from somewhere untrusted.
+`users` reaches `companies`, whose `employees` relation reaches `usersBase` — which has no `company`
+relation. So `{ withCompany: { withEmployees: true } }` is a valid query, and
+`{ withCompany: { withEmployees: { withCompany: true } } }` fails validation. Nesting is also bounded
+at run time by `maximumRelationDepth` (10).
 
-## What's next
+## Reaching a relation directly
 
-- [Reading Relations](./reading-relations) — asking for one, and what comes back
+`pipeline.relations` holds each `Relation`, for when you have one resource rather than a page:
+
+```ts twoslash
+import { SchemaBuilder as SB } from "@serafin/schema-builder"
+import { MemoryPipeline } from "@serafin/pipeline"
+const addressSchema = SB.objectSchema({ title: "Address" }, { id: SB.stringSchema(), city: SB.stringSchema() })
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), addressId: SB.stringSchema() })
+const addresses = new MemoryPipeline(addressSchema, { initialData: [{ id: "a1", city: "Paris" }] })
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", addressId: "a1" }] }).addRelationWithOne("address", addresses, {
+    id: ":addressId",
+})
+const user = (await users.read({ id: "1" })).data[0]
+// ---cut---
+const related = await users.relations.address.fetch(user) // the relation, for one resource
+const withAddress = await users.relations.address.assignToResource(user) // a copy carrying it inline
+withAddress.address.city
+```

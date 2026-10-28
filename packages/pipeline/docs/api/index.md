@@ -1,7 +1,6 @@
 # API Reference
 
-Everything `@serafin/pipeline` exports, grouped by what it is for. The pages that follow go into
-detail; this is the map.
+Everything `@serafin/pipeline` exports from the package root, grouped by what it is for.
 
 ## Pipelines
 
@@ -26,7 +25,7 @@ detail; this is the map.
 | `IdentityInterface` | `{ id: string }` — all the library assumes of a model |
 | `ResultsInterface` | `{ data, meta }` — what every action returns |
 
-See [Schema Builders](/guide/schema-builders).
+See [Actions & Schemas](/guide/actions).
 
 ## Pipes
 
@@ -52,17 +51,16 @@ See [Writing a Pipe](/guide/writing-a-pipe).
 | `UpdateOperators` | the update operators |
 | `QueryTypeName` | the type names `$type` accepts |
 
-See [SourceQuery & SourceValues](/guide/source-query).
+See [SourceQuery & Capabilities](/guide/source-query).
 
 ## Built-in pipes
 
 | Export | What it is |
 | ------ | ---------- |
-| `Cache`, `CacheOptions` | reads each distinct query once per scope |
-| `openCacheScope`, `flushCacheScope` | opening and emptying a scope |
+| `Cache`, `CacheOptions`, `openCacheScope`, `flushCacheScope` | reads each distinct query once per [scope](/guide/caching) |
 | `SetReadQueryParameterDefaultValue` | fills in a read query parameter the caller left out |
 
-See [Caching](/guide/caching).
+See [Pipe types](./pipe#built-in-pipes).
 
 ## Relations
 
@@ -75,35 +73,10 @@ See [Caching](/guide/caching).
 | `inlineRelations`, `WithInlinedRelations` | joins a normalized result back into the inlined shape |
 | `QueryTemplate` | hydrates a `:field` template against a resource |
 
-See [Declaring Relations](/guide/relations).
+See [Relations](/guide/relations).
 
-## The query engine
+## Query engine, paths and errors
 
-Exported so a source of your own can reuse them rather than reimplement mongodb semantics.
-
-| Export | What it is |
-| ------ | ---------- |
-| `matchQuery` | does a resource match a query? |
-| `matchValue` | does one value match one condition? |
-| `assertQueryProperties` | refuse a query filtering on something the model does not declare |
-| `queryOperators`, `logicalQueryOperators` | the query vocabulary, as tuples |
-| `compareValues`, `compareForSort` | same-type comparison, and the total order `sort` uses |
-| `applyPatch` | a patched copy of a resource |
-| `isUpdateDocument` | is this an update document or a merge patch? |
-| `updateOperators` | the update vocabulary, in application order |
-| `parsePath`, `valuesAtPath`, `getAtPath`, `hasAtPath`, `setAtPath`, `unsetAtPath` | the path helpers |
-| `stableKey` | a stable string for any JSON value |
-
-See [Helpers & errors](./helpers) and [Writing a Pipeline](/guide/writing-a-pipeline).
-
-## Errors
-
-`error`, and the constructors and names listed in [Errors](/guide/errors).
-
-## Importing
-
-Everything is exported from the package root:
-
-```ts twoslash
-import { MemoryPipeline, PipelineAbstract, Cache, inlineRelations, matchQuery, applyPatch } from "@serafin/pipeline"
-```
+`matchQuery`, `matchValue`, `assertQueryProperties`, `queryOperators`, `logicalQueryOperators`,
+`compareValues`, `compareForSort`, `applyPatch`, `isUpdateDocument`, `updateOperators`, the path
+helpers, `stableKey`, and `error` with its constructors — see [Helpers & errors](./helpers).

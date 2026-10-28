@@ -36,8 +36,8 @@ features:
 
 ## A quick taste
 
-A pipeline is a data source you call through four actions. Give it a model, and it derives every
-related schema — the create values, the read query, the patch values — from that one definition.
+A pipeline is a data source with four actions. Give it a model, and it derives the schema of every
+action from it.
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -62,8 +62,8 @@ const result = await users.read({ lastName: ["Degardin"] })
 //    ^?
 ```
 
-Then wrap behaviour around it with `.pipe()`. A pipe can change what the actions accept, and the
-change shows up in the schema and in the type together:
+Then wrap behaviour around it with `.pipe()`. A pipe can change what the actions accept, in the
+schema and the type together:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -95,7 +95,7 @@ const users = new MemoryPipeline(userSchema).pipe(MinAge)
 await users.read({ minAge: 18 })
 ```
 
-`minAge` is now part of the read query — as a JSON Schema property and as a TypeScript parameter —
-while the source below never hears of it. And because the pipe declares `requires: ["$gt"]`,
-`.pipe()` checks that against what the pipeline says it understands: a source that cannot do `$gt`
-refuses the pipe the moment you attach it, rather than on the first request that needed it.
+`minAge` is now part of the read query, as a JSON Schema property and as a TypeScript parameter,
+while the source below never hears of it. Because the pipe declares `requires: ["$gt"]`, a source
+that cannot do `$gt` [refuses it when it is attached](./guide/source-query#capabilities), not on the
+first request that needed it.

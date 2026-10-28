@@ -9,10 +9,9 @@ Serafin Pipeline is a TypeScript CRUD data access library with a functional appr
 gives access to data through four actions — `create`, `read`, `patch`, `delete` — and **pipes** wrap
 behaviour around it: permissions, timestamps, soft deletes, caching, parameter translation.
 
-What makes a pipe more than middleware is that **it carries schema changes, not just behaviour**. A
-pipe that adds a query parameter changes the pipeline's JSON Schema and its TypeScript type together,
-so the interface of your data access layer is _derived_ from the pieces it is built out of rather
-than written down beside them.
+A pipe **carries schema changes, not just behaviour**: one that adds a query parameter changes the
+pipeline's JSON Schema and TypeScript type together, so the interface of your data access layer is
+_derived_ from the pieces it is built of.
 
 ## Installation
 
@@ -48,35 +47,44 @@ result.data // the users that matched
 result.meta // everything else: counts, relations, whatever a pipe added
 ```
 
-Every schema an action uses — what `create` accepts, what `read` filters on, what `patch` writes — is
-derived from that one model, and available as a JSON Schema at runtime:
+Every schema an action uses is derived from that one model, and available as a JSON Schema at runtime:
 
 ```typescript
 users.schemaBuilders.readQuery.schema // feed it to OpenAPI, to an MCP tool definition, to a form
 ```
 
-Wrap behaviour around it with `.pipe()`, which returns a new pipeline:
+Wrap behaviour around it with `.pipe()`, which returns a new pipeline. `Cache` is one of the pipes
+the library ships; [writing your own](https://serafin-labs.github.io/pipeline/guide/writing-a-pipe) is
+a function of a few lines:
 
 ```typescript
-const visibleUsers = users.pipe(Cache()).pipe(SoftDelete()).pipe(OnlyVisibleTo())
+import { Cache, openCacheScope } from "@serafin/pipeline"
+
+const cachedUsers = users.pipe(Cache())
+
+// within one cache scope -- typically one request -- each distinct read hits the store once
+await cachedUsers.read({ lastName: "Degardin" }, openCacheScope({}))
 ```
 
 And link pipelines to each other with relations, resolved per request:
 
 ```typescript
-const usersWithAddress = users.addRelationWithOne("address", addresses, { id: ":addressId" })
+const addresses = new MemoryPipeline(
+    SchemaBuilder.objectSchema(
+        { title: "Address" },
+        { id: SchemaBuilder.stringSchema(), userId: SchemaBuilder.stringSchema(), city: SchemaBuilder.stringSchema() },
+    ),
+)
 
-await usersWithAddress.read({ withAddress: true })
+const usersWithAddresses = users.addRelationWithMany("addresses", addresses, { userId: ":id" })
+
+const withAddresses = await usersWithAddresses.read({ withAddresses: true })
+withAddresses.meta.relations?.addresses // every address once, plus an index from user id to address ids
 ```
 
 ## Documentation
 
 📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/pipeline](https://serafin-labs.github.io/pipeline/).**
-
-It covers the four actions and the schemas they derive, writing and ordering pipes, the
-pipe/implementation contract (`requires`, `capabilities`, `SourceQuery`), relations, request-scoped
-caching, the in-memory pipeline with its mongodb-style query and update operators, writing a pipeline
-of your own, and the complete API reference.
 
 ## What's next?
 

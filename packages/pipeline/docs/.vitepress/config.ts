@@ -62,14 +62,12 @@ export default defineConfig({
                     items: [
                         { text: "Why Pipeline?", link: "/guide/why" },
                         { text: "Getting Started", link: "/guide/getting-started" },
-                        { text: "Core Concepts", link: "/guide/concepts" },
                     ],
                 },
                 {
-                    text: "Actions",
+                    text: "Essentials",
                     items: [
-                        { text: "create, read, patch, delete", link: "/guide/actions" },
-                        { text: "Schema Builders", link: "/guide/schema-builders" },
+                        { text: "Actions & Schemas", link: "/guide/actions" },
                         { text: "Results & Meta", link: "/guide/results" },
                         { text: "Context", link: "/guide/context" },
                         { text: "Errors", link: "/guide/errors" },
@@ -80,26 +78,31 @@ export default defineConfig({
                     items: [
                         { text: "Writing a Pipe", link: "/guide/writing-a-pipe" },
                         { text: "Order & Composition", link: "/guide/pipe-order" },
-                        { text: "Capabilities", link: "/guide/capabilities" },
-                        { text: "SourceQuery & SourceValues", link: "/guide/source-query" },
                         { text: "Caching", link: "/guide/caching" },
                     ],
                 },
                 {
                     text: "Relations",
-                    items: [
-                        { text: "Declaring Relations", link: "/guide/relations" },
-                        { text: "Reading Relations", link: "/guide/reading-relations" },
-                    ],
+                    items: [{ text: "Relations", link: "/guide/relations" }],
                 },
                 {
-                    text: "Pipelines",
+                    text: "MemoryPipeline",
                     items: [
                         { text: "In-memory Pipeline", link: "/guide/memory-pipeline" },
                         { text: "Query Operators", link: "/guide/query-operators" },
                         { text: "Update Operators", link: "/guide/update-operators" },
+                    ],
+                },
+                {
+                    text: "Implementer Contract",
+                    items: [
+                        { text: "SourceQuery & Capabilities", link: "/guide/source-query" },
                         { text: "Writing a Pipeline", link: "/guide/writing-a-pipeline" },
                     ],
+                },
+                {
+                    text: "API",
+                    items: [{ text: "API Reference", link: "/api/" }],
                 },
             ],
             "/api/": [
