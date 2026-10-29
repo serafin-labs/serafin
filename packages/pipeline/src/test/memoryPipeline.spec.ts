@@ -190,6 +190,13 @@ describe("matchQuery", function () {
         expect(matchQuery({ size: { $regex: "3" } }, doc)).to.eql(false)
     })
 
+    it("should match every resource against a regular expression carrying the g or y flag", function () {
+        const names = [{ name: "a" }, { name: "a" }, { name: "a" }]
+        for (const condition of [/a/g, /a/y, { $regex: /a/g }, { $regex: "a", $options: "g" }, { $in: [/a/g] }]) {
+            expect(names.filter((resource) => matchQuery({ name: condition }, resource)).length).to.eql(3)
+        }
+    })
+
     it("should support $mod, $size, $all, $type and $not", function () {
         expect(matchQuery({ size: { $mod: [2, 1] } }, doc)).to.eql(true)
         expect(matchQuery({ size: { $mod: [2, 0] } }, doc)).to.eql(false)
@@ -208,6 +215,12 @@ describe("matchQuery", function () {
         expect(matchQuery({ name: { $type: "null" } }, doc)).to.eql(false)
         expect(matchQuery({ size: { $not: { $gt: 5 } } }, doc)).to.eql(true)
         expect(matchQuery({ name: { $not: /^bo/ } }, doc)).to.eql(false)
+    })
+
+    it("should not find a $type test on the prototype of the table", function () {
+        for (const name of ["constructor", "toString", "__proto__"]) {
+            expect(() => matchQuery({ name: { $type: name } }, doc)).to.throw(/is not a type '\$type' knows/)
+        }
     })
 
     it("should match a dotted path, including through an array", function () {
@@ -275,6 +288,20 @@ describe("applyPatch", function () {
         expect(isUpdateDocument({ a: 1 })).to.eql(false)
         expect(isUpdateDocument("nope")).to.eql(false)
         expect(() => isUpdateDocument({ $set: { a: 1 }, b: 2 })).to.throw(/cannot mix update operators and properties/)
+    })
+
+    it("should refuse a property that would reach the prototype, anywhere in the values", function () {
+        const resource = { id: "1", owner: { company: "acme" } }
+        for (const values of [
+            '{"__proto__":{"admin":true}}',
+            '{"owner":{"__proto__":{"admin":true}}}',
+            '{"owner":{"constructor":{"prototype":{"admin":true}}}}',
+            '{"$set":{"owner":{"__proto__":{"admin":true}}}}',
+            '{"$push":{"tags":{"$each":[{"__proto__":{"admin":true}}]}}}',
+        ]) {
+            expect(() => applyPatch(resource, JSON.parse(values))).to.throw(/is not a valid property name/)
+        }
+        expect(Object.getPrototypeOf(resource.owner)).to.eql(Object.prototype)
     })
 
     it("should apply a merge patch, where null deletes and anything else replaces", function () {
@@ -384,6 +411,23 @@ describe("MemoryPipeline", function () {
 
     it("should validate the resources it is restored with", function () {
         expect(() => new MemoryPipeline(widgetSchema, { initialData: [{ id: "1" } as any] })).to.throw(/Validation failed in MemoryPipeline::restore/)
+    })
+
+    it("should refuse two resources sharing an id rather than keep the last", function () {
+        const p = pipeline()
+        expect(() => p.restore([widgets()[0], { ...widgets()[1], id: "1" }])).to.throw(/conflict/)
+        // the store is left as it was
+        expect(p.size).to.eql(3)
+        expect(() => new MemoryPipeline(widgetSchema, { initialData: [widgets()[0], widgets()[0]] })).to.throw(/conflict/)
+    })
+
+    it("should refuse a resource holding a property that would reach the prototype", async function () {
+        const looseSchema = SchemaBuilder.emptySchema().addString("id").addProperty("extra", SchemaBuilder.emptySchema().addAdditionalProperties(), false)
+        const poisoned = JSON.parse('{"id":"1","extra":{"__proto__":{"admin":true}}}')
+        expect(() => new MemoryPipeline(looseSchema, { initialData: [poisoned] })).to.throw(/is not a valid property name/)
+        const p = new MemoryPipeline(looseSchema)
+        await expect(p.create([poisoned])).to.be.rejectedWith(/is not a valid property name/)
+        expect(p.size).to.eql(0)
     })
 
     it("should snapshot, restore and clear", async function () {

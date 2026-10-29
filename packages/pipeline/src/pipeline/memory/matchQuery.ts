@@ -109,10 +109,18 @@ function isOperatorDocument(condition: any): boolean {
     return true
 }
 
+/**
+ * A copy of `regExp` without the `g` and `y` flags. Those make `test` resume from `lastIndex`, so the
+ * same expression matched against several resources would skip some of them.
+ */
+function stateless(regExp: RegExp): RegExp {
+    return regExp.global || regExp.sticky ? new RegExp(regExp.source, regExp.flags.replace(/[gy]/g, "")) : regExp
+}
+
 /** `null` matches a property that is absent as well as one set to null, as it does in mongo. */
 function equals(value: any, operand: any): boolean {
     if (operand instanceof RegExp) {
-        return typeof value === "string" && operand.test(value)
+        return typeof value === "string" && stateless(operand).test(value)
     }
     if (_.isEqual(value, operand)) {
         return true
@@ -145,12 +153,12 @@ function operandArray(operator: string, operand: any): any[] {
 
 function regExpOf(operand: any, options: any): RegExp {
     if (operand instanceof RegExp) {
-        return options === undefined ? operand : new RegExp(operand.source, String(options))
+        return stateless(options === undefined ? operand : new RegExp(operand.source, String(options)))
     }
     if (typeof operand !== "string") {
         throw validationError("'$regex' expects a string or a regular expression")
     }
-    return new RegExp(operand, options === undefined ? undefined : String(options))
+    return stateless(new RegExp(operand, options === undefined ? undefined : String(options)))
 }
 
 function matchOperator(operator: string, operand: any, values: any[], condition: any): boolean {
@@ -203,7 +211,9 @@ function matchOperator(operator: string, operand: any, values: any[], condition:
                     value.some((entry) => (isOperatorDocument(operand) ? matchCondition(operand, [entry]) : matchQuery(operand, entry))),
             )
         case "$type": {
-            const test = typeTests[operand]
+            // Own properties only: `constructor` or `toString` would otherwise find a test on the
+            // prototype of the table.
+            const test = Object.prototype.hasOwnProperty.call(typeTests, operand) ? typeTests[operand] : undefined
             if (!test) {
                 throw validationError(`'${operand}' is not a type '$type' knows: '${Object.keys(typeTests).join("', '")}'`)
             }

@@ -1,7 +1,7 @@
 import _ from "lodash"
 import { validationError } from "../../error.js"
 import { compareValues, matchQuery, matchValue } from "./matchQuery.js"
-import { getAtPath, hasAtPath, parsePath, setAtPath, unsetAtPath } from "./path.js"
+import { assertSafeKeys, getAtPath, hasAtPath, parsePath, setAtPath, unsetAtPath } from "./path.js"
 
 /**
  * The update operators `applyPatch` understands, in the order they are applied. Mongo leaves the
@@ -211,10 +211,14 @@ const applyOperator: { [operator: string]: (resource: any, operand: any) => void
 /**
  * Apply `values` to a copy of `resource`.
  *
+ * A property named `__proto__`, `constructor` or `prototype` anywhere in `values` is refused, as it
+ * is in a path: a merge patch assigns its keys, and assigning `__proto__` replaces a prototype.
+ *
  * `values` is either an update document -- `{ $set: ... }`, `{ $push: ... }` -- or a JSON merge
  * patch. Which one it is comes from its shape, the same way a mongo source decides.
  */
 export function applyPatch<T>(resource: T, values: any): T {
+    assertSafeKeys(values)
     if (!isUpdateDocument(values)) {
         return mergePatch(resource, values)
     }

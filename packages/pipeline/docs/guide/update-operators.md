@@ -77,6 +77,9 @@ applyPatch(user, { $bit: { views: 1 } })
 
 applyPatch(user, { $inc: { views: 1 }, firstName: "Nicolas" })
 // SerafinSchemaValidationError: Invalid parameters: Patch values cannot mix update operators and properties: '$inc', 'firstName'
+
+applyPatch(user, JSON.parse('{ "profile": { "__proto__": { "admin": true } } }'))
+// SerafinSchemaValidationError: Invalid parameters: '__proto__' is not a valid property name
 ```
 
 **Not implemented:** positional operators — `$`, `$[]`, `$[<identifier>]` — and the `$push` modifiers

@@ -48,7 +48,12 @@ users.restore([{ id: "1", firstName: "Nico" }]) // replace the contents; each is
 users.clear() // empty it
 ```
 
-A fixture that has drifted from the schema fails at `restore` rather than mid-test.
+A fixture that has drifted from the schema fails at `restore` rather than mid-test, and so does one
+holding two resources with the same id (`SerafinConflictError`), rather than keeping the last.
+
+A property named `__proto__`, `constructor` or `prototype` **anywhere** in a resource being created or
+restored, or in patch values, is refused: `JSON.parse` keeps `"__proto__"` as an own key, and the
+first merge patch assigning it would replace a prototype instead of setting a property.
 
 ## Copies
 

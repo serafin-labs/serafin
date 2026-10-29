@@ -17,7 +17,7 @@ with.
 | `$in`, `$nin` | an array | equal to any entry, or to none |
 | `$exists` | a boolean | the property is present, or absent |
 | `$type` | a type name | the value is a `"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"date"`, `"regex"` or `"null"` |
-| `$regex`, `$options` | a string or `RegExp`, flags | the value matches it |
+| `$regex`, `$options` | a string or `RegExp`, flags | the value matches it (`g` and `y` are ignored: they would make each test resume where the last stopped) |
 | `$mod` | `[divisor, remainder]` | the remainder is that |
 | `$not` | operators or a `RegExp` | they do not match |
 

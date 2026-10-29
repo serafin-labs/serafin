@@ -12,6 +12,27 @@ const hasOwn = (value: any, key: string) => Object.prototype.hasOwnProperty.call
 const isIndex = (segment: string) => /^(0|[1-9][0-9]*)$/.test(segment)
 
 /**
+ * Refuse a value holding a property that would reach the prototype chain, at any depth.
+ *
+ * `JSON.parse` turns `"__proto__"` into an own property, so it does reach a pipeline from a
+ * transport. Kept as data it is harmless, but the first plain assignment of it -- a merge patch, a
+ * spread into a new object, a library merging two resources -- replaces a prototype instead of
+ * setting a property. Refused rather than dropped, as a path naming one is.
+ */
+export function assertSafeKeys(value: any): void {
+    if (Array.isArray(value)) {
+        value.forEach(assertSafeKeys)
+    } else if (_.isPlainObject(value)) {
+        for (const key of Object.keys(value)) {
+            if (unsafeSegments.has(key)) {
+                throw validationError(`'${key}' is not a valid property name`)
+            }
+            assertSafeKeys(value[key])
+        }
+    }
+}
+
+/**
  * Split a dotted path into segments, rejecting the ones that don't name a property.
  */
 export function parsePath(path: string): string[] {

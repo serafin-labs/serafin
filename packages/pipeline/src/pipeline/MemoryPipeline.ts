@@ -8,7 +8,7 @@ import { SourceQuery, SourceValues } from "../SourceQuery.js"
 import { defaultSchemaBuilders } from "../SchemaBuildersInterface.js"
 import { assertQueryProperties, compareForSort, logicalQueryOperators, matchQuery, queryOperators } from "./memory/matchQuery.js"
 import { applyPatch, updateOperators } from "./memory/applyPatch.js"
-import { parsePath, valuesAtPath } from "./memory/path.js"
+import { assertSafeKeys, parsePath, valuesAtPath } from "./memory/path.js"
 
 /**
  * Read query properties that shape the result rather than filter it. Deliberately the same set, with
@@ -155,12 +155,23 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
         return [...this.store.values()].map((resource) => this.out(resource))
     }
 
-    /** Replace the store's contents. Each resource is validated against the model. */
+    /**
+     * Replace the store's contents. Each resource is validated against the model, and two resources
+     * sharing an id are a conflict rather than the second silently replacing the first.
+     */
     public restore(resources: M[]): void {
         const validated = resources.map((resource) => {
             this.validateModel(resource, "restore")
+            assertSafeKeys(resource)
             return this.in(resource)
         })
+        const seen = new Set<string>()
+        for (const resource of validated) {
+            if (seen.has(resource.id)) {
+                throw conflictError(resource.id)
+            }
+            seen.add(resource.id)
+        }
         this.store.clear()
         for (const resource of validated) {
             this.store.set(resource.id, resource)
@@ -258,6 +269,7 @@ export class MemoryPipeline<M extends IdentityInterface> extends PipelineAbstrac
         // `createValues` is the model with an optional id, so a resource that passed the action's own
         // validation satisfies the model once an id is on it. Only patch and restore can produce a
         // resource the entry validation never saw.
+        assertSafeKeys(resources)
         const created = resources.map((resource) => ({ ...(resource as any), id: (resource as any).id ?? this.generateId() }) as M)
         const seen = new Set<string>()
         for (const resource of created) {
