@@ -17,6 +17,13 @@ export class QueryTemplate {
         })
     }
 
+    /**
+     * Whether `resource` holds every field the template reads, so `hydrate` won't throw.
+     */
+    static canHydrate(query: object, resource: any): boolean {
+        return Object.values(QueryTemplate.getTemplatedParts(query)).every((o: string) => resource[o.substring(1)] !== undefined)
+    }
+
     static getTemplatedParts(queryTemplate: object) {
         return _.pickBy(queryTemplate, (o) => QueryTemplate.isTemplated(o))
     }

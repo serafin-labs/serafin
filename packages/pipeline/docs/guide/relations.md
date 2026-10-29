@@ -23,8 +23,13 @@ users.relations.address.type // "one"
 The arguments are the relation's **name**, the **target pipeline**, and a **query template**: a partial
 read query of the target in which a value starting with `:` is replaced by that field of the holding
 resource. Literal values may sit alongside — `{ userId: ":id", status: "paid" }` — and a literal that
-starts with `:` is escaped as `\:`. An absent field is an error (`Resource field addressId not found`);
-`false`, `0`, `""` and `null` are legitimate keys.
+starts with `:` is escaped as `\:`. A resource whose field is absent has nothing to relate to: it is
+left out of the relation's `index` (fetching it directly through `pipeline.relations` is an error,
+`Resource field addressId not found`). `false`, `0`, `""` and `null` are legitimate keys.
+
+Keys may be lists on either side. A resource holding `companyIds: ["c1", "c2"]` relates to both
+through `{ id: ":companyIds" }`, and a target holding `tagIds` is reached by `{ tagIds: ":id" }`,
+which reads the targets whose list contains the key.
 
 **One** promises at most one related resource; **many**, any number. They read the same way and differ
 in their types and in the shape of the result.
@@ -164,6 +169,10 @@ on one templated field that the target declares on its model and accepts as an a
 40 addresses is one `{ id: [...40 ids] }` read. That is why a derived read query accepts an array on
 every property. Otherwise there is one read per distinct key, and a [cache scope](./caching) removes
 the duplicates left across relations and pipes.
+
+A related read that pages — `{ withOrders: { limit: 5 } }`, or `skip` — is made **per resource**
+instead, so each user gets their own five orders rather than five shared by the whole page. `sort`
+does not prevent batching.
 
 ## No cycles
 

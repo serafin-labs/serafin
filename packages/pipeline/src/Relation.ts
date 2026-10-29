@@ -21,6 +21,14 @@ function acceptsArray(schema: any): boolean {
 }
 
 /**
+ * Read query options that page a result. A batched read pages the whole batch at once, so a related
+ * read carrying one of them is made per resource instead.
+ */
+const pagingOptions = ["limit", "skip"]
+
+const asList = (value: any): any[] => (Array.isArray(value) ? value : [value])
+
+/**
  * What a relation contributes to `meta.relations`.
  *
  * `data` holds each related resource once, keyed by its own id, so a target shared by many
@@ -107,17 +115,15 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
      *
      * Resources whose hydrated query is identical share a single read. When the relation is keyed on
      * a single templated field and the target accepts an array for it, the whole page is resolved
-     * with one read instead of one per resource.
+     * with one read instead of one per resource. A resource missing a templated field has nothing to
+     * relate to, and is left out of the index rather than failing the whole page.
      */
     async resolve(resources: M[], query?: Partial<ReadQuery>, context?: any): Promise<RelationMeta<R, Type, AnyRelations>> {
         const meta: RelationMeta<R, Type, AnyRelations> = { type: this.type, data: {}, index: {} }
-        if (resources.length === 0) {
-            return meta
-        }
 
         // Group by hydrated query, so resources pointing at the same target are read once.
         const groups = new Map<string, { query: any; resources: M[] }>()
-        for (const resource of resources) {
+        for (const resource of resources.filter((resource) => QueryTemplate.canHydrate(this.query, resource))) {
             const resourceQuery = this.queryFor(resource, query)
             const key = stableKey(resourceQuery)
             const group = groups.get(key)
@@ -127,27 +133,43 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
                 groups.set(key, { query: resourceQuery, resources: [resource] })
             }
         }
+        if (groups.size === 0) {
+            return meta
+        }
 
-        const batchField = groups.size > 1 ? this.batchField() : undefined
+        const batchField = groups.size > 1 ? this.batchField(query) : undefined
         if (batchField !== undefined) {
             const batches = [...groups.values()]
-            const result = await this.pipeline.read(
-                { ...batches[0].query, [batchField]: batches.map((group) => group.query[batchField]) } as any,
-                this.nestedContext(context),
-            )
-            // Index the single result set by the field the relation is keyed on.
-            const related = new Map<string, R[]>()
-            for (const entry of result.data) {
-                const key = stableKey((entry as any)[batchField])
-                const bucket = related.get(key)
-                if (bucket) {
-                    bucket.push(entry)
-                } else {
-                    related.set(key, [entry])
+            // A key that is itself a list -- a resource holding several ids -- asks for each of them.
+            const wanted = new Map<string, any>()
+            for (const group of batches) {
+                for (const value of asList(group.query[batchField])) {
+                    wanted.set(stableKey(value), value)
                 }
             }
+            const result = await this.pipeline.read({ ...batches[0].query, [batchField]: [...wanted.values()] } as any, this.nestedContext(context))
+            // Index the single result set by the field the relation is keyed on, under each of its
+            // values when the target holds a list there. Positions rather than entries, so a group
+            // reached through several keys gets each entry once, in the order the target returned.
+            const related = new Map<string, number[]>()
+            result.data.forEach((entry, position) => {
+                for (const value of asList((entry as any)[batchField])) {
+                    const key = stableKey(value)
+                    const bucket = related.get(key)
+                    if (bucket) {
+                        bucket.push(position)
+                    } else {
+                        related.set(key, [position])
+                    }
+                }
+            })
             for (const group of batches) {
-                this.record(meta, group.resources, related.get(stableKey(group.query[batchField])) ?? [])
+                const positions = new Set(asList(group.query[batchField]).flatMap((value) => related.get(stableKey(value)) ?? []))
+                this.record(
+                    meta,
+                    group.resources,
+                    [...positions].sort((a, b) => a - b).map((position) => result.data[position]),
+                )
             }
             this.recordNested(meta, result.meta)
         } else {
@@ -201,8 +223,19 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
         return { ...(context ?? {}), [relationDepth]: depth }
     }
 
+    /**
+     * The target's read query for one resource. A scalar key aimed at a field the target holds as a
+     * list is sent as a list of one: a derived read query takes an array there, meaning "any of".
+     */
     private queryFor(resource: M, query?: Partial<ReadQuery>) {
-        return { ...(QueryTemplate.hydrate(this.query, resource) as any), ...(query || {}) }
+        const hydrated: any = QueryTemplate.hydrate(this.query, resource)
+        const model = (this.pipeline.schemaBuilders.model.schema as any)?.properties
+        for (const field of Object.keys(QueryTemplate.getTemplatedParts(this.query))) {
+            if (!Array.isArray(hydrated[field]) && acceptsArray(model?.[field])) {
+                hydrated[field] = [hydrated[field]]
+            }
+        }
+        return { ...hydrated, ...(query || {}) }
     }
 
     private assign(resource: M, data: R[]) {
@@ -216,8 +249,15 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
      * The field a whole page can be read on in one call, or `undefined` when it has to be read
      * resource by resource. Batching needs a single templated field that the target declares on its
      * model -- so the results can be grouped back by it -- and accepts as an array on its read query.
+     *
+     * A related read that pages its result can't be shared either: its `limit` and `skip` would apply
+     * to the page as a whole rather than to each resource's share of it.
      */
-    private batchField(): string | undefined {
+    private batchField(query?: Partial<ReadQuery>): string | undefined {
+        const options: any = { ...QueryTemplate.getNonTemplatedParts(this.query), ...(query || {}) }
+        if (pagingOptions.some((option) => options[option] !== undefined)) {
+            return undefined
+        }
         const templated = Object.keys(QueryTemplate.getTemplatedParts(this.query))
         if (templated.length !== 1) {
             return undefined
