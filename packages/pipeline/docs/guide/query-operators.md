@@ -8,6 +8,26 @@ public schemas describe plain values. [SourceQuery & Capabilities](./source-quer
 contract. The examples below call `matchQuery`, the exported pure function `MemoryPipeline` filters
 with.
 
+A property holding a **free-form object** is the one place a schema alone would let an operator
+through: `{ meta: { $exists: true } }` is a valid object. So a caller's query is also checked for
+`$`-prefixed keys, at any depth, and **one the schema does not declare by name is refused** before any
+pipe runs:
+
+```ts twoslash
+import { SchemaBuilder as SB } from "@serafin/schema-builder"
+import { MemoryPipeline } from "@serafin/pipeline"
+// ---cut---
+const notes = new MemoryPipeline(SB.emptySchema().addString("id").addProperty("meta", SB.emptySchema().addAdditionalProperties(), false))
+
+await notes.read({ meta: { source: "import" } }) // matched literally, as a subdocument
+await notes.read({ meta: { $exists: true } })
+// SerafinValidationError: ... '/meta/$exists' is not declared by the schema: only a pipe can hand an operator down
+```
+
+Refusing rather than matching literally keeps one meaning per query: below the pipes, every
+`$`-prefixed key is an operator, whoever wrote it. A pipe that does want callers to send an operator
+declares it in its `readQuery`, and a pipeline with validation off skips the check.
+
 ## On a value
 
 | Operator | Takes | Matches when |

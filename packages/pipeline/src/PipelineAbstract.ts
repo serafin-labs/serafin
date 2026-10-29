@@ -98,6 +98,45 @@ function stripUndefined<T>(value: T): T {
 }
 
 /**
+ * A schema and the schemas its combination keywords hold, flattened: every shape a value validated
+ * against it may have taken.
+ */
+function alternatives(schema: any): any[] {
+    if (!schema || typeof schema !== "object") {
+        return []
+    }
+    return [schema, ...["oneOf", "anyOf", "allOf"].flatMap((keyword) => (Array.isArray(schema[keyword]) ? schema[keyword].flatMap(alternatives) : []))]
+}
+
+/**
+ * Refuse a `$`-prefixed key in a caller's query unless its schema declares that key.
+ *
+ * A model property holding a free-form object validates `{ meta: { $exists: true } }` as an object
+ * like any other, and the implementation below would then read it as an operator. Operators are what
+ * a pipe hands down through `next`, so a caller sending one where the schema only says "any object"
+ * is asking the implementation something the schema never offered. A key the schema declares by name
+ * in `properties` -- a pipe exposing an operator on purpose -- is accepted.
+ */
+function assertDeclaredOperators(value: any, schemas: any[], path: string): void {
+    if (Array.isArray(value)) {
+        const items = schemas.flatMap((schema) => alternatives(schema.items))
+        value.forEach((entry, index) => assertDeclaredOperators(entry, items, `${path}/${index}`))
+    } else if (_.isPlainObject(value)) {
+        for (const key of Object.keys(value)) {
+            const declared = schemas.filter((schema) => _.isPlainObject(schema.properties) && Object.prototype.hasOwnProperty.call(schema.properties, key))
+            if (key.startsWith("$") && declared.length === 0) {
+                throw validationError(`'${path}/${key}' is not declared by the schema: only a pipe can hand an operator down`)
+            }
+            const next =
+                declared.length > 0
+                    ? declared.flatMap((schema) => alternatives(schema.properties[key]))
+                    : schemas.flatMap((schema) => alternatives(schema.additionalProperties))
+            assertDeclaredOperators(value[key], next, `${path}/${key}`)
+        }
+    }
+}
+
+/**
  * The same, but only the object's own properties.
  *
  * Used for the context, which is shallow-copied rather than cloned so that what it carries -- a
@@ -604,6 +643,9 @@ export abstract class PipelineAbstract<
                 })
             } else {
                 schema.validate(data)
+                if (valueName === "query") {
+                    assertDeclaredOperators(data, alternatives(schema.schema), "")
+                }
             }
         } catch (e) {
             throw error(
