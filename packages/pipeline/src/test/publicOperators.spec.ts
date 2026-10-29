@@ -10,11 +10,7 @@ const looseSchema = SchemaBuilder.emptySchema().addString("id").addProperty("met
 
 const loose = (options: any = {}) =>
     new MemoryPipeline(looseSchema, {
-        initialData: [
-            { id: "1", meta: { a: 1 } },
-            { id: "2", meta: { $exists: true } },
-            { id: "3" },
-        ],
+        initialData: [{ id: "1", meta: { a: 1 } }, { id: "2", meta: { $exists: true } }, { id: "3" }],
         ...options,
     })
 
