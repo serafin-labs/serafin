@@ -15,8 +15,29 @@ const cacheScope = Symbol.for("@serafin/pipeline.cacheScope")
 /**
  * A scope holds the reads issued since it was opened, as the promises themselves rather than their
  * results -- which is what lets two calls that overlap in time share a single read.
+ *
+ * A scope opened inside another keeps a link to it, so a write under either invalidates both: a flush
+ * empties the whole chain upwards, and each entry carries the flush count of the chain it was stored
+ * under, so an inner entry stored before an enclosing scope was flushed is not served afterwards.
  */
-type CacheScope = Map<string, Promise<ResultsInterface<any, any>>>
+interface CacheScope {
+    entries: Map<string, CacheEntry>
+    parent?: CacheScope
+    flushes: number
+}
+
+interface CacheEntry {
+    read: Promise<ResultsInterface<any, any>>
+    stamp: number
+}
+
+function stampOf(scope: CacheScope) {
+    let stamp = 0
+    for (let current: CacheScope | undefined = scope; current; current = current.parent) {
+        stamp += current.flushes
+    }
+    return stamp
+}
 
 /**
  * Scopes handed out by `openCacheScope`.
@@ -42,10 +63,11 @@ function liveScopes(): WeakSet<CacheScope> {
  * Nothing is cached until a scope is open, so a pipeline carrying `Cache()` behaves exactly as it
  * did before until a caller asks for it. Open one per request, or around any sequence of reads that
  * should see a single consistent version of the data. Opening a scope on a context that already has
- * one nests it: the inner scope starts empty and is discarded with the context that carries it.
+ * one nests it: the inner scope starts empty and is discarded with the context that carries it, and a
+ * write made under either scope invalidates both.
  */
 export function openCacheScope<CTX extends object>(context?: CTX): CTX {
-    const scope: CacheScope = new Map()
+    const scope: CacheScope = { entries: new Map(), parent: scopeOf(context), flushes: 0 }
     liveScopes().add(scope)
     return { ...(context ?? ({} as CTX)), [cacheScope]: scope }
 }
@@ -65,7 +87,10 @@ function scopeOf(context: any): CacheScope | undefined {
  * what was true before.
  */
 export function flushCacheScope(context: any): void {
-    scopeOf(context)?.clear()
+    for (let scope = scopeOf(context); scope; scope = scope.parent) {
+        scope.entries.clear()
+        scope.flushes++
+    }
 }
 
 /**
@@ -146,19 +171,24 @@ export function Cache<
                 return next(query, context)
             }
             const key = `${id}:${stableKey(query)}`
-            const pending = scope.get(key)
-            if (pending) {
-                return envelope(await pending) as ResultsInterface<M, META & RM>
+            const stamp = stampOf(scope)
+            const pending = scope.entries.get(key)
+            if (pending && pending.stamp === stamp) {
+                return envelope(await pending.read) as ResultsInterface<M, META & RM>
             }
             // `next` returns its promise synchronously, so the entry is in place before anything can
             // await it. That is what makes two overlapping reads share one call rather than race.
-            const issued = next(query, context)
-            scope.set(key, issued)
+            const entry: CacheEntry = { read: next(query, context), stamp }
+            scope.entries.set(key, entry)
             try {
-                return envelope(await issued)
+                return envelope(await entry.read)
             } catch (e) {
-                // Don't pin a failure for the life of the scope: let the next caller try again.
-                scope.delete(key)
+                // Don't pin a failure for the life of the scope: let the next caller try again. Only if
+                // the entry is still this read's, though -- a write may have flushed it since, and a
+                // newer read put its own in its place.
+                if (scope.entries.get(key) === entry) {
+                    scope.entries.delete(key)
+                }
                 throw e
             }
         },

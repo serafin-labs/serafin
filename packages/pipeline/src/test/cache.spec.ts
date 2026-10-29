@@ -249,6 +249,53 @@ describe("Cache", function () {
         expect(source.reads).to.eql(2)
     })
 
+    it("should invalidate the enclosing scope on a write made in a nested one", async function () {
+        const { source, pipeline } = cached()
+        const outer = openCacheScope({})
+        await pipeline.read({}, outer)
+        await pipeline.patch({ id: "1" }, {}, openCacheScope(outer))
+        await pipeline.read({}, outer)
+        expect(source.reads).to.eql(2)
+    })
+
+    it("should not serve a nested scope's entry once the enclosing scope saw a write", async function () {
+        const { source, pipeline } = cached()
+        const outer = openCacheScope({})
+        const inner = openCacheScope(outer)
+        await pipeline.read({}, inner)
+        await pipeline.patch({ id: "1" }, {}, outer)
+        await pipeline.read({}, inner)
+        expect(source.reads).to.eql(2)
+        await pipeline.read({}, inner)
+        expect(source.reads).to.eql(2)
+    })
+
+    it("should not let a failed read evict the entry a newer read put in its place", async function () {
+        let release!: () => void
+        const gate = new Promise<void>((resolve) => (release = resolve))
+        let reads = 0
+        const pipeline = new Source(newState())
+            .pipe(() => ({
+                read: async (next: any, query: any, context: any) => {
+                    reads++
+                    if (reads === 1) {
+                        await gate
+                        throw new Error("stale read failed")
+                    }
+                    return next(query, context)
+                },
+            }))
+            .pipe(Cache())
+        const context = openCacheScope({})
+        const stale = pipeline.read({}, context)
+        await pipeline.patch({ id: "1" }, {}, context)
+        await pipeline.read({}, context)
+        release()
+        await expect(stale).to.be.rejectedWith("stale read failed")
+        await pipeline.read({}, context)
+        expect(reads).to.eql(2)
+    })
+
     it("should open a scope without being given a context", async function () {
         const { source, pipeline } = cached()
         const context = openCacheScope()

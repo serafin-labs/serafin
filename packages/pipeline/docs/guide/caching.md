@@ -45,9 +45,11 @@ await handle(context) // every read below shares the scope
 The scope rides on the context under a symbol ([Context](./context#what-travels-invisibly)), so
 **every pipeline and every nested relation read below it shares it**: a relation resolving through a
 target that also carries `Cache()` is deduplicated against the rest of the request. Opening a scope on
-a context that has one **nests** it: the inner scope starts empty and is dropped with its context.
+a context that has one **nests** it: the inner scope starts empty and is dropped with its context, and
+a write under either scope invalidates both.
 
-A scope holds read **promises**, so overlapping reads share one call. A read that throws is removed.
+A scope holds read **promises**, so overlapping reads share one call. A read that throws is removed,
+unless a write has flushed it since and a newer read has taken its place.
 
 ## Invalidation
 
