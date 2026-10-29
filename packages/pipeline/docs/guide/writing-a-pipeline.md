@@ -168,6 +168,11 @@ A fork declared with `any` for its type parameters is not assignable from a conc
 pipeline, so mirroring the base's builders is the pattern. Passing `false` as the fourth constructor
 argument skips revalidating what the base pipeline validates anyway.
 
+A fork reaches its base through the base's **public** actions, which validate again, so it declares
+the base's [capabilities](./source-query#capabilities) **minus the operators and `dotted-paths`**: a
+pipe attached to the fork that hands down `$gt` is refused when attached, while one handing down
+`limit` is accepted.
+
 ## A checklist
 
 - **Be atomic where you can.** Compute and check everything, then write.

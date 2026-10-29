@@ -5,8 +5,20 @@ import { Relation } from "../Relation.js"
 import { RelationType } from "../RelationType.js"
 
 /**
+ * What a fork can still promise of its base's capabilities. The fork reaches its base through the
+ * base's public actions, which validate again: an operator or a dotted path a pipe hands down to the
+ * fork is refused there, while a read option, a meta key or a context capability passes through.
+ */
+function forwardedCapabilities(capabilities: ReadonlySet<string> | undefined): string[] | undefined {
+    return capabilities && [...capabilities].filter((capability) => !capability.startsWith("$") && capability !== "dotted-paths")
+}
+
+/**
  * Forked version of a pipeline.
  * The provided base pipeline will be called internally.
+ *
+ * It declares the base's capabilities minus the operators and dotted paths, which the base's own
+ * validation would refuse, so a pipe attached to the fork that needs one fails when attached.
  */
 export abstract class ForkedPipeline<
     M extends IdentityInterface = IdentityInterface,
@@ -31,7 +43,7 @@ export abstract class ForkedPipeline<
         validationEnabled = true,
     ) {
         const newModelSchema = basePipeline.schemaBuilders.model.setSchemaAttributes({ title, description })
-        super({ ...basePipeline.schemaBuilders, model: newModelSchema }, { validationEnabled })
+        super({ ...basePipeline.schemaBuilders, model: newModelSchema }, { validationEnabled, capabilities: forwardedCapabilities(basePipeline.capabilities) })
     }
 
     protected async _create(resources: CV[], options: CO, context: CTX): Promise<ResultsInterface<M, CM>> {

@@ -7,6 +7,7 @@ import { defaultSchemaBuilders } from "../SchemaBuildersInterface.js"
 import { ForkedPipeline } from "../pipeline/ForkedPipeline.js"
 import { SetReadQueryParameterDefaultValue } from "../pipe/SetQueryParameterDefaultValue.js"
 import { ResultsInterface } from "../ResultsInterface.js"
+import { MemoryPipeline } from "../pipeline/MemoryPipeline.js"
 
 chai.use(chaiAsPromised)
 
@@ -60,6 +61,30 @@ describe("ForkedPipeline", function () {
         for (const [, args] of base.calls) {
             expect(args[args.length - 1]).to.eql({})
         }
+    })
+
+    describe("capabilities", function () {
+        const counterSchema = SchemaBuilder.emptySchema().addString("id").addInteger("n", {}, false)
+        const memoryFork = () => new Fork(new MemoryPipeline(counterSchema, { initialData: [{ id: "1", n: 3 }] }) as any, "t", "d")
+
+        it("should refuse a pipe handing down an operator its base would refuse", function () {
+            const NeedsGt = () => ({ requires: ["$gt"] })
+            expect(() => memoryFork().pipe(NeedsGt)).to.throw(/needs '\$gt', which Fork does not declare/)
+            expect(() => memoryFork().pipe(() => ({ requires: ["dotted-paths"] }))).to.throw(/does not declare/)
+            expect(() => memoryFork().pipe(() => ({ requires: ["$whatever"] }))).to.throw(/does not declare/)
+        })
+
+        it("should accept a pipe handing down a read option its base takes publicly", async function () {
+            const p = memoryFork().pipe(() => ({
+                requires: ["limit", "count"],
+                read: (next: any, query: any, context: any) => next({ ...query, limit: 0, withCount: true }, context),
+            }))
+            expect((await p.read({})).meta).to.eql({ count: 1 })
+        })
+
+        it("should leave a fork of an undeclared base undeclared", function () {
+            expect(forked().fork.capabilities).to.eql(undefined)
+        })
     })
 
     it("should be able to skip its own validation", async function () {

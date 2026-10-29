@@ -114,6 +114,8 @@ abstract class ForkedPipeline<M, CV, ...> extends PipelineAbstract<M, CV, ...> {
 }
 ```
 
-Delegates all four actions to `basePipeline`, with the model retitled and described. Its type
+Delegates all four actions to `basePipeline`, with the model retitled and described. Its
+`capabilities` are the base's minus the `$` operators and `dotted-paths`, which the base's public
+validation would refuse. Its type
 parameters must line up with the base pipeline's — see
 [Wrapping another pipeline](/guide/writing-a-pipeline#wrapping-another-pipeline).
