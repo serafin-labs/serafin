@@ -42,8 +42,9 @@ an array index leaves a `null` in place.
 ## `stableKey(value): string`
 
 A stable string for any JSON value: object keys are sorted, and the type is part of the key, so
-`{ b: 1, a: 2 }` and `{ a: 2, b: 1 }` collide while `1` and `"1"` do not. Used to recognise a query
-already seen, in relation grouping and the read cache.
+`{ b: 1, a: 2 }` and `{ a: 2, b: 1 }` collide while `1` and `"1"` do not. Strings are quoted, so no
+string can pass for a list of values, and a `Date` or `RegExp` is keyed by its value. Used to
+recognise a query already seen, in relation grouping and the read cache.
 
 ## Relations
 

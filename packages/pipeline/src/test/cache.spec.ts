@@ -98,6 +98,14 @@ describe("Cache", function () {
         expect(source.reads).to.eql(2)
     })
 
+    it("should not let a crafted string collide with a list of values", async function () {
+        const { source, pipeline } = cached()
+        const context = openCacheScope({})
+        await pipeline.read({ id: ["a,string:b"] }, context)
+        await pipeline.read({ id: ["a", "b"] }, context)
+        expect(source.reads).to.eql(2)
+    })
+
     it("should share a single read between calls that overlap in time", async function () {
         const { source, pipeline } = cached()
         const context = openCacheScope({})
@@ -293,5 +301,19 @@ describe("stableKey", function () {
     it("should keep array order", function () {
         expect(stableKey([1, 2])).to.not.eql(stableKey([2, 1]))
         expect(stableKey([1, 2])).to.eql(stableKey([1, 2]))
+    })
+
+    it("should not let a string forge the delimiters of an array", function () {
+        expect(stableKey(["a,string:b"])).to.not.eql(stableKey(["a", "b"]))
+        expect(stableKey(['a"],["b'])).to.not.eql(stableKey(["a", "b"]))
+    })
+
+    it("should key a Date and a RegExp by their value", function () {
+        expect(stableKey(new Date(0))).to.not.eql(stableKey(new Date(1)))
+        expect(stableKey(new Date(0))).to.eql(stableKey(new Date(0)))
+        expect(stableKey(/a/)).to.not.eql(stableKey(/b/))
+        expect(stableKey(/a/)).to.not.eql(stableKey(/a/i))
+        expect(stableKey({ $regex: /a/ })).to.not.eql(stableKey({ $regex: /b/ }))
+        expect(stableKey(new Date(0))).to.not.eql(stableKey({}))
     })
 })
