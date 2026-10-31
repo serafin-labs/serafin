@@ -1,11 +1,11 @@
 import { PipelineAbstract } from "@serafin/pipeline"
-import * as express from "express"
+import express from "express"
 import ExpressGraphQL from "express-graphql"
 import * as graphql from "graphql"
-import * as _ from "lodash"
-import { Api } from "../../Api"
-import { TransportInterface } from "../TransportInterface"
-import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL"
+import _ from "lodash"
+import { Api } from "../../Api.js"
+import { TransportInterface } from "../TransportInterface.js"
+import { jsonSchemaToGraphQL } from "./jsonSchemaToGraphQL.js"
 
 export interface GraphQLOptions {
     /**

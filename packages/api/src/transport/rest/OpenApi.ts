@@ -1,8 +1,8 @@
 import { ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "@serafin/pipeline"
-import * as _ from "lodash"
-import { Api } from "../../Api"
-import { flattenSchemas, jsonSchemaToOpenApiSchema, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils"
+import _ from "lodash"
+import { Api } from "../../Api.js"
+import { flattenSchemas, jsonSchemaToOpenApiSchema, removeDuplicatedParameters, schemaToOpenApiParameter } from "../../util/openApiUtils.js"
 
 function mapSchemaBuilderName(schemaBuilderName: string, modelName: string) {
     if (schemaBuilderName === "modelSchemaBuilder") {

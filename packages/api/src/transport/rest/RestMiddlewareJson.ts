@@ -1,11 +1,11 @@
 import { notFoundError, PipelineAbstract } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import * as express from "express"
-import * as _ from "lodash"
-import { Api } from "../../Api"
-import { JsonHal } from "./JsonHal"
-import { OpenApi } from "./OpenApi"
-import { RestTransport } from "./Rest"
+import express from "express"
+import _ from "lodash"
+import { Api } from "../../Api.js"
+import { JsonHal } from "./JsonHal.js"
+import { OpenApi } from "./OpenApi.js"
+import { RestTransport } from "./Rest.js"
 
 export const restMiddlewareJson = (
     rest: RestTransport<any, any>,

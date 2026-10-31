@@ -10,12 +10,12 @@ import {
 } from "@serafin/pipeline"
 import { JSONSchema, SchemaBuilder } from "@serafin/schema-builder"
 import { Request, Response } from "express"
-import * as _ from "lodash"
+import _ from "lodash"
 import VError from "verror"
-import { Api } from "../../Api"
-import { TransportInterface } from "../TransportInterface"
-import { OpenApi } from "./OpenApi"
-import { restMiddlewareJson, restRootMiddlewareJson } from "./RestMiddlewareJson"
+import { Api } from "../../Api.js"
+import { TransportInterface } from "../TransportInterface.js"
+import { OpenApi } from "./OpenApi.js"
+import { restMiddlewareJson, restRootMiddlewareJson } from "./RestMiddlewareJson.js"
 
 export interface Error {
     name: string

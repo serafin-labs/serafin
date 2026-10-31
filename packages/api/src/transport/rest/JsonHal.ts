@@ -1,6 +1,6 @@
-import * as _ from "lodash"
+import _ from "lodash"
 import { QueryTemplate, Relation } from "@serafin/pipeline"
-import { Api } from "../../Api"
+import { Api } from "../../Api.js"
 
 export class JsonHal {
     constructor(private selfUrl: string, private api: Api, private relations: { [k: string]: Relation<any, any, any, any, any, any> }) {}

@@ -1,8 +1,8 @@
 import { JSONSchema } from "@serafin/schema-builder"
 import * as graphql from "graphql"
-import * as GraphQLJSON from "graphql-type-json"
-import * as jsonpointer from "jsonpointer"
-import * as _ from "lodash"
+import GraphQLJSON from "graphql-type-json"
+import jsonpointer from "jsonpointer"
+import _ from "lodash"
 
 /**
  * Basic types that can be converted to JSON Schema directly

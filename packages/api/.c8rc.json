@@ -1,0 +1,5 @@
+{
+    "reporter": ["text-summary", "lcov"],
+    "report-dir": ".coverage",
+    "exclude": [".coverage-build/test/**"]
+}

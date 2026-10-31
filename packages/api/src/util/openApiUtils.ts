@@ -1,8 +1,8 @@
 import { OpenAPIObject, ParameterObject, SchemaObject, ReferenceObject } from "@serafin/open-api"
-import * as _ from "lodash"
-import * as jsonpointer from "jsonpointer"
+import _ from "lodash"
+import jsonpointer from "jsonpointer"
 
-import { throughJsonSchema } from "./throughJsonSchema"
+import { throughJsonSchema } from "./throughJsonSchema.js"
 import { JSONSchema } from "@serafin/schema-builder"
 
 /**

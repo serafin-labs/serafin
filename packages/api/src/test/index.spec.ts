@@ -1,17 +1,14 @@
 import { ParameterObject } from "@serafin/open-api"
 import { defaultSchemaBuilders, IdentityInterface, PipelineAbstract, PipelineAbstractOptions, SchemaBuildersInterface } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
-import { use } from "chai"
-import { expect, request } from "chai"
+import { expect, use } from "chai"
+import chaiHttp, { request } from "chai-http"
 import express from "express"
-import { Api } from "../Api"
-import { RestTransport } from "../transport/rest/Rest"
-import * as bodyParser from "body-parser"
-import chaiHttp from "chai-http"
+import { Server } from "node:http"
+import { Api } from "../Api.js"
+import { RestTransport } from "../transport/rest/Rest.js"
 
-chaiHttp
-use(require("chai-http"))
-use(require("chai-as-promised"))
+use(chaiHttp)
 
 class TestingPipeline<
     M extends IdentityInterface = IdentityInterface,
@@ -56,10 +53,10 @@ export class RolePipe<CTX> {
 describe("Api", function () {
     let api: Api
     let app: express.Application
-    let server: any
+    let server: Server
     beforeEach(function (done) {
         app = express()
-        app.use(bodyParser.json())
+        app.use(express.json())
         api = new Api(app, "", {
             openapi: "3.0.0",
             info: {
@@ -77,8 +74,8 @@ describe("Api", function () {
             done()
         })
     })
-    afterEach(function () {
-        server.close()
+    afterEach(function (done) {
+        server.close(() => done())
     })
 
     it("should be initialized with an express app", function () {
@@ -88,111 +85,74 @@ describe("Api", function () {
         expect(api.configure).to.exist
     })
 
-    it("should provide a /api.json enpoint", function (done) {
-        request(app)
-            .get("/api.json")
-            .end((err, res) => {
-                expect(err).to.not.exist
-                expect(res.status).to.eql(200)
-                expect(res.type).to.eql("application/json")
-                expect(res.body).to.include.keys("openapi", "info", "paths", "components")
-                server.close()
-                done()
-            })
+    it("should provide a /api.json enpoint", async function () {
+        const res = await request.execute(app).get("/api.json")
+        expect(res.status).to.eql(200)
+        expect(res.type).to.eql("application/json")
+        expect(res.body).to.include.keys("openapi", "info", "paths", "components")
     })
 
-    it("should configure a transport and handle requests", function (done) {
+    it("should configure a transport and handle requests", async function () {
         // malformed read
-        request(app)
-            .get("/tests/badId")
-            .end((err, res) => {
-                expect(res.status).to.eql(400)
-            })
+        let res = await request.execute(app).get("/tests/badId")
+        expect(res.status).to.eql(400)
 
         // read by id
-        request(app)
-            .get("/tests/1")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("read")
-            })
+        res = await request.execute(app).get("/tests/1")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("read")
 
         // read
-        request(app)
-            .get("/tests/")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("read")
-            })
+        res = await request.execute(app).get("/tests/")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("read")
 
         // read with type coercion
-        request(app)
-            .get("/tests/?value=42")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("read")
-                expect(res.body.data[0].query.value).to.equals(42)
-            })
+        res = await request.execute(app).get("/tests/?value=42")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("read")
+        expect(res.body.data[0].query.value).to.equals(42)
 
         // read with params filtering
-        request(app)
-            .get("/tests/?other=none")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("read")
-                expect(res.body.data[0].query.v).to.equals(undefined)
-            })
+        res = await request.execute(app).get("/tests/?other=none")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("read")
+        expect(res.body.data[0].query.v).to.equals(undefined)
 
         // read with private options
-        request(app)
-            .get("/tests/?_role=admin&v=1")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("read")
-                expect(res.body.data[0].context._role).to.equals(undefined)
-                expect(res.body.data[0].context.v).to.equals(1)
-            })
+        res = await request.execute(app).get("/tests/?_role=admin&v=1")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("read")
+        expect(res.body.data[0].context._role).to.equals(undefined)
+        expect(res.body.data[0].context.v).to.equals(1)
 
         // malformed create
-        request(app)
-            .post("/tests/")
-            .send([{ id: "1" }])
-            .end((err, res) => {
-                expect(res.status).to.eql(400)
-            })
+        res = await request.execute(app).post("/tests/").send([{ id: "1" }])
+        expect(res.status).to.eql(400)
 
         // create
-        request(app)
+        res = await request
+            .execute(app)
             .post("/tests/?_role=admin&v=1")
             .send([{ value: 42 }])
-            .end((err, res) => {
-                expect(res.status).to.eql(201)
-                expect(res.body.data[0].method).to.eql("create")
-                expect(res.body.data[0].context._role).to.equals(undefined)
-                expect(res.body.data[0].context.v).to.equals(1)
-            })
+        expect(res.status).to.eql(201)
+        expect(res.body.data[0].method).to.eql("create")
+        expect(res.body.data[0].context._role).to.equals(undefined)
+        expect(res.body.data[0].context.v).to.equals(1)
 
         // patch
-        request(app)
-            .patch("/tests/1?_role=admin&v=1")
-            .send({ value: 42 })
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("patch")
-                expect(res.body.data[0].context._role).to.equals(undefined)
-                expect(res.body.data[0].context.v).to.equals(1)
-            })
+        res = await request.execute(app).patch("/tests/1?_role=admin&v=1").send({ value: 42 })
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("patch")
+        expect(res.body.data[0].context._role).to.equals(undefined)
+        expect(res.body.data[0].context.v).to.equals(1)
 
         // delete
-        request(app)
-            .del("/tests/1?_role=admin&v=1")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("delete")
-                expect(res.body.data[0].context._role).to.equals(undefined)
-                expect(res.body.data[0].context.v).to.equals(1)
-                done()
-            })
+        res = await request.execute(app).delete("/tests/1?_role=admin&v=1")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("delete")
+        expect(res.body.data[0].context._role).to.equals(undefined)
+        expect(res.body.data[0].context.v).to.equals(1)
     })
 
     it("should filter internal options", function () {
@@ -224,31 +184,24 @@ describe("Api", function () {
         expect(filteredParameters[0].name).to.eql("okOption")
     })
 
-    it("should support general patch", function () {
+    it("should support general patch", async function () {
         const pipeline1 = new TestingPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
         api.use(pipeline1, "p1", "p1")
 
-        request(app)
-            .patch("/p1?id=42&id=21")
-            .send({ test: "21" })
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("patch")
-                expect(res.body.data[0].values.test).to.equals("21")
-                expect(res.body.data[0].query.id).to.eql(["42", "21"])
-            })
+        const res = await request.execute(app).patch("/p1?id=42&id=21").send({ test: "21" })
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("patch")
+        expect(res.body.data[0].values.test).to.equals("21")
+        expect(res.body.data[0].query.id).to.eql(["42", "21"])
     })
 
-    it("should support general delete", function () {
+    it("should support general delete", async function () {
         const pipeline1 = new TestingPipeline(defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id", { maxLength: 2 }).addString("test")))
         api.use(pipeline1, "p1", "p1")
 
-        request(app)
-            .delete("/p1?id=42&id=21")
-            .end((err, res) => {
-                expect(res.status).to.eql(200)
-                expect(res.body.data[0].method).to.eql("delete")
-                expect(res.body.data[0].query.id).to.eql(["42", "21"])
-            })
+        const res = await request.execute(app).delete("/p1?id=42&id=21")
+        expect(res.status).to.eql(200)
+        expect(res.body.data[0].method).to.eql("delete")
+        expect(res.body.data[0].query.id).to.eql(["42", "21"])
     })
 })

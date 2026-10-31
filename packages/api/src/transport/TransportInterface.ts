@@ -1,5 +1,5 @@
 import { PipelineAbstract } from "@serafin/pipeline"
-import { Api } from "../Api"
+import { Api } from "../Api.js"
 
 /**
  * Transport represent a way to expose pipelines to an external interface.

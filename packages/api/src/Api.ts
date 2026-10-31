@@ -1,9 +1,9 @@
 import { OpenAPIObject, ParameterObject } from "@serafin/open-api"
 import { PipelineAbstract } from "@serafin/pipeline"
-import * as express from "express"
-import * as _ from "lodash"
+import express from "express"
+import _ from "lodash"
 import VError from "verror"
-import { TransportInterface } from "./transport/TransportInterface"
+import { TransportInterface } from "./transport/TransportInterface.js"
 
 /**
  * Api class represents a set of endpoints based on pipelines.
