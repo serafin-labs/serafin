@@ -1,4 +1,4 @@
-<p align="center"><img src="./docs/public/logo.png" width="300"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/serafin-labs/serafin/master/docs/public/logo.png" width="300"/></p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@serafin/schema-builder"><img src="https://img.shields.io/npm/v/@serafin/schema-builder.svg" alt="npm version"></a>
@@ -49,7 +49,7 @@ type UserPatch = typeof userPatchSchema.T
 
 ## Documentation
 
-📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/schema-builder](https://serafin-labs.github.io/schema-builder/).**
+📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/serafin/schema-builder](https://serafin-labs.github.io/serafin/schema-builder/).**
 
 It covers building schemas (primitives, objects, arrays, tuples, enums, unions), transforming them (pick/omit, optionals, merging, combinators), validation, and the complete API reference.
 

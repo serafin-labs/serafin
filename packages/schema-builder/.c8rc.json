@@ -1,0 +1,10 @@
+{
+    "reporter": ["text-summary", "lcov"],
+    "report-dir": ".coverage",
+    "exclude": [".coverage-build/test/**"],
+    "check-coverage": true,
+    "statements": 98,
+    "branches": 91,
+    "functions": 100,
+    "lines": 98
+}

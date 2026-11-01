@@ -1,0 +1,12 @@
+{
+    "extends": "./tsconfig.json",
+    "exclude": [],
+    "compilerOptions": {
+        "incremental": false,
+        "declaration": false,
+        "declarationMap": false,
+        "inlineSources": true,
+        "outDir": ".coverage-build",
+        "types": ["mocha", "node"]
+    }
+}

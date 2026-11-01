@@ -1,0 +1,18 @@
+packages:
+    - packages/*
+
+# Only install versions published for at least 7 days
+minimumReleaseAge: 10080
+
+# Versions shared by several packages
+catalog:
+    ajv: ^8.20.0
+    ajv-formats: ^3.0.1
+    lodash: ^4.18.1
+    verror: ^1.10.1
+    "@types/lodash": ^4.17.24
+    "@types/verror": ^1.10.11
+
+# esbuild ships its binary as an optional dependency, its install script is not needed
+ignoredBuiltDependencies:
+    - esbuild

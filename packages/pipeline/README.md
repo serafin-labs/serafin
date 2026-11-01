@@ -1,4 +1,4 @@
-<p align="center"><img src="./docs/public/logo.png" width="300"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/serafin-labs/serafin/master/docs/public/logo.png" width="300"/></p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@serafin/pipeline"><img src="https://img.shields.io/npm/v/@serafin/pipeline.svg" alt="npm version"></a>
@@ -54,7 +54,7 @@ users.schemaBuilders.readQuery.schema // feed it to OpenAPI, to an MCP tool defi
 ```
 
 Wrap behaviour around it with `.pipe()`, which returns a new pipeline. `Cache` is one of the pipes
-the library ships; [writing your own](https://serafin-labs.github.io/pipeline/guide/writing-a-pipe) is
+the library ships; [writing your own](https://serafin-labs.github.io/serafin/pipeline/guide/writing-a-pipe) is
 a function of a few lines:
 
 ```typescript
@@ -84,12 +84,12 @@ withAddresses.meta.relations?.addresses // every address once, plus an index fro
 
 ## Documentation
 
-📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/pipeline](https://serafin-labs.github.io/pipeline/).**
+📚 **Full documentation, with interactive type-aware examples, is available at [serafin-labs.github.io/serafin/pipeline](https://serafin-labs.github.io/serafin/pipeline/).**
 
 ## What's next?
 
 `pipeline` is a component of the **Serafin** framework, alongside
-[`schema-builder`](https://github.com/serafin-labs/schema-builder). Learn more at
+[`schema-builder`](https://github.com/serafin-labs/serafin/tree/master/packages/schema-builder). Learn more at
 [github.com/serafin-labs/serafin](https://github.com/serafin-labs/serafin).
 
 ## License

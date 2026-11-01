@@ -1,11 +1,11 @@
-<p align="center"><img src="https://serafin-labs.github.io/images/logo-serafin-with-text-1080.png" width="300"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/serafin-labs/serafin/master/docs/public/logo.png" width="300"/></p>
 
 # Serafin API
 
-A RESTful, self-descriptive API on top of [Serafin pipelines](https://github.com/serafin-labs/pipeline): expose a pipeline, get its REST endpoints and their [OpenAPI 3.2](https://spec.openapis.org/oas/v3.2.html) documentation.
+A RESTful, self-descriptive API on top of [Serafin pipelines](https://github.com/serafin-labs/serafin/tree/master/packages/pipeline): expose a pipeline, get its REST endpoints and their [OpenAPI 3.2](https://spec.openapis.org/oas/v3.2.html) documentation.
 
 ```
-npm i @serafin/api express
+npm i @serafin/api @serafin/pipeline @serafin/schema-builder express
 ```
 
 ```ts
@@ -24,7 +24,9 @@ const api = new Api(app, { basePath: "/v1", openApi: { title: "Library", version
 app.listen(3000)
 ```
 
-`express` is a peer dependency: versions 4 and 5 are supported.
+`express`, `@serafin/pipeline`, `@serafin/schema-builder` and `@serafin/open-api` are peer dependencies, so the application and the Api share the same instances. Versions 4 and 5 of express are supported.
+
+📚 **Full documentation: [serafin-labs.github.io/serafin/api](https://serafin-labs.github.io/serafin/api/).**
 
 ## Endpoints
 
@@ -75,7 +77,7 @@ new RestTransport({
 
 ## OpenAPI document
 
-The document describes every route, with the schemas of the pipeline (`Book`, `BookCreateValues`, `BookPatchValues`, `BookReadResults`...), its query and context parameters, and the meta of each action, relations included. It is an [`OpenApiBuilder`](https://github.com/serafin-labs/open-api): decorate it at any time, it is served as it is when requested.
+The document describes every route, with the schemas of the pipeline (`Book`, `BookCreateValues`, `BookPatchValues`, `BookReadResults`...), its query and context parameters, and the meta of each action, relations included. It is an [`OpenApiBuilder`](https://github.com/serafin-labs/serafin/tree/master/packages/open-api): decorate it at any time, it is served as it is when requested.
 
 ```ts
 api.openApi = api.openApi

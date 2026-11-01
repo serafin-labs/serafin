@@ -1,0 +1,29 @@
+name: CI
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: [22, 24]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node }}
+                  cache: pnpm
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm build
+            - run: pnpm typecheck
+            - run: pnpm test
+            - run: pnpm coverage
+            - run: pnpm check:exports
+            - run: pnpm format:check
+            - run: pnpm docs:build
+              if: matrix.node == 24

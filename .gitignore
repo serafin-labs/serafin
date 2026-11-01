@@ -1,0 +1,18 @@
+node_modules/
+lib/
+*.tsbuildinfo
+*.log
+.DS_Store
+
+# coverage
+.coverage/
+.coverage-build/
+
+# docs
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# local work, never committed
+.scratch/
+.idea/
+.history/

@@ -1,0 +1,14 @@
+{
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "module": "esnext",
+        "target": "esnext",
+        "incremental": true,
+        "sourceMap": true,
+        "declaration": true,
+        "declarationMap": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true
+    }
+}

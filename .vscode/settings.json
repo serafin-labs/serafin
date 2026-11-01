@@ -1,0 +1,10 @@
+{
+    "typescript.tsdk": "./node_modules/typescript/lib",
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.showGutterCoverage": false,
+    "coverage-gutters.showRulerCoverage": true,
+    "coverage-gutters.coverageFileNames": ["lcov.info"],
+    "coverage-gutters.coverageBaseDir": "packages/*/.coverage",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+}

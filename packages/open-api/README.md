@@ -1,4 +1,4 @@
-<p align="center"><img src="https://serafin-labs.github.io/images/logo-serafin-with-text-1080.png" width="300"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/serafin-labs/serafin/master/docs/public/logo.png" width="300"/></p>
 
 # Serafin Open API
 
@@ -7,6 +7,8 @@ TypeScript definitions for [OpenAPI 3.2](https://spec.openapis.org/oas/v3.2.html
 ```
 npm i @serafin/open-api
 ```
+
+📚 **Full documentation: [serafin-labs.github.io/serafin/open-api](https://serafin-labs.github.io/serafin/open-api/).**
 
 ## Types
 
