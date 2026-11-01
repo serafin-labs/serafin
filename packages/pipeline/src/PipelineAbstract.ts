@@ -1,0 +1,676 @@
+import _ from "lodash"
+import { SchemaBuilder } from "@serafin/schema-builder"
+import { notImplementedError, error, validationError } from "./error.js"
+import { IdentityInterface } from "./IdentityInterface.js"
+import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
+import { Pipe, PipeActionsInterface, PipeCapabilitiesInterface } from "./PipeInterface.js"
+import { NestedRelations, Relation, RelationMeta } from "./Relation.js"
+import { ResultsInterface } from "./ResultsInterface.js"
+import {
+    PipelineCreateFunction,
+    PipelineDeleteFunction,
+    PipelineInterface,
+    PipelineMethods,
+    PipelinePatchFunction,
+    PipelineReadFunction,
+    ReadOnlyPipelineInterface,
+    pipelineMethods,
+} from "./PipelineInterface.js"
+import { RelationType } from "./RelationType.js"
+
+export interface PipelineAbstractOptions {
+    validationEnabled?: boolean
+    name?: string
+    /**
+     * What this pipeline's implementation understands of what a pipe hands down to it -- typically
+     * the query and update operators it interprets below the pipes.
+     *
+     * Leave it out and a pipe's `requires` is not checked: a pipeline that has not declared its
+     * capabilities is undeclared, not incapable. Declare it and attaching a pipe that needs
+     * something absent fails immediately, rather than at the first request that uses it.
+     */
+    capabilities?: readonly string[]
+}
+export const defaultPipelineAbstractOptions: PipelineAbstractOptions = { validationEnabled: true }
+
+/**
+ * A relation installs a `with<Name>` option on the actions it hooks into. It gates the resolution,
+ * and it has to be removed before the query travels further down the chain: the pipes and the
+ * concrete implementation below this one were built without it in their schemas.
+ */
+function relationQuery(params: any, relationOption: string): any | undefined {
+    const value = params?.[relationOption]
+    if (!value) {
+        return undefined
+    }
+    // `true` asks for the relation as declared; an object additionally narrows the related read,
+    // and can carry the target's own `with<Name>` options to nest a level deeper.
+    return typeof value === "object" ? value : {}
+}
+
+/**
+ * Merge one relation's contribution into a result's meta, under the reserved `relations` key.
+ * Pipes merge freely into meta, so relations are namespaced rather than sitting at the top.
+ */
+function withRelationMeta(result: any, name: string, relationMeta: any) {
+    return { ...result, meta: { ...result.meta, relations: { ...result.meta?.relations, [name]: relationMeta } } }
+}
+
+/**
+ * The schema of the relations a target's read can resolve in turn, which a relation to it carries one
+ * level down when its option nests the target's own `with<Name>` options.
+ */
+function nestedRelationsSchema(pipeline: ReadOnlyPipelineInterface<any, any, any>) {
+    const relations = (pipeline.schemaBuilders.meta.schema as any).properties?.relations
+    return relations ? new SchemaBuilder(relations) : SchemaBuilder.emptySchema()
+}
+
+function withoutRelationOption(params: any, relationOption: string) {
+    return params && relationOption in params ? _.omit(params, [relationOption]) : params
+}
+
+/**
+ * Remove properties whose value is `undefined`, in place.
+ *
+ * `undefined` has no JSON representation, so it can never reach a pipeline from a transport, only
+ * from code. Left in place it means two things at once: ajv reads it as an absent property, while an
+ * implementation iterating `Object.keys` or testing `"field" in query` reads it as a present one.
+ * Dropping it at the boundary leaves a single meaning, and makes an in-process call look like one
+ * that arrived as JSON.
+ *
+ * Only plain objects and arrays are walked, so a `Date`, a `RegExp` or a class instance a caller
+ * passes through is left as it is. Array elements keep their position: dropping one would shift
+ * every index after it.
+ */
+function stripUndefined<T>(value: T): T {
+    if (Array.isArray(value)) {
+        value.forEach((entry) => stripUndefined(entry))
+    } else if (_.isPlainObject(value)) {
+        for (const key of Object.keys(value as any)) {
+            if ((value as any)[key] === undefined) {
+                delete (value as any)[key]
+            } else {
+                stripUndefined((value as any)[key])
+            }
+        }
+    }
+    return value
+}
+
+/**
+ * A schema and the schemas its combination keywords hold, flattened: every shape a value validated
+ * against it may have taken.
+ */
+function alternatives(schema: any): any[] {
+    if (!schema || typeof schema !== "object") {
+        return []
+    }
+    return [schema, ...["oneOf", "anyOf", "allOf"].flatMap((keyword) => (Array.isArray(schema[keyword]) ? schema[keyword].flatMap(alternatives) : []))]
+}
+
+/**
+ * Refuse a `$`-prefixed key in a caller's query unless its schema declares that key.
+ *
+ * A model property holding a free-form object validates `{ meta: { $exists: true } }` as an object
+ * like any other, and the implementation below would then read it as an operator. Operators are what
+ * a pipe hands down through `next`, so a caller sending one where the schema only says "any object"
+ * is asking the implementation something the schema never offered. A key the schema declares by name
+ * in `properties` -- a pipe exposing an operator on purpose -- is accepted.
+ */
+function assertDeclaredOperators(value: any, schemas: any[], path: string): void {
+    if (Array.isArray(value)) {
+        const items = schemas.flatMap((schema) => alternatives(schema.items))
+        value.forEach((entry, index) => assertDeclaredOperators(entry, items, `${path}/${index}`))
+    } else if (_.isPlainObject(value)) {
+        for (const key of Object.keys(value)) {
+            const declared = schemas.filter((schema) => _.isPlainObject(schema.properties) && Object.prototype.hasOwnProperty.call(schema.properties, key))
+            if (key.startsWith("$") && declared.length === 0) {
+                throw validationError(`'${path}/${key}' is not declared by the schema: only a pipe can hand an operator down`)
+            }
+            const next =
+                declared.length > 0
+                    ? declared.flatMap((schema) => alternatives(schema.properties[key]))
+                    : schemas.flatMap((schema) => alternatives(schema.additionalProperties))
+            assertDeclaredOperators(value[key], next, `${path}/${key}`)
+        }
+    }
+}
+
+/**
+ * The same, but only the object's own properties.
+ *
+ * Used for the context, which is shallow-copied rather than cloned so that what it carries -- a
+ * transaction, a logger, a cache scope -- stays the same object all the way down. Recursing here
+ * would delete keys from objects the caller still holds.
+ */
+function stripOwnUndefined<T>(value: T): T {
+    for (const key of Object.keys(value as any)) {
+        if ((value as any)[key] === undefined) {
+            delete (value as any)[key]
+        }
+    }
+    return value
+}
+
+export abstract class PipelineAbstract<
+    M extends IdentityInterface = IdentityInterface,
+    CV = any,
+    CO = any,
+    RQ = any,
+    PQ = any,
+    PV = any,
+    DQ = any,
+    CM = any,
+    RM = any,
+    PM = any,
+    DM = any,
+    CTX = any,
+    META = any,
+    R extends Record<string, Relation<IdentityInterface, string, IdentityInterface, any, any, RelationType>> = {},
+> implements PipelineInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META> {
+    public relations: R = {} as R
+
+    /**
+     * Names the implementation below the pipes understands, or `undefined` when this pipeline has
+     * not declared any. @see PipeCapabilitiesInterface
+     */
+    public capabilities?: ReadonlySet<string>
+
+    private pipes: PipeActionsInterface[] = []
+
+    private options: PipelineAbstractOptions
+
+    constructor(
+        public schemaBuilders: SchemaBuildersInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META>,
+        options?: PipelineAbstractOptions,
+    ) {
+        this.options = { ...defaultPipelineAbstractOptions, ...options }
+        this.capabilities = options?.capabilities ? new Set(options.capabilities) : undefined
+    }
+
+    public get modelSchemaBuilder() {
+        return this.schemaBuilders.model as SchemaBuilder<M>
+    }
+
+    public pipe<
+        M2 extends IdentityInterface = M,
+        CV2 = CV,
+        CO2 = CO,
+        RQ2 = RQ,
+        PQ2 = PQ,
+        PV2 = PV,
+        DQ2 = DQ,
+        CM2 = CM,
+        RM2 = RM,
+        PM2 = PM,
+        DM2 = DM,
+        CTX2 = CTX,
+        META2 = META,
+    >(pipe: Pipe<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>) {
+        // run the pipe
+        const result =
+            typeof pipe === "function"
+                ? pipe({
+                      ...this.schemaBuilders,
+                  })
+                : pipe.transform({
+                      ...this.schemaBuilders,
+                  })
+        this.checkCapabilities(pipe, result)
+        // combine schema modifications with the current schemas
+        const newPipeline = this.clone() as any as PipelineAbstract<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2, R>
+        if (this.capabilities && result.provides?.length) {
+            // A pipe that implements something itself answers for it on behalf of the pipes attached
+            // after it, which are the only ones above it in the chain.
+            newPipeline.capabilities = new Set([...this.capabilities, ...result.provides])
+        }
+        const modifiedSchemas = _.pick(result, schemaBuildersInterfaceKeys)
+        if (Object.keys(modifiedSchemas).length > 0) {
+            newPipeline.schemaBuilders = {
+                ...this.schemaBuilders,
+                ...modifiedSchemas,
+            } as any
+        }
+        // add pipe methods modifications to the pipeline if it implements at least one of the CRUD methods
+        const modifiedMethods = _.pickBy(result, (v, k) => !!v && pipelineMethods.includes(k as any))
+        if (Object.keys(modifiedMethods).length > 0) {
+            newPipeline.pipes = [
+                _.mapValues(
+                    modifiedMethods,
+                    (value: any, key) =>
+                        (...props: any[]) =>
+                            value(...props, this), // the current pipeline is provided as the last argument
+                ),
+                ...this.pipes,
+            ]
+        }
+
+        return newPipeline
+    }
+
+    /**
+     * Refuse a pipe that needs something the implementation below it has not declared.
+     *
+     * Only checked when this pipeline declared its capabilities, so adding a `requires` to a pipe
+     * never breaks a pipeline that has said nothing about what it can do.
+     */
+    private checkCapabilities(pipe: any, result: PipeCapabilitiesInterface) {
+        if (!this.capabilities || !result.requires?.length) {
+            return
+        }
+        const missing = result.requires.filter((capability) => !this.capabilities!.has(capability))
+        if (missing.length > 0) {
+            const pipeName = typeof pipe === "function" ? pipe.name : Object.getPrototypeOf(pipe).constructor.name
+            throw error(
+                "SerafinCapabilityError",
+                `${pipeName || "The pipe"} needs '${missing.join("', '")}', which ${
+                    Object.getPrototypeOf(this).constructor.name
+                } does not declare`,
+                { missing, declared: [...this.capabilities] },
+            )
+        }
+    }
+
+    /**
+     * Build a recursive function that will call all the pipes for a CRUD method
+     */
+    private pipeChain(method: PipelineMethods) {
+        const callChain = async (i: number, ...args: any[]) => {
+            while (i < this.pipes.length && !this.pipes[i][method]) {
+                ++i
+            }
+            if (i >= this.pipes.length) {
+                return (this[`_${method}`] as (...args: any[]) => any)(...args)
+            } else {
+                return (this.pipes[i++] as any)[method]((...args: any[]) => callChain(i, ...args), ...args)
+            }
+        }
+        return async (...args: any[]) => callChain(0, ...args)
+    }
+
+    /**
+     * Add a many relation to the pipeline.
+     * A query parameter is added to the all actions to conditionally fetch the related entities.
+     */
+    public addRelationWithMany<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, RelationMETA = {}>(
+        name: NameKey,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta, any, RelationMETA>,
+        query: Partial<ReadQuery>,
+    ) {
+        // What the relation contributes to meta: every related resource once, keyed by its own id,
+        // plus an index from each holding resource to the related id(s).
+        const relationMetaSchema = SchemaBuilder.emptySchema()
+            .addString("type")
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.arraySchema(SchemaBuilder.stringSchema())))
+            .addProperty("relations", nestedRelationsSchema(pipeline), false)
+        const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
+        const relationOptionSchema = SchemaBuilder.oneOf(
+            SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
+            pipeline.schemaBuilders.readQuery,
+        )
+        const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> = new Relation(
+            this,
+            name,
+            pipeline,
+            query,
+            RelationType.many,
+        )
+        const newPipeline = (
+            this as any as PipelineAbstract<
+                M,
+                CV,
+                CO,
+                RQ,
+                PQ,
+                PV,
+                DQ,
+                CM,
+                RM,
+                PM,
+                DM,
+                CTX,
+                META,
+                R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> }
+            >
+        ).pipe((p) => {
+            const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
+            const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
+            const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
+            const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            const existingRelations = (p.meta.schema as any)?.properties?.relations
+            const meta = (
+                existingRelations
+                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many, NestedRelations<RelationMETA>> } }>
+            return {
+                meta,
+                readQuery,
+                createOptions,
+                patchQuery,
+                deleteQuery,
+                create: async (next, resources, options: typeof createOptions.T, context) => {
+                    const result = await next(resources, withoutRelationOption(options, relationOption), context)
+                    const subQuery = relationQuery(options, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                read: async (next, query: typeof readQuery.T, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                patch: async (next, query: typeof patchQuery.T, values, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), values, context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                delete: async (next, query: typeof deleteQuery.T, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+            }
+        })
+        newPipeline.relations[name] = relation as any
+        return newPipeline
+    }
+
+    /**
+     * Add a one relation to the pipeline.
+     * A query parameter is added to the all actions to conditionally fetch the related entity.
+     */
+    public addRelationWithOne<NameKey extends string, RelationModel extends IdentityInterface, ReadQuery, ReadMeta, RelationMETA = {}>(
+        name: NameKey,
+        pipeline: ReadOnlyPipelineInterface<RelationModel, ReadQuery, ReadMeta, any, RelationMETA>,
+        query: Partial<ReadQuery>,
+    ) {
+        // What the relation contributes to meta: every related resource once, keyed by its own id,
+        // plus an index from each holding resource to the related id(s).
+        const relationMetaSchema = SchemaBuilder.emptySchema()
+            .addString("type")
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.stringSchema()))
+            .addProperty("relations", nestedRelationsSchema(pipeline), false)
+        const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
+        const relationOptionSchema = SchemaBuilder.oneOf(
+            SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
+            pipeline.schemaBuilders.readQuery,
+        )
+        const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> = new Relation(this, name, pipeline, query, RelationType.one)
+        const newPipeline = (
+            this as any as PipelineAbstract<
+                M,
+                CV,
+                CO,
+                RQ,
+                PQ,
+                PV,
+                DQ,
+                CM,
+                RM,
+                PM,
+                DM,
+                CTX,
+                META,
+                R & { [key in NameKey]: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> }
+            >
+        ).pipe((p) => {
+            const readQuery = p.readQuery.addProperty(relationOption, relationOptionSchema, false)
+            const createOptions = p.createOptions.addProperty(relationOption, relationOptionSchema, false)
+            const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
+            const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
+            const existingRelations = (p.meta.schema as any)?.properties?.relations
+            const meta = (
+                existingRelations
+                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
+            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one, NestedRelations<RelationMETA>> } }>
+            return {
+                meta,
+                readQuery,
+                createOptions,
+                patchQuery,
+                deleteQuery,
+                create: async (next, resources, options: typeof createOptions.T, context) => {
+                    const result = await next(resources, withoutRelationOption(options, relationOption), context)
+                    const subQuery = relationQuery(options, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                read: async (next, query: typeof readQuery.T, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                patch: async (next, query: typeof patchQuery.T, values, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), values, context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+                delete: async (next, query: typeof deleteQuery.T, context) => {
+                    const result = await next(withoutRelationOption(query, relationOption), context)
+                    const subQuery = relationQuery(query, relationOption)
+                    if (subQuery === undefined) {
+                        return result
+                    }
+                    return withRelationMeta(result, name, await relation.resolve(result.data, subQuery, context))
+                },
+            }
+        })
+        newPipeline.relations[name] = relation as any
+        return newPipeline
+    }
+
+    /**
+     * Create new resources based on `resources` input array.
+     *
+     * @param resources An array of partial resources to be created
+     * @param options Options that can alter the action behavior
+     * @param context Context object
+     */
+    async create(resources: CV[], options?: CO, context?: CTX): Promise<ResultsInterface<M, META & CM>> {
+        resources = stripUndefined(_.cloneDeep(resources))
+        options = stripUndefined(_.cloneDeep(options ?? ({} as CO)))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
+
+        this.handleValidationOfData("create", "resources", this.schemaBuilders.createValues, resources, true)
+        this.handleValidationOfData("create", "options", this.schemaBuilders.createOptions, options)
+        this.handleValidationOfData("create", "context", this.schemaBuilders.context, context)
+
+        return this.pipeChain("create")(resources, options, context)
+    }
+
+    /**
+     * Create action placeholder
+     * It should be overridden by child pipeline class
+     */
+    protected _create(resources: CV[], options: CO, context: CTX): Promise<ResultsInterface<M, CM>> {
+        throw notImplementedError("create", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone create function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getCreateFunction() {
+        return this.create.bind(this) as PipelineCreateFunction<M, CV, CO, CM, CTX, META>
+    }
+
+    /**
+     * Read resources from the underlying source according to the given `query`.
+     *
+     * @param query The query filter to be used for fetching the data
+     * @param context Context object
+     */
+    async read(query: RQ, context?: CTX): Promise<ResultsInterface<M, META & RM>> {
+        query = stripUndefined(_.cloneDeep(query))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
+
+        this.handleValidationOfData("read", "query", this.schemaBuilders.readQuery, query)
+        this.handleValidationOfData("read", "context", this.schemaBuilders.context, context)
+
+        return this.pipeChain("read")(query, context)
+    }
+
+    /**
+     * Read action placeholder
+     * It should be overridden by child pipeline class
+     */
+    protected _read(query: RQ, context: CTX): Promise<ResultsInterface<M, RM>> {
+        throw notImplementedError("read", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone read function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getReadFunction() {
+        return this.read.bind(this) as PipelineReadFunction<M, RQ, RM, CTX, META>
+    }
+
+    /**
+     * Patch resources according to the given query and values.
+     * The `query` will select a subset of the underlying data source and `values` are updated on it.
+     * This method should follow the JSON merge patch standard if possible. @see https://tools.ietf.org/html/rfc7396
+     *
+     * @param query
+     * @param values
+     * @param context Context object
+     */
+    async patch(query: PQ, values: PV, context?: CTX): Promise<ResultsInterface<M, META & PM>> {
+        query = stripUndefined(_.cloneDeep(query))
+        values = stripUndefined(_.cloneDeep(values))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
+
+        this.handleValidationOfData("patch", "query", this.schemaBuilders.patchQuery, query)
+        this.handleValidationOfData("patch", "values", this.schemaBuilders.patchValues, values)
+        this.handleValidationOfData("patch", "context", this.schemaBuilders.context, context)
+
+        return this.pipeChain("patch")(query, values, context)
+    }
+
+    /**
+     * Patch action placeholder
+     * It should be overridden by child pipeline class
+     */
+    protected _patch(query: PQ, values: PV, context: CTX): Promise<ResultsInterface<M, PM>> {
+        throw notImplementedError("patch", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone patch function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getPatchFunction() {
+        return this.patch.bind(this) as PipelinePatchFunction<M, PQ, PV, PM, CTX, META>
+    }
+
+    /**
+     * Delete resources that match th given Query.
+     * @param query The query filter to be used for selecting resources to delete
+     * @param context Context object
+     */
+    async delete(query: DQ, context?: CTX): Promise<ResultsInterface<M, META & DM>> {
+        query = stripUndefined(_.cloneDeep(query))
+        context = stripOwnUndefined({ ...(context ?? ({} as CTX)) })
+
+        this.handleValidationOfData("delete", "query", this.schemaBuilders.deleteQuery, query)
+        this.handleValidationOfData("delete", "context", this.schemaBuilders.context, context)
+
+        return this.pipeChain("delete")(query, context)
+    }
+
+    /**
+     * Delete action placeholder
+     * It should be overridden by child pipeline class
+     */
+    protected _delete(query: DQ, context: CTX): Promise<ResultsInterface<M, DM>> {
+        throw notImplementedError("delete", Object.getPrototypeOf(this).constructor.name)
+    }
+
+    /**
+     * Extract a standalone delete function.
+     * It can be used as a parameter for pipes to isolate dependencies and ease constraints definition
+     */
+    getDeleteFunction() {
+        return this.delete.bind(this) as PipelineDeleteFunction<M, DQ, DM, CTX, META>
+    }
+
+    private handleValidationOfData(method: string, valueName: string, schema: SchemaBuilder<any>, data: any, isArray: boolean = false) {
+        if (!this.options.validationEnabled) {
+            return
+        }
+        try {
+            if (isArray) {
+                // `SchemaBuilder` no longer exposes `validateList`. Validating each entry against the
+                // item schema reuses its already compiled validation function, rather than compiling a
+                // second one for the array wrapper.
+                if (!Array.isArray(data)) {
+                    throw validationError("data must be array")
+                }
+                if (data.length === 0) {
+                    throw validationError("data must NOT have fewer than 1 items")
+                }
+                data.forEach((entry: any, index: number) => {
+                    try {
+                        schema.validate(entry)
+                    } catch (e) {
+                        // The array schema used to report the failing index as part of the ajv path
+                        // (`data/0/...`). Validating entry by entry loses it, so carry it here.
+                        throw validationError(`entry at index ${index} is invalid`, { index }, e as Error)
+                    }
+                })
+            } else {
+                schema.validate(data)
+                if (valueName === "query") {
+                    assertDeclaredOperators(data, alternatives(schema.schema), "")
+                }
+            }
+        } catch (e) {
+            throw error(
+                "SerafinValidationError",
+                `Validation failed in ${Object.getPrototypeOf(this).constructor.name}${
+                    this.options.name ? `::${this.options.name}` : ""
+                }::${method}(${valueName})`,
+                { constructor: Object.getPrototypeOf(this).constructor.name, method: method, schema: schema, data: data },
+                e,
+            )
+        }
+    }
+
+    /**
+     * A copy of this pipeline that can take a pipe without affecting the original.
+     *
+     * `relations`, `schemaBuilders` and `pipes` are the only members a pipe reassigns, so only they
+     * need their own copy. Everything else -- including whatever a concrete pipeline holds as its
+     * data source -- is shared, so piping a pipeline never forks its connection, cache or store.
+     */
+    clone(): this {
+        const clonedPipeline = Object.assign(Object.create(Object.getPrototypeOf(this)), this) as this
+        clonedPipeline.relations = { ...this.relations }
+        clonedPipeline.schemaBuilders = { ...this.schemaBuilders }
+        ;(clonedPipeline as any).pipes = [...this.pipes]
+        return clonedPipeline
+    }
+}

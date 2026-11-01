@@ -1,0 +1,17 @@
+{
+    "extends": "./tsconfig.base.json",
+    "include": ["src"],
+    "exclude": ["node_modules"],
+    "compilerOptions": {
+        "moduleResolution": "bundler",
+        "module": "esnext",
+        "target": "esnext",
+        "incremental": false,
+        "declaration": false,
+        "declarationMap": false,
+        "sourceMap": true,
+        "inlineSources": true,
+        "outDir": ".coverage-build",
+        "types": ["mocha", "node"]
+    }
+}
