@@ -90,7 +90,7 @@ Related resources come back **normalized, in `meta.relations`**, not inlined int
 ```
 
 `data` holds each related resource **once**, keyed by its id; `index` maps each holding resource to
-the related id, or to an array of ids for a *many* relation. An address shared by a hundred users is
+the related id, or to an array of ids for a _many_ relation. An address shared by a hundred users is
 carried once, in the shape a normalized client-side store wants.
 
 `inlineRelations` joins it back, each related resource hanging off the resource pointing at it:

@@ -24,7 +24,17 @@ type Widget = typeof widgetSchema.T
 
 const widgets = (): Widget[] => [
     { id: "1", name: "bolt", size: 3, active: true, tags: ["metal", "small"], owner: { company: "acme", team: "hardware" } },
-    { id: "2", name: "nut", size: 7, active: false, tags: ["metal"], parts: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] },
+    {
+        id: "2",
+        name: "nut",
+        size: 7,
+        active: false,
+        tags: ["metal"],
+        parts: [
+            { sku: "a", qty: 2 },
+            { sku: "b", qty: 5 },
+        ],
+    },
     { id: "3", name: "washer", tags: [], owner: { company: "globex" } },
 ]
 
@@ -367,7 +377,14 @@ describe("applyPatch", function () {
     })
 
     it("should support $pull, $pullAll and $pop", function () {
-        const resource = { id: "1", tags: ["a", "b", "c"], parts: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] }
+        const resource = {
+            id: "1",
+            tags: ["a", "b", "c"],
+            parts: [
+                { sku: "a", qty: 2 },
+                { sku: "b", qty: 5 },
+            ],
+        }
         expect(applyPatch(resource, { $pull: { tags: "b" } }).tags).to.eql(["a", "c"])
         expect(applyPatch(resource, { $pull: { tags: { $gt: "b" } } }).tags).to.eql(["a", "b"])
         expect(applyPatch(resource, { $pull: { parts: { sku: "a" } } }).parts).to.eql([{ sku: "b", qty: 5 }])
@@ -457,13 +474,23 @@ describe("MemoryPipeline", function () {
 
         it("should refuse a conflict, and write nothing when it does", async function () {
             const p = pipeline()
-            await expect(p.create([{ id: "4", name: "new" }, { id: "1", name: "clash" }])).to.be.rejectedWith(/conflict/)
+            await expect(
+                p.create([
+                    { id: "4", name: "new" },
+                    { id: "1", name: "clash" },
+                ]),
+            ).to.be.rejectedWith(/conflict/)
             expect(p.size).to.eql(3)
         })
 
         it("should refuse a batch that conflicts with itself", async function () {
             const p = new MemoryPipeline(widgetSchema)
-            await expect(p.create([{ id: "a", name: "one" }, { id: "a", name: "two" }])).to.be.rejectedWith(/conflict/)
+            await expect(
+                p.create([
+                    { id: "a", name: "one" },
+                    { id: "a", name: "two" },
+                ]),
+            ).to.be.rejectedWith(/conflict/)
             expect(p.size).to.eql(0)
         })
     })
@@ -597,7 +624,10 @@ describe("MemoryPipeline", function () {
 
         it("should refuse an unknown property inside a logical operator, and at the first segment of a path", async function () {
             const Inject = (query: any) => () => () => ({ read: async (next: any, _q: any, context: any) => next(query, context) })
-            const reads = (query: any) => pipeline().pipe(Inject(query)() as any).read({})
+            const reads = (query: any) =>
+                pipeline()
+                    .pipe(Inject(query)() as any)
+                    .read({})
             await expect(reads({ $or: [{ name: "nut" }, { minSize: 4 }] })).to.be.rejectedWith(/'minSize' is not a property/)
             await expect(reads({ "missing.deep": 1 })).to.be.rejectedWith(/'missing' is not a property/)
             await expect(reads({ "owner.company": "acme" })).to.eventually.have.nested.property("data[0].id", "1")
@@ -647,11 +677,18 @@ describe("MemoryPipeline", function () {
 
         it("should resolve a relation against another memory pipeline in one read", async function () {
             const ownerSchema = SchemaBuilder.emptySchema({ title: "Company" }).addString("id").addString("label")
-            const companies = new MemoryPipeline(ownerSchema, { initialData: [{ id: "acme", label: "Acme" }, { id: "globex", label: "Globex" }] })
-            const widgetsWithOwner = new MemoryPipeline(
-                widgetSchema.addString("companyId", {}, false),
-                { initialData: [{ id: "1", name: "bolt", companyId: "acme" }, { id: "2", name: "nut", companyId: "acme" }] },
-            ).addRelationWithOne("company", companies, { id: ":companyId" })
+            const companies = new MemoryPipeline(ownerSchema, {
+                initialData: [
+                    { id: "acme", label: "Acme" },
+                    { id: "globex", label: "Globex" },
+                ],
+            })
+            const widgetsWithOwner = new MemoryPipeline(widgetSchema.addString("companyId", {}, false), {
+                initialData: [
+                    { id: "1", name: "bolt", companyId: "acme" },
+                    { id: "2", name: "nut", companyId: "acme" },
+                ],
+            }).addRelationWithOne("company", companies, { id: ":companyId" })
             const { meta } = await widgetsWithOwner.read({ withCompany: true })
             expect(meta.relations?.company?.data).to.eql({ acme: { id: "acme", label: "Acme" } })
             expect(meta.relations?.company?.index).to.eql({ "1": "acme", "2": "acme" })

@@ -118,17 +118,19 @@ describe("Cache", function () {
         // The case this exists for: two pipes of one pipeline both reading the same resource from
         // another pipeline, with nothing modifying it in between.
         const { source, pipeline: shared } = cached()
-        const holder = new Source(newState()).pipe(() => ({
-            read: async (next: any, query: any, context: any) => {
-                await shared.read({ id: "1" }, context)
-                return next(query, context)
-            },
-        })).pipe(() => ({
-            read: async (next: any, query: any, context: any) => {
-                await shared.read({ id: "1" }, context)
-                return next(query, context)
-            },
-        }))
+        const holder = new Source(newState())
+            .pipe(() => ({
+                read: async (next: any, query: any, context: any) => {
+                    await shared.read({ id: "1" }, context)
+                    return next(query, context)
+                },
+            }))
+            .pipe(() => ({
+                read: async (next: any, query: any, context: any) => {
+                    await shared.read({ id: "1" }, context)
+                    return next(query, context)
+                },
+            }))
         await holder.read({}, openCacheScope({}))
         expect(source.reads).to.eql(1)
     })

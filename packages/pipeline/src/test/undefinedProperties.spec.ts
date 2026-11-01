@@ -23,7 +23,10 @@ interface Seen {
 const modelSchema = SchemaBuilder.emptySchema().addString("id").addString("group", {}, false)
 
 class Recorder extends PipelineAbstract<any, any, any, any, any, any, any, any, any, any, any, any, any> {
-    constructor(public seen: Seen, options?: { validationEnabled?: boolean }) {
+    constructor(
+        public seen: Seen,
+        options?: { validationEnabled?: boolean },
+    ) {
         super(defaultSchemaBuilders(modelSchema) as any, { validationEnabled: false, ...options })
     }
     protected override async _read(query: any, context: any) {

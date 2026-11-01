@@ -17,18 +17,18 @@ from its inputs, validates them, and runs the pipe chain down to the implementat
 
 ## The thirteen schema builders
 
-| Builder         | Describes                         | Derived from the model as                               |
-| --------------- | --------------------------------- | ------------------------------------------------------- |
-| `model`         | one resource                      | given                                                   |
-| `createValues`  | each entry `create` accepts       | `setOptionalProperties(["id"])`                         |
-| `createOptions` | `create`'s options                | empty                                                   |
-| `readQuery`     | `read`'s query                    | `transformPropertiesToArray().toOptionals()`            |
-| `patchQuery`    | which resources `patch` selects   | `pickProperties(["id"]).transformPropertiesToArray()`   |
-| `patchValues`   | what `patch` writes               | `omitProperties(["id"]).toNullable().toDeepOptionals()` |
-| `deleteQuery`   | which resources `delete` selects  | `pickProperties(["id"]).transformPropertiesToArray()`   |
-| `createMeta`, `readMeta`, `patchMeta`, `deleteMeta` | each action's own meta | empty   |
-| `meta`          | meta shared by all four actions   | empty                                                   |
-| `context`       | the context every action accepts  | empty                                                   |
+| Builder                                             | Describes                        | Derived from the model as                               |
+| --------------------------------------------------- | -------------------------------- | ------------------------------------------------------- |
+| `model`                                             | one resource                     | given                                                   |
+| `createValues`                                      | each entry `create` accepts      | `setOptionalProperties(["id"])`                         |
+| `createOptions`                                     | `create`'s options               | empty                                                   |
+| `readQuery`                                         | `read`'s query                   | `transformPropertiesToArray().toOptionals()`            |
+| `patchQuery`                                        | which resources `patch` selects  | `pickProperties(["id"]).transformPropertiesToArray()`   |
+| `patchValues`                                       | what `patch` writes              | `omitProperties(["id"]).toNullable().toDeepOptionals()` |
+| `deleteQuery`                                       | which resources `delete` selects | `pickProperties(["id"]).transformPropertiesToArray()`   |
+| `createMeta`, `readMeta`, `patchMeta`, `deleteMeta` | each action's own meta           | empty                                                   |
+| `meta`                                              | meta shared by all four actions  | empty                                                   |
+| `context`                                           | the context every action accepts | empty                                                   |
 
 Each is a JSON Schema at runtime and a type at compile time:
 
@@ -73,7 +73,7 @@ data[1].id // "chosen"
 ## read
 
 Every property of `readQuery` is **optional**, so `read({})` matches everything, and **accepts an
-array**, meaning *any of these values*:
+array**, meaning _any of these values_:
 
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
@@ -106,10 +106,7 @@ bulk operation by accident. `delete` returns what it deleted, so a pipe above ca
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline } from "@serafin/pipeline"
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), firstName: SB.stringSchema(), nickname: [SB.stringSchema(), undefined] },
-)
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema(), nickname: [SB.stringSchema(), undefined] })
 const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico", nickname: "nico" }] })
 // ---cut---
 await users.patch({ id: "1" }, { firstName: "Nicolas" }) // set it

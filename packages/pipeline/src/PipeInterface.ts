@@ -222,7 +222,9 @@ export interface PipeResultsInterface<
     DM2 = DM,
     CTX2 = CTX,
     META2 = META,
-> extends Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>>,
+>
+    extends
+        Partial<SchemaBuildersInterface<M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>>,
         PipeActionsInterface<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>,
         PipeCapabilitiesInterface {}
 
@@ -336,7 +338,9 @@ export interface PipeClass<
     CTX2 = CTX,
     META2 = META,
 > {
-    new (...params: P): PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
+    new (
+        ...params: P
+    ): PipeClassInstance<M, CV, CO, RQ, PQ, PV, DQ, CM, RM, PM, DM, CTX, META, M2, CV2, CO2, RQ2, PQ2, PV2, DQ2, CM2, RM2, PM2, DM2, CTX2, META2>
 }
 
 export type Pipe<

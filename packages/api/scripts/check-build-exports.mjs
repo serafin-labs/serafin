@@ -35,13 +35,21 @@ await checkExports(import.meta, {
             assert.equal(found.status, 200, `${label}: find failed`)
             assert.deepEqual((await found.json()).data, [{ id: "1", name: "one", tags: ["a"] }], `${label}: find returned unexpected data`)
 
-            const created = await fetch(`${base}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "2", name: "two" }) })
+            const created = await fetch(`${base}/items`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: "2", name: "two" }),
+            })
             assert.equal(created.status, 201, `${label}: create failed`)
             assert.equal(created.headers.get("location"), "/api/items/2", `${label}: create returned an unexpected location`)
 
             const invalid = await fetch(`${base}/items?unknown=1`)
             assert.equal(invalid.status, 400, `${label}: an unknown parameter was accepted`)
-            assert.deepEqual(await invalid.json(), { code: 400, name: "BadRequest", message: "Unknown query parameter: unknown" }, `${label}: unexpected error body`)
+            assert.deepEqual(
+                await invalid.json(),
+                { code: 400, name: "BadRequest", message: "Unknown query parameter: unknown" },
+                `${label}: unexpected error body`,
+            )
         } finally {
             await new Promise((resolve) => server.close(resolve))
         }

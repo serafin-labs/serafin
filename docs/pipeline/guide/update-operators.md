@@ -33,23 +33,31 @@ Operators are applied in a **fixed order** — `$rename`, `$unset`, `$set`, `$in
 `$max`, `$push`, `$addToSet`, `$pull`, `$pullAll`, `$pop` — since mongodb leaves the order between
 operators unspecified, and fixing it makes an update reproducible.
 
-| Operator | Takes | Does |
-| -------- | ----- | ---- |
-| `$set` | path → value | sets it, creating intermediate objects |
-| `$unset` | path → `""`, `1`, `true` | removes it; on an array index, leaves `null` in place |
-| `$rename` | path → path | moves it, if it is there |
-| `$inc`, `$mul` | path → number | adds or multiplies; an absent property counts as `0`; a non-number is refused |
-| `$min`, `$max` | path → value | sets it if smaller, or larger, by the same-type rule queries use; an absent property is set |
-| `$push` | element, or `{ $each: [...] }` | appends, creating the array if absent |
-| `$addToSet` | element, or `{ $each: [...] }` | appends what is not already there |
-| `$pull` | element or condition | removes what matches |
-| `$pullAll` | array | removes those elements, by equality |
-| `$pop` | `1` or `-1` | removes the last or first element |
+| Operator       | Takes                          | Does                                                                                        |
+| -------------- | ------------------------------ | ------------------------------------------------------------------------------------------- |
+| `$set`         | path → value                   | sets it, creating intermediate objects                                                      |
+| `$unset`       | path → `""`, `1`, `true`       | removes it; on an array index, leaves `null` in place                                       |
+| `$rename`      | path → path                    | moves it, if it is there                                                                    |
+| `$inc`, `$mul` | path → number                  | adds or multiplies; an absent property counts as `0`; a non-number is refused               |
+| `$min`, `$max` | path → value                   | sets it if smaller, or larger, by the same-type rule queries use; an absent property is set |
+| `$push`        | element, or `{ $each: [...] }` | appends, creating the array if absent                                                       |
+| `$addToSet`    | element, or `{ $each: [...] }` | appends what is not already there                                                           |
+| `$pull`        | element or condition           | removes what matches                                                                        |
+| `$pullAll`     | array                          | removes those elements, by equality                                                         |
+| `$pop`         | `1` or `-1`                    | removes the last or first element                                                           |
 
 ```ts twoslash
 import { applyPatch } from "@serafin/pipeline"
 
-const order = { id: "1", views: 10, tags: ["urgent"], lines: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] }
+const order = {
+    id: "1",
+    views: 10,
+    tags: ["urgent"],
+    lines: [
+        { sku: "a", qty: 2 },
+        { sku: "b", qty: 5 },
+    ],
+}
 
 applyPatch(order, { $set: { "address.city": "Paris", "lines.0.qty": 9 } })
 applyPatch(order, { $unset: { views: "" } })
@@ -61,7 +69,7 @@ applyPatch(order, { $pull: { lines: { qty: { $gt: 4 } } } }) // conditions selec
 ```
 
 Paths work as in queries, including through arrays by index. `$set` refuses to create a property
-*through* a value that cannot hold one, naming the path rather than throwing a bare `TypeError`.
+_through_ a value that cannot hold one, naming the path rather than throwing a bare `TypeError`.
 
 ## Errors
 

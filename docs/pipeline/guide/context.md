@@ -18,8 +18,7 @@ const OnlyMine = (p: Builders) => {
     const context = p.context.addString("_userId")
     return {
         context,
-        read: async (next: PipeReadNext<User, ReadQuery>, query: ReadQuery, ctx: typeof context.T) =>
-            next({ ...query, ownerId: ctx._userId }, ctx),
+        read: async (next: PipeReadNext<User, ReadQuery>, query: ReadQuery, ctx: typeof context.T) => next({ ...query, ownerId: ctx._userId }, ctx),
     }
 }
 
@@ -49,7 +48,7 @@ to implementations, and shared by ESM and CJS copies of the library in one proce
 ::: warning Spread the context, don't deep-copy it
 Every action **shallow**-copies the context, so what it carries — a transaction, a logger, a cache
 scope — stays the same object all the way down. A pipe that deep-clones it duplicates the cache scope;
-a duplicate is treated as *no* scope, so nothing goes stale, but the caching is lost.
+a duplicate is treated as _no_ scope, so nothing goes stale, but the caching is lost.
 :::
 
 ## Undefined properties
@@ -57,7 +56,7 @@ a duplicate is treated as *no* scope, so nothing goes stale, but the caching is 
 Every action drops properties whose value is `undefined` from its inputs before validating them.
 Left in place, `undefined` means two things: the validator reads an absent property, while an
 implementation iterating `Object.keys` reads a present one. Dropping it makes an in-process call
-behave like one that arrived as JSON, and makes `undefined` mean *leave alone* in a patch.
+behave like one that arrived as JSON, and makes `undefined` mean _leave alone_ in a patch.
 
 - **Queries, values, options and create resources** are cleaned at **every depth**.
 - **Arrays keep their length** — dropping an element would shift every index after it.

@@ -10,7 +10,11 @@ await checkExports(import.meta, {
         assert.equal(typeof mod.PipelineAbstract, "function", `${label}: PipelineAbstract export is missing`)
         assert.equal(typeof mod.QueryTemplate, "function", `${label}: QueryTemplate export is missing`)
         assert.equal(mod.RelationType?.one, "one", `${label}: RelationType export is missing`)
-        assert.deepEqual(mod.QueryTemplate.hydrate({ id: ":id", kind: "a" }, { id: "42" }), { id: "42", kind: "a" }, `${label}: QueryTemplate.hydrate misbehaved`)
+        assert.deepEqual(
+            mod.QueryTemplate.hydrate({ id: ":id", kind: "a" }, { id: "42" }),
+            { id: "42", kind: "a" },
+            `${label}: QueryTemplate.hydrate misbehaved`,
+        )
 
         // builds the full set of schema builders from a model
         const schemas = mod.defaultSchemaBuilders(SchemaBuilder.emptySchema().addString("id").addString("method"))

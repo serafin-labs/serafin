@@ -69,10 +69,7 @@ schema and the type together:
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline, memorySchemaBuilders, PipeReadNext } from "@serafin/pipeline"
 
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), firstName: SB.stringSchema(), age: [SB.integerSchema(), undefined] },
-)
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema(), age: [SB.integerSchema(), undefined] })
 type User = typeof userSchema.T
 type ReadQuery = ReturnType<typeof memorySchemaBuilders<User>>["readQuery"]["T"]
 

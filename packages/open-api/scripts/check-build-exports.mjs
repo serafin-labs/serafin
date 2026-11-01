@@ -11,7 +11,11 @@ await checkExports(import.meta, {
         let builder = mod.OpenApiBuilder.create({ title: "smoke", version: "1" }).addComponent("schemas", "Item", { type: "object" })
         builder = builder.addOperation("/items", "get", { responses: { 200: { content: { "application/json": { schema: builder.ref("schemas", "Item") } } } } })
         builder.validate()
-        assert.throws(() => mod.OpenApiBuilder.create({ title: "smoke", version: "1" }).validate(), mod.OpenApiValidationError, `${label}: validation did not reject an empty document`)
+        assert.throws(
+            () => mod.OpenApiBuilder.create({ title: "smoke", version: "1" }).validate(),
+            mod.OpenApiValidationError,
+            `${label}: validation did not reject an empty document`,
+        )
         assert.throws(() => builder.removeComponent("schemas", "Item"), mod.OpenApiBuilderError, `${label}: a referenced component was removed`)
     },
     consumer: [

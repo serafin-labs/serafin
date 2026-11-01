@@ -164,8 +164,7 @@ describe("PipelineAbstract internals", function () {
 })
 
 describe("Relation internals", function () {
-    const relationOf = (query: any, type = RelationType.one, target = companies()) =>
-        new Relation(employees() as any, "company", target as any, query, type)
+    const relationOf = (query: any, type = RelationType.one, target = companies()) => new Relation(employees() as any, "company", target as any, query, type)
 
     it("should fetch and inline for a single resource", async function () {
         const relation = relationOf({ id: ":companyId" })

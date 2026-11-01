@@ -169,7 +169,10 @@ export function documentPipeline(openApi: OpenApiBuilder, exposed: ExposedPipeli
                 content: { "application/json": { schema: { oneOf: [values, { type: "array", items: values, minItems: 1 }] } } },
             },
             responses: {
-                201: { ...created, headers: { Location: { description: `The path of the ${name}, when a single one is created`, schema: { type: "string" } } } },
+                201: {
+                    ...created,
+                    headers: { Location: { description: `The path of the ${name}, when a single one is created`, schema: { type: "string" } } },
+                },
                 ...errors("BadRequest", "Conflict"),
             },
         })

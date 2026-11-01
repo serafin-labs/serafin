@@ -194,8 +194,7 @@ export function Cache<
         },
         create: async (next: PipeCreateNext<M, CV, CO, CM, CTX, META>, resources: CV[], createOptions: CO, context: CTX) =>
             write(context, () => next(resources, createOptions, context)),
-        patch: async (next: PipePatchNext<M, PQ, PV, PM, CTX, META>, query: PQ, values: PV, context: CTX) =>
-            write(context, () => next(query, values, context)),
+        patch: async (next: PipePatchNext<M, PQ, PV, PM, CTX, META>, query: PQ, values: PV, context: CTX) => write(context, () => next(query, values, context)),
         delete: async (next: PipeDeleteNext<M, DQ, DM, CTX, META>, query: DQ, context: CTX) => write(context, () => next(query, context)),
     })
 }

@@ -67,8 +67,6 @@ export function schemaDescription(schema: Schema): string | undefined {
     if (schema.description !== undefined) {
         return schema.description
     }
-    const descriptions = new Set(
-        [...(schema.oneOf ?? []), ...(schema.anyOf ?? [])].map(schemaDescription).filter((d): d is string => d !== undefined),
-    )
+    const descriptions = new Set([...(schema.oneOf ?? []), ...(schema.anyOf ?? [])].map(schemaDescription).filter((d): d is string => d !== undefined))
     return descriptions.size === 1 ? [...descriptions][0] : undefined
 }

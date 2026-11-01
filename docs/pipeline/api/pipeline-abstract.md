@@ -18,11 +18,11 @@ constructor(schemaBuilders: SchemaBuildersInterface<...>, options?: PipelineAbst
 
 ### `PipelineAbstractOptions`
 
-| Option | Type | Default | Meaning |
-| ------ | ---- | ------- | ------- |
-| `validationEnabled` | `boolean` | `true` | validate every action's inputs against the schemas |
-| `name` | `string` | — | included in validation error messages |
-| `capabilities` | `readonly string[]` | — | what the implementation understands of what a pipe hands down |
+| Option              | Type                | Default | Meaning                                                       |
+| ------------------- | ------------------- | ------- | ------------------------------------------------------------- |
+| `validationEnabled` | `boolean`           | `true`  | validate every action's inputs against the schemas            |
+| `name`              | `string`            | —       | included in validation error messages                         |
+| `capabilities`      | `readonly string[]` | —       | what the implementation understands of what a pipe hands down |
 
 Leaving `capabilities` out means a pipe's `requires` is **not checked**. See
 [Capabilities](/pipeline/guide/source-query#capabilities).
@@ -90,12 +90,12 @@ A bound function for one action.
 
 ## Properties
 
-| Property | Type | Meaning |
-| -------- | ---- | ------- |
-| `schemaBuilders` | `SchemaBuildersInterface<...>` | the thirteen builders |
-| `modelSchemaBuilder` | `SchemaBuilder<M>` | shorthand for `schemaBuilders.model` |
-| `relations` | `R` | the declared relations, by name |
-| `capabilities` | `ReadonlySet<string> \| undefined` | what was declared, plus what pipes below have `provides`-ed |
+| Property             | Type                               | Meaning                                                     |
+| -------------------- | ---------------------------------- | ----------------------------------------------------------- |
+| `schemaBuilders`     | `SchemaBuildersInterface<...>`     | the thirteen builders                                       |
+| `modelSchemaBuilder` | `SchemaBuilder<M>`                 | shorthand for `schemaBuilders.model`                        |
+| `relations`          | `R`                                | the declared relations, by name                             |
+| `capabilities`       | `ReadonlySet<string> \| undefined` | what was declared, plus what pipes below have `provides`-ed |
 
 ## `clone()`
 

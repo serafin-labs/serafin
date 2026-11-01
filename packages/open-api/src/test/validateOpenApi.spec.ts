@@ -57,7 +57,10 @@ describe("validateOpenApi", function () {
 
     it("reports duplicated operation ids, webhooks included", function () {
         const operation = { operationId: "same", responses: { 200: { description: "ok" } } }
-        const d = document({ paths: { "/a": { get: operation, put: { responses: { 200: { description: "ok" } } } }, "/b": { get: operation } }, webhooks: { w: { post: operation } } })
+        const d = document({
+            paths: { "/a": { get: operation, put: { responses: { 200: { description: "ok" } } } }, "/b": { get: operation } },
+            webhooks: { w: { post: operation } },
+        })
         expect(messages(d)).to.eql([
             "/paths/~1b/get/operationId operationId 'same' is already used at /paths/~1a/get/operationId",
             "/webhooks/w/post/operationId operationId 'same' is already used at /paths/~1a/get/operationId",
@@ -74,10 +77,17 @@ describe("validateOpenApi", function () {
         const d = document({
             paths: {
                 "/a/{id}": { get: { responses } },
-                "/b/{id}": { parameters: [idParameter], get: { responses }, additionalOperations: { COPY: { parameters: [{ $ref: "#/components/parameters/id" }], responses } } },
+                "/b/{id}": {
+                    parameters: [idParameter],
+                    get: { responses },
+                    additionalOperations: { COPY: { parameters: [{ $ref: "#/components/parameters/id" }], responses } },
+                },
                 "/c": { get: { parameters: [idParameter], responses } },
                 "/d/{id}": { get: { parameters: [{ $ref: "#/components/parameters/missing" }, { $ref: "https://example.com/p" }], responses } },
-                "/e/{id}": { parameters: [{ ...idParameter, name: "other" }], get: { parameters: [{ in: "query", name: "id", schema: true }, idParameter], responses } },
+                "/e/{id}": {
+                    parameters: [{ ...idParameter, name: "other" }],
+                    get: { parameters: [{ in: "query", name: "id", schema: true }, idParameter], responses },
+                },
             },
             components: { parameters: { id: idParameter } },
         })
@@ -101,7 +111,10 @@ describe("validateOpenApi", function () {
     })
 
     it("lists every issue in the error it throws", function () {
-        const error = new OpenApiValidationError([{ path: "", message: "a" }, { path: "/b", message: "b" }])
+        const error = new OpenApiValidationError([
+            { path: "", message: "a" },
+            { path: "/b", message: "b" },
+        ])
         expect(error.name).to.eql("OpenApiValidationError")
         expect(error.message).to.eql("Invalid OpenAPI document:\n  /: a\n  /b: b")
     })

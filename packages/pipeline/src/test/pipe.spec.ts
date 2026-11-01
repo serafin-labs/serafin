@@ -91,9 +91,7 @@ describe("ForkedPipeline", function () {
         // the fork validates nothing, but still delegates to a base that does
         const validatingBase = new Recorder(schemas)
         class Unvalidated extends ForkedPipeline<any, any, any, any, any, any, any, any, any, any, any, any, any> {}
-        await expect(new Unvalidated(validatingBase, "t", "d", false).read({ id: true } as any)).to.be.rejectedWith(
-            /Validation failed in Recorder::read/,
-        )
+        await expect(new Unvalidated(validatingBase, "t", "d", false).read({ id: true } as any)).to.be.rejectedWith(/Validation failed in Recorder::read/)
         // with the base opted out too, the query goes through untouched
         const quietBase = new Recorder(schemas, { validationEnabled: false })
         const fork = new Unvalidated(quietBase, "t", "d", false)
@@ -119,7 +117,10 @@ describe("SetReadQueryParameterDefaultValue", function () {
 
     it("should accept a function producing the default from the query and context", async function () {
         const p = new Recorder(querySchemas).pipe(
-            SetReadQueryParameterDefaultValue((a: any) => a.method, async (query: any, context: any) => `computed:${Object.keys(context).length}`) as any,
+            SetReadQueryParameterDefaultValue(
+                (a: any) => a.method,
+                async (query: any, context: any) => `computed:${Object.keys(context).length}`,
+            ) as any,
         )
         await p.read({}, {} as any)
         expect((p as any).calls[0][1][0]).to.eql({ method: "computed:0" })

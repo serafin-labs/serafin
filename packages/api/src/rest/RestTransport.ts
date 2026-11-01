@@ -123,7 +123,8 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
             }
         }
 
-        const parameters = (schema: (typeof schemas)["readQuery"]) => new RequestParameters(schema, schemas.context, this.isInternal, this.options.unknownParameters !== "ignore")
+        const parameters = (schema: (typeof schemas)["readQuery"]) =>
+            new RequestParameters(schema, schemas.context, this.isInternal, this.options.unknownParameters !== "ignore")
         const readParameters = parameters(schemas.readQuery)
         const createParameters = parameters(schemas.createOptions)
         const patchParameters = parameters(schemas.patchQuery)
@@ -141,52 +142,73 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
         router.use(express.json({ limit: this.options.bodyLimit ?? "1mb", type: jsonTypes }))
 
         if (routes.find) {
-            router.get("/", this.handle(async (req) => {
-                const { query, context } = await this.parameters(readParameters, req)
-                return { status: 200, body: await pipeline.read(query, context) }
-            }))
+            router.get(
+                "/",
+                this.handle(async (req) => {
+                    const { query, context } = await this.parameters(readParameters, req)
+                    return { status: 200, body: await pipeline.read(query, context) }
+                }),
+            )
         }
         if (routes.get) {
-            router.get("/:id", this.handle(async (req) => {
-                const { query, context } = await this.parameters(readParameters, req, idOf(req))
-                return { status: 200, body: notFound(await pipeline.read(query, context), idOf(req)) }
-            }))
+            router.get(
+                "/:id",
+                this.handle(async (req) => {
+                    const { query, context } = await this.parameters(readParameters, req, idOf(req))
+                    return { status: 200, body: notFound(await pipeline.read(query, context), idOf(req)) }
+                }),
+            )
         }
         if (routes.create) {
-            router.post("/", this.handle(async (req) => {
-                const body = this.body(req)
-                const resources = Array.isArray(body) ? body : [body]
-                const { query, context } = await this.parameters(createParameters, req)
-                const results = await pipeline.create(resources, query, context)
-                const single = results.data.length === 1 && (results.data[0] as { id?: unknown }).id !== undefined
-                return { status: 201, body: results, headers: single ? { Location: resourcePath((results.data[0] as { id: unknown }).id) } : undefined }
-            }))
+            router.post(
+                "/",
+                this.handle(async (req) => {
+                    const body = this.body(req)
+                    const resources = Array.isArray(body) ? body : [body]
+                    const { query, context } = await this.parameters(createParameters, req)
+                    const results = await pipeline.create(resources, query, context)
+                    const single = results.data.length === 1 && (results.data[0] as { id?: unknown }).id !== undefined
+                    return { status: 201, body: results, headers: single ? { Location: resourcePath((results.data[0] as { id: unknown }).id) } : undefined }
+                }),
+            )
         }
         if (routes.patchOne) {
-            router.patch("/:id", this.handle(async (req) => {
-                const values = this.body(req)
-                const { query, context } = await this.parameters(patchParameters, req, idOf(req))
-                return { status: 200, body: notFound(await pipeline.patch(query, values, context), idOf(req)) }
-            }))
+            router.patch(
+                "/:id",
+                this.handle(async (req) => {
+                    const values = this.body(req)
+                    const { query, context } = await this.parameters(patchParameters, req, idOf(req))
+                    return { status: 200, body: notFound(await pipeline.patch(query, values, context), idOf(req)) }
+                }),
+            )
         }
         if (routes.patchMany) {
-            router.patch("/", this.handle(async (req) => {
-                const values = this.body(req)
-                const { query, context } = await this.parameters(patchParameters, req)
-                return { status: 200, body: await pipeline.patch(query, values, context) }
-            }))
+            router.patch(
+                "/",
+                this.handle(async (req) => {
+                    const values = this.body(req)
+                    const { query, context } = await this.parameters(patchParameters, req)
+                    return { status: 200, body: await pipeline.patch(query, values, context) }
+                }),
+            )
         }
         if (routes.deleteOne) {
-            router.delete("/:id", this.handle(async (req) => {
-                const { query, context } = await this.parameters(deleteParameters, req, idOf(req))
-                return { status: 200, body: notFound(await pipeline.delete(query, context), idOf(req)) }
-            }))
+            router.delete(
+                "/:id",
+                this.handle(async (req) => {
+                    const { query, context } = await this.parameters(deleteParameters, req, idOf(req))
+                    return { status: 200, body: notFound(await pipeline.delete(query, context), idOf(req)) }
+                }),
+            )
         }
         if (routes.deleteMany) {
-            router.delete("/", this.handle(async (req) => {
-                const { query, context } = await this.parameters(deleteParameters, req)
-                return { status: 200, body: await pipeline.delete(query, context) }
-            }))
+            router.delete(
+                "/",
+                this.handle(async (req) => {
+                    const { query, context } = await this.parameters(deleteParameters, req)
+                    return { status: 200, body: await pipeline.delete(query, context) }
+                }),
+            )
         }
         router.all("/", this.methodNotAllowed([routes.find && "GET", routes.create && "POST", routes.patchMany && "PATCH", routes.deleteMany && "DELETE"]))
         router.all("/:id", this.methodNotAllowed([routes.get && "GET", routes.patchOne && "PATCH", routes.deleteOne && "DELETE"]))
@@ -246,7 +268,9 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
             try {
                 const { status, body, headers } = await action(req as REQ)
                 asArray(this.options.onSuccess).forEach((callback) => callback(req as REQ, res as RES, body))
-                res.status(status).set(headers ?? {}).json(body)
+                res.status(status)
+                    .set(headers ?? {})
+                    .json(body)
             } catch (error) {
                 this.sendError(req as REQ, res as RES, error)
             }

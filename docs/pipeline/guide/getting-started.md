@@ -114,8 +114,7 @@ type ReadQuery = Builders["readQuery"]["T"] // what `read` accepts
 
 /** Never returns more than ten users at once. */
 const LimitToTen = (p: Builders) => ({
-    read: async (next: PipeReadNext<User, ReadQuery>, query: ReadQuery, context: any) =>
-        next({ ...query, limit: Math.min(query.limit ?? 10, 10) }, context),
+    read: async (next: PipeReadNext<User, ReadQuery>, query: ReadQuery, context: any) => next({ ...query, limit: Math.min(query.limit ?? 10, 10) }, context),
 })
 
 const users = new MemoryPipeline(userSchema).pipe(LimitToTen)

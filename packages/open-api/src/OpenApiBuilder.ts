@@ -481,7 +481,10 @@ export class OpenApiBuilder {
     private expectNewPath(path: string) {
         this.expect(path.startsWith("/"), `path '${path}' must start with '/'`)
         const equivalent = Object.keys(this.doc.paths ?? {}).find((p) => normalizePathTemplate(p) === normalizePathTemplate(path))
-        this.expect(equivalent === undefined, equivalent === path ? `path '${path}' already exists` : `path '${path}' is equivalent to the existing path '${equivalent}'`)
+        this.expect(
+            equivalent === undefined,
+            equivalent === path ? `path '${path}' already exists` : `path '${path}' is equivalent to the existing path '${equivalent}'`,
+        )
     }
 
     private expectParentTag(tag: TagObject) {

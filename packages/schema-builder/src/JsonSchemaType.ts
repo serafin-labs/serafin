@@ -23,12 +23,12 @@ export type ArrayOfJsonSchemasType<T> = UnwrapPropsToJsonSchemaType<ArrayToTypeO
 export type JsonSchemaSimpleTypes<TYPE> = TYPE extends "integer" | "number"
     ? number
     : TYPE extends "boolean"
-    ? boolean
-    : TYPE extends "null"
-    ? null
-    : TYPE extends "string"
-    ? string
-    : never
+      ? boolean
+      : TYPE extends "null"
+        ? null
+        : TYPE extends "string"
+          ? string
+          : never
 
 /**
  * Map an array of primitive JSON Schema type names to the union of their TypeScript types.
@@ -42,19 +42,20 @@ export type JsonSchemaTypesUnion<L> = L extends readonly (infer TYPE)[] ? JsonSc
 export type JsonSchemaObjectType<PROPERTIES, REQUIRED, AP> = AP extends false
     ? JsonSchemaProperties<PROPERTIES, REQUIRED>
     : AP extends true
-    ? JsonSchemaProperties<PROPERTIES, REQUIRED> & { [k: string]: any }
-    : {} extends AP
-    ? JsonSchemaProperties<PROPERTIES, REQUIRED> & { [k: string]: any }
-    : JsonSchemaProperties<PROPERTIES, REQUIRED> & JsonSchemaAdditionalProperties<AP>
+      ? JsonSchemaProperties<PROPERTIES, REQUIRED> & { [k: string]: any }
+      : {} extends AP
+        ? JsonSchemaProperties<PROPERTIES, REQUIRED> & { [k: string]: any }
+        : JsonSchemaProperties<PROPERTIES, REQUIRED> & JsonSchemaAdditionalProperties<AP>
 
 /**
  * Type of properties map for an 'object' type
  */
-export type JsonSchemaProperties<T, R> = R extends ReadonlyArray<infer KR>
-    ? [KR] extends [keyof T]
-        ? { [P in KR]: JsonSchemaType<T[P]> } & { [P in Exclude<keyof T, KR>]?: JsonSchemaType<T[P]> }
-        : never /* A required property does not exist */
-    : { [P in keyof T]?: JsonSchemaType<T[P]> } /* No required properties */
+export type JsonSchemaProperties<T, R> =
+    R extends ReadonlyArray<infer KR>
+        ? [KR] extends [keyof T]
+            ? { [P in KR]: JsonSchemaType<T[P]> } & { [P in Exclude<keyof T, KR>]?: JsonSchemaType<T[P]> }
+            : never /* A required property does not exist */
+        : { [P in keyof T]?: JsonSchemaType<T[P]> } /* No required properties */
 
 /**
  * Intermediate interface used to avoid circular references for additional properties
@@ -69,12 +70,12 @@ export interface JsonSchemaAdditionalProperties<T> {
 export type JsonSchemaPrimitiveType<TYPE, ITEM, PROPERTIES, REQUIRED, AP> = TYPE extends "integer" | "number" | "boolean" | "null" | "string"
     ? JsonSchemaSimpleTypes<TYPE>
     : TYPE extends "object"
-    ? JsonSchemaObjectType<PROPERTIES, REQUIRED, AP>
-    : TYPE extends "array"
-    ? ITEM extends ReadonlyArray<infer ITEM_VALUE>
-        ? JsonSchemaType<ITEM_VALUE>[]
-        : JsonSchemaType<ITEM>[]
-    : never
+      ? JsonSchemaObjectType<PROPERTIES, REQUIRED, AP>
+      : TYPE extends "array"
+        ? ITEM extends ReadonlyArray<infer ITEM_VALUE>
+            ? JsonSchemaType<ITEM_VALUE>[]
+            : JsonSchemaType<ITEM>[]
+        : never
 
 /**
  * Deduce the type that represents a JSON Schema from the Schema itself.
@@ -95,16 +96,16 @@ export type JsonSchemaType<T> = T extends {
     ? ONE_OF extends ReadonlyArray<any>
         ? ArrayOfJsonSchemasType<ONE_OF>
         : ANY_OF extends ReadonlyArray<any>
-        ? ArrayOfJsonSchemasType<ANY_OF>
-        : ALL_OF extends ReadonlyArray<any>
-        ? any
-        : ENUM extends ReadonlyArray<infer ENUM_VALUE>
-        ? ENUM_VALUE
-        : {} extends CONST
-        ? TYPE extends string
-            ? JsonSchemaPrimitiveType<TYPE, ITEM, PROPERTIES, REQUIRED, AP>
-            : TYPE extends ReadonlyArray<infer TYPES>
-            ? JsonSchemaPrimitiveType<TYPES, ITEM, PROPERTIES, REQUIRED, AP>
-            : any
-        : CONST
+          ? ArrayOfJsonSchemasType<ANY_OF>
+          : ALL_OF extends ReadonlyArray<any>
+            ? any
+            : ENUM extends ReadonlyArray<infer ENUM_VALUE>
+              ? ENUM_VALUE
+              : {} extends CONST
+                ? TYPE extends string
+                    ? JsonSchemaPrimitiveType<TYPE, ITEM, PROPERTIES, REQUIRED, AP>
+                    : TYPE extends ReadonlyArray<infer TYPES>
+                      ? JsonSchemaPrimitiveType<TYPES, ITEM, PROPERTIES, REQUIRED, AP>
+                      : any
+                : CONST
     : never

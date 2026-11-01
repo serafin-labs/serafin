@@ -6,12 +6,12 @@ TypeScript libraries to build self-descriptive APIs: describe your data once, as
 
 📚 **Documentation: [serafin-labs.github.io/serafin](https://serafin-labs.github.io/serafin/)**
 
-| Package | | |
-| --- | --- | --- |
-| [`@serafin/schema-builder`](./packages/schema-builder) | [![npm](https://img.shields.io/npm/v/@serafin/schema-builder.svg)](https://www.npmjs.com/package/@serafin/schema-builder) | Build a JSON Schema and its TypeScript type at the same time |
-| [`@serafin/pipeline`](./packages/pipeline) | [![npm](https://img.shields.io/npm/v/@serafin/pipeline.svg)](https://www.npmjs.com/package/@serafin/pipeline) | CRUD data access where a data source and the behaviour around it compose |
-| [`@serafin/open-api`](./packages/open-api) | [![npm](https://img.shields.io/npm/v/@serafin/open-api.svg)](https://www.npmjs.com/package/@serafin/open-api) | OpenAPI 3.2 types, and an immutable builder to change documents safely |
-| [`@serafin/api`](./packages/api) | [![npm](https://img.shields.io/npm/v/@serafin/api.svg)](https://www.npmjs.com/package/@serafin/api) | Expose pipelines as REST endpoints, documented with OpenAPI |
+| Package                                                |                                                                                                                           |                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [`@serafin/schema-builder`](./packages/schema-builder) | [![npm](https://img.shields.io/npm/v/@serafin/schema-builder.svg)](https://www.npmjs.com/package/@serafin/schema-builder) | Build a JSON Schema and its TypeScript type at the same time             |
+| [`@serafin/pipeline`](./packages/pipeline)             | [![npm](https://img.shields.io/npm/v/@serafin/pipeline.svg)](https://www.npmjs.com/package/@serafin/pipeline)             | CRUD data access where a data source and the behaviour around it compose |
+| [`@serafin/open-api`](./packages/open-api)             | [![npm](https://img.shields.io/npm/v/@serafin/open-api.svg)](https://www.npmjs.com/package/@serafin/open-api)             | OpenAPI 3.2 types, and an immutable builder to change documents safely   |
+| [`@serafin/api`](./packages/api)                       | [![npm](https://img.shields.io/npm/v/@serafin/api.svg)](https://www.npmjs.com/package/@serafin/api)                       | Expose pipelines as REST endpoints, documented with OpenAPI              |
 
 ## Development
 
@@ -23,16 +23,16 @@ pnpm install
 pnpm build
 ```
 
-| Command | |
-| --- | --- |
-| `pnpm build` | Build every package, ESM and CommonJS, in dependency order |
-| `pnpm typecheck` | Type-check the sources and the tests |
-| `pnpm test` | Run the tests |
-| `pnpm coverage` | Run the tests against the build, with a coverage gate |
+| Command              |                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm build`         | Build every package, ESM and CommonJS, in dependency order                               |
+| `pnpm typecheck`     | Type-check the sources and the tests                                                     |
+| `pnpm test`          | Run the tests                                                                            |
+| `pnpm coverage`      | Run the tests against the build, with a coverage gate                                    |
 | `pnpm check:exports` | Import both builds of every package and type-check a consumer against their declarations |
-| `pnpm check` | All of the above, and the formatting |
-| `pnpm format` | Format the repository with Prettier |
-| `pnpm docs:dev` | Serve the documentation |
+| `pnpm check`         | All of the above, and the formatting                                                     |
+| `pnpm format`        | Format the repository with Prettier                                                      |
+| `pnpm docs:dev`      | Serve the documentation                                                                  |
 
 Run a command in a single package with `pnpm --filter @serafin/pipeline test`, or `pnpm dev` from the package folder to build and test it in watch mode.
 

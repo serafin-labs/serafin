@@ -263,9 +263,7 @@ export abstract class PipelineAbstract<
             const pipeName = typeof pipe === "function" ? pipe.name : Object.getPrototypeOf(pipe).constructor.name
             throw error(
                 "SerafinCapabilityError",
-                `${pipeName || "The pipe"} needs '${missing.join("', '")}', which ${
-                    Object.getPrototypeOf(this).constructor.name
-                } does not declare`,
+                `${pipeName || "The pipe"} needs '${missing.join("', '")}', which ${Object.getPrototypeOf(this).constructor.name} does not declare`,
                 { missing, declared: [...this.capabilities] },
             )
         }
@@ -339,11 +337,11 @@ export abstract class PipelineAbstract<
             const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
             const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
             const existingRelations = (p.meta.schema as any)?.properties?.relations
-            const meta = (
-                existingRelations
-                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
-                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
-            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many, NestedRelations<RelationMETA>> } }>
+            const meta = (existingRelations
+                ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)) as any as SchemaBuilder<
+                META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.many, NestedRelations<RelationMETA>> } }
+            >
             return {
                 meta,
                 readQuery,
@@ -433,11 +431,11 @@ export abstract class PipelineAbstract<
             const patchQuery = p.patchQuery.addProperty(relationOption, relationOptionSchema, false)
             const deleteQuery = p.deleteQuery.addProperty(relationOption, relationOptionSchema, false)
             const existingRelations = (p.meta.schema as any)?.properties?.relations
-            const meta = (
-                existingRelations
-                    ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
-                    : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)
-            ) as any as SchemaBuilder<META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one, NestedRelations<RelationMETA>> } }>
+            const meta = (existingRelations
+                ? p.meta.replaceProperty("relations" as any, (r: any) => r.addProperty(name, relationMetaSchema, false), false)
+                : p.meta.addProperty("relations", SchemaBuilder.emptySchema().addProperty(name, relationMetaSchema, false), false)) as any as SchemaBuilder<
+                META & { relations?: { [k in NameKey]?: RelationMeta<RelationModel, RelationType.one, NestedRelations<RelationMETA>> } }
+            >
             return {
                 meta,
                 readQuery,

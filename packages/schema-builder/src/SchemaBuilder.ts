@@ -2194,16 +2194,7 @@ function validationError(ajvErrorsText: string, errorsDetails: any) {
 }
 
 export type JSONSchemaCommonProperties =
-    | "title"
-    | "description"
-    | "default"
-    | "examples"
-    | "readOnly"
-    | "writeOnly"
-    | "deprecated"
-    | "$id"
-    | "$anchor"
-    | "$dynamicAnchor"
+    "title" | "description" | "default" | "examples" | "readOnly" | "writeOnly" | "deprecated" | "$id" | "$anchor" | "$dynamicAnchor"
 
 export type JSONSchemaArraySpecificProperties = "maxItems" | "minItems" | "uniqueItems"
 

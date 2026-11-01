@@ -3,7 +3,11 @@ import { OpenApiBuilder, OpenApiBuilderError, OpenApiValidationError, defaultOpe
 
 const info = { title: "Library", version: "1.0.0" }
 const ok = { 200: { description: "OK" } }
-const op = (operationId?: string, extra: Partial<OperationObject> = {}): OperationObject => ({ ...(operationId ? { operationId } : {}), responses: ok, ...extra })
+const op = (operationId?: string, extra: Partial<OperationObject> = {}): OperationObject => ({
+    ...(operationId ? { operationId } : {}),
+    responses: ok,
+    ...extra,
+})
 
 describe("OpenApiBuilder", function () {
     describe("documents", function () {
@@ -100,7 +104,10 @@ describe("OpenApiBuilder", function () {
         it("sets, replaces and removes servers", function () {
             expect(builder.setServer({ url: "https://a", name: "A" }).document.servers).to.eql([{ url: "https://a", name: "A" }, { url: "https://b" }])
             expect(builder.setServer({ url: "https://c" }).document.servers).to.have.length(3)
-            expect(builder.replaceServer("https://b", (s) => ({ ...s, url: "https://c" })).document.servers).to.eql([{ url: "https://a" }, { url: "https://c" }])
+            expect(builder.replaceServer("https://b", (s) => ({ ...s, url: "https://c" })).document.servers).to.eql([
+                { url: "https://a" },
+                { url: "https://c" },
+            ])
             expect(() => builder.replaceServer("https://b", { url: "https://a" })).to.throw(OpenApiBuilderError, "server 'https://a' already exists")
             expect(() => builder.replaceServer("https://z", { url: "https://z" })).to.throw(OpenApiBuilderError, "server 'https://z' does not exist")
             expect(builder.removeServer("https://a").document.servers).to.eql([{ url: "https://b" }])
@@ -130,12 +137,22 @@ describe("OpenApiBuilder", function () {
             expect(builder.setTag({ name: "library", description: "D" }).getTag("library")).to.eql({ name: "library", description: "D" })
             expect(builder.setTag({ name: "authors" }).hasTag("authors")).to.be.true
             expect(builder.replaceTag("books", (t) => ({ ...t, summary: "S" })).getTag("books")).to.eql({ name: "books", parent: "library", summary: "S" })
-            expect(() => builder.replaceTag("library", { name: "library", parent: "books" })).to.throw(OpenApiBuilderError, "tag 'library' would be nested in a cycle")
+            expect(() => builder.replaceTag("library", { name: "library", parent: "books" })).to.throw(
+                OpenApiBuilderError,
+                "tag 'library' would be nested in a cycle",
+            )
             expect(() => builder.replaceTag("unknown", { name: "unknown" })).to.throw(OpenApiBuilderError, "tag 'unknown' does not exist")
         })
 
         it("does not loop on documents that already nest tags in a cycle", function () {
-            const cyclic = OpenApiBuilder.from({ openapi: "3.2.0", info, tags: [{ name: "a", parent: "b" }, { name: "b", parent: "a" }] })
+            const cyclic = OpenApiBuilder.from({
+                openapi: "3.2.0",
+                info,
+                tags: [
+                    { name: "a", parent: "b" },
+                    { name: "b", parent: "a" },
+                ],
+            })
             expect(() => cyclic.addTag({ name: "c", parent: "a" })).to.throw(OpenApiBuilderError, "tag 'c' would be nested in a cycle")
         })
 
@@ -191,7 +208,10 @@ describe("OpenApiBuilder", function () {
 
         it("refuses operation ids already used", function () {
             const withOp = builder.addOperation("/books", "get", op("findBooks"))
-            expect(() => withOp.addPath("/other", { get: op("findBooks") })).to.throw(OpenApiBuilderError, "operationId 'findBooks' is already used by /paths/~1books/get")
+            expect(() => withOp.addPath("/other", { get: op("findBooks") })).to.throw(
+                OpenApiBuilderError,
+                "operationId 'findBooks' is already used by /paths/~1books/get",
+            )
             expect(() => builder.addPath("/other", { get: op("x"), additionalOperations: { COPY: op("x") } })).to.throw(
                 OpenApiBuilderError,
                 "operationId 'x' is used twice in the path item",
@@ -220,12 +240,19 @@ describe("OpenApiBuilder", function () {
             expect(() => builder.addOperation("/books", "get", op())).to.throw(OpenApiBuilderError, "operation GET /books already exists")
             expect(() => builder.addOperation("/books", "BAD METHOD", op())).to.throw(OpenApiBuilderError, "'BAD METHOD' is not a valid HTTP method name")
             expect(() => builder.addOperation("/authors", "get", op("findBooks"))).to.throw(OpenApiBuilderError, "operationId 'findBooks' is already used")
-            expect(() => builder.addOperation("/books/{id}", "get", op()).addOperation("/books/{key}", "put", op())).to.throw(OpenApiBuilderError, "is equivalent")
+            expect(() => builder.addOperation("/books/{id}", "get", op()).addOperation("/books/{key}", "put", op())).to.throw(
+                OpenApiBuilderError,
+                "is equivalent",
+            )
         })
 
         it("sets and replaces operations", function () {
-            expect(builder.setOperation("/books", "get", op("findBooks", { summary: "S" })).getOperation("/books", "get")).to.eql(op("findBooks", { summary: "S" }))
-            expect(builder.replaceOperation("/books", "COPY", (o) => ({ ...o, deprecated: true })).getOperation("/books", "COPY")).to.eql(op("copyBooks", { deprecated: true }))
+            expect(builder.setOperation("/books", "get", op("findBooks", { summary: "S" })).getOperation("/books", "get")).to.eql(
+                op("findBooks", { summary: "S" }),
+            )
+            expect(builder.replaceOperation("/books", "COPY", (o) => ({ ...o, deprecated: true })).getOperation("/books", "COPY")).to.eql(
+                op("copyBooks", { deprecated: true }),
+            )
             expect(() => builder.replaceOperation("/books", "delete", op())).to.throw(OpenApiBuilderError, "operation DELETE /books does not exist")
         })
 
@@ -255,14 +282,20 @@ describe("OpenApiBuilder", function () {
             expect(() => builder.addWebhook("bookCreated", {})).to.throw(OpenApiBuilderError, "webhook 'bookCreated' already exists")
             expect(builder.setWebhook("bookCreated", { summary: "S" }).getWebhook("bookCreated")).to.eql({ summary: "S" })
             expect(builder.setWebhook("bookDeleted", {}).hasWebhook("bookDeleted")).to.be.true
-            expect(builder.replaceWebhook("bookCreated", (w) => ({ ...w, summary: "S" })).getWebhook("bookCreated")).to.eql({ post: op("onBookCreated"), summary: "S" })
+            expect(builder.replaceWebhook("bookCreated", (w) => ({ ...w, summary: "S" })).getWebhook("bookCreated")).to.eql({
+                post: op("onBookCreated"),
+                summary: "S",
+            })
             expect(() => builder.replaceWebhook("unknown", {})).to.throw(OpenApiBuilderError, "webhook 'unknown' does not exist")
             expect(builder.removeWebhook("bookCreated").document.webhooks).to.eql({})
             expect(() => builder.removeWebhook("unknown")).to.throw(OpenApiBuilderError, "webhook 'unknown' does not exist")
         })
 
         it("shares operation ids with the paths", function () {
-            expect(() => builder.addOperation("/books", "post", op("onBookCreated"))).to.throw(OpenApiBuilderError, "already used by /webhooks/bookCreated/post")
+            expect(() => builder.addOperation("/books", "post", op("onBookCreated"))).to.throw(
+                OpenApiBuilderError,
+                "already used by /webhooks/bookCreated/post",
+            )
             expect(() => builder.addWebhook("other", { put: op("onBookCreated") })).to.throw(OpenApiBuilderError, "already used by /webhooks/bookCreated/post")
         })
     })
@@ -312,7 +345,10 @@ describe("OpenApiBuilder", function () {
             )
             const nested = builder.replaceComponent("schemas", "Author", { $ref: "#/components/schemas/Book/properties/title" })
             expect(() => nested.removeComponent("schemas", "Book")).to.throw(OpenApiBuilderError, "referenced at /components/schemas/Author/$ref")
-            expect(() => referenced.removeComponent("responses", "NotFound")).to.throw(OpenApiBuilderError, "referenced at /paths/~1books/get/responses/404/$ref")
+            expect(() => referenced.removeComponent("responses", "NotFound")).to.throw(
+                OpenApiBuilderError,
+                "referenced at /paths/~1books/get/responses/404/$ref",
+            )
             expect(nested.removeComponent("responses", "NotFound").hasComponent("responses", "NotFound")).to.be.false
         })
     })

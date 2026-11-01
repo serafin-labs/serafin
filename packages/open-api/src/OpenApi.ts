@@ -408,11 +408,7 @@ export interface OpenIdConnectSecuritySchemeObject extends SecuritySchemeBase {
 }
 
 export type SecuritySchemeObject =
-    | ApiKeySecuritySchemeObject
-    | HttpSecuritySchemeObject
-    | MutualTLSSecuritySchemeObject
-    | OAuth2SecuritySchemeObject
-    | OpenIdConnectSecuritySchemeObject
+    ApiKeySecuritySchemeObject | HttpSecuritySchemeObject | MutualTLSSecuritySchemeObject | OAuth2SecuritySchemeObject | OpenIdConnectSecuritySchemeObject
 
 export interface OAuthFlowsObject extends Extensions {
     implicit?: OAuthImplicitFlowObject

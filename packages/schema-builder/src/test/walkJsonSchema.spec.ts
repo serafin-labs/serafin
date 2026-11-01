@@ -377,8 +377,6 @@ describe("walkJsonSchema", function () {
         walkJsonSchema(schema, (s) => {
             if (s.$ref) refs.push(s.$ref)
         })
-        expect(refs.sort()).to.eql(
-            ["#/defs/Contained", "#/defs/Dep", "#/defs/Else", "#/defs/If", "#/defs/Names", "#/defs/Then"].sort(),
-        )
+        expect(refs.sort()).to.eql(["#/defs/Contained", "#/defs/Dep", "#/defs/Else", "#/defs/If", "#/defs/Names", "#/defs/Then"].sort())
     })
 })

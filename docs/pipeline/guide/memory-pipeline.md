@@ -6,10 +6,7 @@
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline } from "@serafin/pipeline"
 
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), firstName: SB.stringSchema(), age: [SB.integerSchema(), undefined] },
-)
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema(), age: [SB.integerSchema(), undefined] })
 
 let counter = 0
 const users = new MemoryPipeline(userSchema, {

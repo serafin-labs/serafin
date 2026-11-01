@@ -8,17 +8,17 @@ import { SchemaBuilder } from "@serafin/schema-builder"
 
 Every builder exposes two key members:
 
-| Member | Description |
-| --- | --- |
-| `.schema` | The underlying JSON Schema object (read at runtime). |
-| `.T` | A compile-time-only marker. Use `typeof builder.T` to reference the inferred type — never read it at runtime. |
+| Member    | Description                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------- |
+| `.schema` | The underlying JSON Schema object (read at runtime).                                                          |
+| `.T`      | A compile-time-only marker. Use `typeof builder.T` to reference the inferred type — never read it at runtime. |
 
-Builders are **immutable**: every factory and transformation method returns a *new* `SchemaBuilder`. This is what makes deriving related schemas safe.
+Builders are **immutable**: every factory and transformation method returns a _new_ `SchemaBuilder`. This is what makes deriving related schemas safe.
 
 ## How the reference is organized
 
-- **[Factory methods](./factories)** — static methods that *create* a builder (`stringSchema`, `objectSchema`, `oneOf`, …).
-- **[Instance methods](./instance-methods)** — methods you call *on* a builder to add properties, transform, combine, and validate.
+- **[Factory methods](./factories)** — static methods that _create_ a builder (`stringSchema`, `objectSchema`, `oneOf`, …).
+- **[Instance methods](./instance-methods)** — methods you call _on_ a builder to add properties, transform, combine, and validate.
 
 ::: tip Source is the source of truth
 This library is TypeScript-first: every method carries doc comments and precise types, so your editor's IntelliSense is an excellent companion to these pages. When in doubt, hover the method in your IDE.

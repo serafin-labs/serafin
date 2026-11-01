@@ -30,16 +30,16 @@ declares it in its `readQuery`, and a pipeline with validation off skips the che
 
 ## On a value
 
-| Operator | Takes | Matches when |
-| -------- | ----- | ------------ |
-| `$eq`, `$ne` | a value | equal (on an array property: contained in it), or not |
-| `$gt` `$gte` `$lt` `$lte` | a value | ordered that way against it, **same type only** |
-| `$in`, `$nin` | an array | equal to any entry, or to none |
-| `$exists` | a boolean | the property is present, or absent |
-| `$type` | a type name | the value is a `"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"date"`, `"regex"` or `"null"` |
-| `$regex`, `$options` | a string or `RegExp`, flags | the value matches it (`g` and `y` are ignored: they would make each test resume where the last stopped) |
-| `$mod` | `[divisor, remainder]` | the remainder is that |
-| `$not` | operators or a `RegExp` | they do not match |
+| Operator                  | Takes                       | Matches when                                                                                               |
+| ------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `$eq`, `$ne`              | a value                     | equal (on an array property: contained in it), or not                                                      |
+| `$gt` `$gte` `$lt` `$lte` | a value                     | ordered that way against it, **same type only**                                                            |
+| `$in`, `$nin`             | an array                    | equal to any entry, or to none                                                                             |
+| `$exists`                 | a boolean                   | the property is present, or absent                                                                         |
+| `$type`                   | a type name                 | the value is a `"string"`, `"number"`, `"boolean"`, `"array"`, `"object"`, `"date"`, `"regex"` or `"null"` |
+| `$regex`, `$options`      | a string or `RegExp`, flags | the value matches it (`g` and `y` are ignored: they would make each test resume where the last stopped)    |
+| `$mod`                    | `[divisor, remainder]`      | the remainder is that                                                                                      |
+| `$not`                    | operators or a `RegExp`     | they do not match                                                                                          |
 
 ```ts twoslash
 import { matchQuery } from "@serafin/pipeline"
@@ -57,22 +57,29 @@ matchQuery({ age: { $mod: [2, 0] } }, nico) // true
 matchQuery({ age: { $not: { $gt: 65 } } }, nico) // true
 ```
 
-Comparisons answer *no match* across types rather than inventing an order, so `{ age: { $gt: 5 } }`
+Comparisons answer _no match_ across types rather than inventing an order, so `{ age: { $gt: 5 } }`
 never matches an age stored as a string — mongodb, with BSON ordering, would. `$type` takes
 JavaScript type names, since nothing here stores BSON.
 
 ## On an array
 
-| Operator | Takes | Matches when |
-| -------- | ----- | ------------ |
-| `$size` | a number | the array has exactly that many elements |
-| `$all` | an array | every entry is present |
-| `$elemMatch` | a query or operators | **one element** satisfies all of it |
+| Operator     | Takes                | Matches when                             |
+| ------------ | -------------------- | ---------------------------------------- |
+| `$size`      | a number             | the array has exactly that many elements |
+| `$all`       | an array             | every entry is present                   |
+| `$elemMatch` | a query or operators | **one element** satisfies all of it      |
 
 ```ts twoslash
 import { matchQuery } from "@serafin/pipeline"
 
-const order = { id: "1", tags: ["urgent", "paid"], lines: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] }
+const order = {
+    id: "1",
+    tags: ["urgent", "paid"],
+    lines: [
+        { sku: "a", qty: 2 },
+        { sku: "b", qty: 5 },
+    ],
+}
 
 matchQuery({ tags: { $size: 2 } }, order) // true
 matchQuery({ tags: { $all: ["urgent", "paid"] } }, order) // true
@@ -83,7 +90,7 @@ matchQuery({ "lines.sku": "a", "lines.qty": { $gt: 4 } }, order) // true -- diff
 ```
 
 As in mongodb, a condition on an array applies to each element, so conditions may be met by
-*different* elements; `$elemMatch` requires one element to meet all of them.
+_different_ elements; `$elemMatch` requires one element to meet all of them.
 
 ## Logical and dotted paths
 
@@ -94,7 +101,15 @@ applies to **each element**:
 ```ts twoslash
 import { matchQuery } from "@serafin/pipeline"
 
-const order = { id: "1", status: "paid", address: { city: "Paris" }, lines: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] }
+const order = {
+    id: "1",
+    status: "paid",
+    address: { city: "Paris" },
+    lines: [
+        { sku: "a", qty: 2 },
+        { sku: "b", qty: 5 },
+    ],
+}
 
 matchQuery({ status: "paid", $or: [{ "address.city": "Lyon" }, { "lines.qty": { $gt: 4 } }] }, order) // true
 matchQuery({ "lines.0.sku": "a" }, order) // true -- the first line specifically

@@ -1,11 +1,4 @@
-import {
-    conflictError,
-    defaultSchemaBuilders,
-    forbiddenError,
-    movedPermanentlyError,
-    PipelineAbstract,
-    unauthorizedError,
-} from "@serafin/pipeline"
+import { conflictError, defaultSchemaBuilders, forbiddenError, movedPermanentlyError, PipelineAbstract, unauthorizedError } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { expect } from "chai"
 import { RestTransport } from "../rest/RestTransport.js"
@@ -165,7 +158,10 @@ for (const { label, express } of expressVersions) {
             it("creates several resources", async function () {
                 const { app, api } = setup(express)
                 api.use(library().books, "book")
-                const res = await request.execute(app).post("/books").send([{ title: "A" }, { title: "B" }])
+                const res = await request
+                    .execute(app)
+                    .post("/books")
+                    .send([{ title: "A" }, { title: "B" }])
                 expect(res.status).to.eql(201)
                 expect(res.headers).to.not.have.property("location")
                 expect(res.body.data.map((b: any) => b.id)).to.eql(["b1", "b2"])
@@ -173,7 +169,10 @@ for (const { label, express } of expressVersions) {
 
             it("encodes the id in the location, and leaves it out when there is no id", async function () {
                 const { app, api } = setup(express)
-                const answers = [{ data: [{ id: "a/b" }], meta: {} }, { data: [{ title: "no id" }], meta: {} }]
+                const answers = [
+                    { data: [{ id: "a/b" }], meta: {} },
+                    { data: [{ title: "no id" }], meta: {} },
+                ]
                 api.use(new EchoPipeline(echoSchemaBuilders(), () => answers.shift()), "book")
                 expect((await request.execute(app).post("/books").send({ title: "A" })).headers.location).to.eql("/books/a%2Fb")
                 expect((await request.execute(app).post("/books").send({ title: "A" })).headers).to.not.have.property("location")
@@ -182,7 +181,10 @@ for (const { label, express } of expressVersions) {
             it("reports the faulty resource of a list", async function () {
                 const { app, api } = setup(express)
                 api.use(library().books, "book")
-                const res = await request.execute(app).post("/books").send([{ title: "A" }, { title: "B", year: "soon" }])
+                const res = await request
+                    .execute(app)
+                    .post("/books")
+                    .send([{ title: "A" }, { title: "B", year: "soon" }])
                 expect(res.status).to.eql(400)
                 expect(res.body.errors).to.eql([{ path: "/1/year", message: "must be integer" }])
                 const extra = await request.execute(app).post("/books").send({ title: "A", isbn: "x" })
@@ -231,7 +233,11 @@ for (const { label, express } of expressVersions) {
             it("patches a resource with a JSON merge patch", async function () {
                 const { app, api } = setup(express)
                 api.use(library().books, "book")
-                const res = await request.execute(app).patch("/books/1").set("Content-Type", "application/merge-patch+json").send(JSON.stringify({ year: null, available: false }))
+                const res = await request
+                    .execute(app)
+                    .patch("/books/1")
+                    .set("Content-Type", "application/merge-patch+json")
+                    .send(JSON.stringify({ year: null, available: false }))
                 expect(res.status).to.eql(200)
                 expect(res.body.data).to.eql([{ id: "1", title: "The Dispossessed", tags: ["sf"], available: false, authorId: "a1" }])
                 const json = await request.execute(app).patch("/books/1").send({ title: "Les Dépossédés" })
@@ -340,7 +346,9 @@ for (const { label, express } of expressVersions) {
             it("has no by id routes when the queries have no id", async function () {
                 const { app, api } = setup(express)
                 const noId = SchemaBuilder.emptySchema().addString("title", {}, false)
-                api.use(new EchoPipeline({ ...echoSchemaBuilders(), readQuery: noId, patchQuery: noId, deleteQuery: noId }), "book", { actions: ["read", "patch", "delete"] })
+                api.use(new EchoPipeline({ ...echoSchemaBuilders(), readQuery: noId, patchQuery: noId, deleteQuery: noId }), "book", {
+                    actions: ["read", "patch", "delete"],
+                })
                 const res = await request.execute(app).get("/books/1")
                 expect(res.status).to.eql(405)
                 expect(res.body.message).to.eql("GET is not allowed here, use OPTIONS")

@@ -53,7 +53,10 @@ export function library() {
  * A pipeline that answers every action with what it received, to observe how requests are read.
  */
 export class EchoPipeline extends PipelineAbstract<any> {
-    constructor(schemaBuilders: SchemaBuildersInterface<any>, private readonly answer?: (action: string, args: unknown[]) => unknown) {
+    constructor(
+        schemaBuilders: SchemaBuildersInterface<any>,
+        private readonly answer?: (action: string, args: unknown[]) => unknown,
+    ) {
         super(schemaBuilders)
     }
     private respond(action: string, ...args: unknown[]): Promise<any> {

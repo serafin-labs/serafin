@@ -38,7 +38,12 @@ export function encodePointer(segments: string[]): string {
  */
 function decodeLocalReference(reference: string): string[] {
     const pointer = decodeURIComponent(reference.slice(1))
-    return pointer === "" ? [] : pointer.slice(1).split("/").map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"))
+    return pointer === ""
+        ? []
+        : pointer
+              .slice(1)
+              .split("/")
+              .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"))
 }
 
 /**

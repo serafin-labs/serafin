@@ -80,7 +80,7 @@ const regexOnANumber: SourceQuery<ReadQuery> = { age: /18/ }
 `{ minAge: 18 }` is the one worth catching: a public parameter reaching the implementation
 untranslated means the pipe meant to translate it is missing or misordered. **Dotted paths** cannot
 be enumerated from the type, so they are accepted with an `unknown` value through a template-literal
-index signature, `` { [path: `${string}.${string}`]: unknown } `` — which still rejects `minAge`.
+index signature, ``{ [path: `${string}.${string}`]: unknown }`` — which still rejects `minAge`.
 
 `QueryOperators<V>` is what may stand in for a value of type `V`:
 

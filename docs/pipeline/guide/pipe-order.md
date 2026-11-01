@@ -54,10 +54,7 @@ build on what `A` added, and `C` receives them as `B` left them. The public quer
 ```ts twoslash
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline, Cache, memorySchemaBuilders, PipeReadNext } from "@serafin/pipeline"
-const userSchema = SB.objectSchema(
-    { title: "User" },
-    { id: SB.stringSchema(), ownerId: SB.stringSchema(), deletedAt: [SB.stringSchema(), undefined] },
-)
+const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), ownerId: SB.stringSchema(), deletedAt: [SB.stringSchema(), undefined] })
 type User = typeof userSchema.T
 type Builders = ReturnType<typeof memorySchemaBuilders<User>>
 type ReadQuery = Builders["readQuery"]["T"]

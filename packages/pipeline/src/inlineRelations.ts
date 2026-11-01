@@ -28,9 +28,7 @@ export type WithInlinedRelations<M, META> = META extends { relations?: infer REL
  *
  * `meta` is returned untouched, so applying this twice is harmless.
  */
-export function inlineRelations<M extends IdentityInterface, META>(
-    result: ResultsInterface<M, META>,
-): ResultsInterface<WithInlinedRelations<M, META>, META> {
+export function inlineRelations<M extends IdentityInterface, META>(result: ResultsInterface<M, META>): ResultsInterface<WithInlinedRelations<M, META>, META> {
     const relations = (result.meta as any)?.relations as Record<string, RelationMeta<IdentityInterface, RelationType, any>> | undefined
     if (!relations || Object.keys(relations).length === 0) {
         return result as any

@@ -20,17 +20,17 @@ try {
 throw error("MyAppQuotaError", "The account is over its quota", { limit: 100, used: 143 })
 ```
 
-| Name                           | Constructor               | Raised when                                              |
-| ------------------------------ | ------------------------- | -------------------------------------------------------- |
-| `SerafinNotFoundError`         | `notFoundError`           | a resource that had to exist does not                    |
-| `SerafinSchemaValidationError` | `validationError`         | an input is not what it must be                          |
-| `SerafinConflictError`         | `conflictError`           | a write collides — a duplicate id, a lost update         |
-| `SerafinNotImplementedError`   | `notImplementedError`     | an action the pipeline does not implement is called      |
-| `SerafinUnauthorizedError`     | `unauthorizedError`       | the caller is not identified                             |
-| `SerafinForbiddenError`        | `forbiddenError`          | the caller is identified and still not allowed           |
-| `SerafinMovedPermanentlyError` | `movedPermanentlyError`   | the resource lives somewhere else now                    |
-| `SerafinValidationError`       | —                         | wraps a validation failure with the pipeline and action  |
-| `SerafinCapabilityError`       | —                         | `pipe()` refused a pipe — see [Capabilities](./source-query#capabilities) |
+| Name                           | Constructor             | Raised when                                                               |
+| ------------------------------ | ----------------------- | ------------------------------------------------------------------------- |
+| `SerafinNotFoundError`         | `notFoundError`         | a resource that had to exist does not                                     |
+| `SerafinSchemaValidationError` | `validationError`       | an input is not what it must be                                           |
+| `SerafinConflictError`         | `conflictError`         | a write collides — a duplicate id, a lost update                          |
+| `SerafinNotImplementedError`   | `notImplementedError`   | an action the pipeline does not implement is called                       |
+| `SerafinUnauthorizedError`     | `unauthorizedError`     | the caller is not identified                                              |
+| `SerafinForbiddenError`        | `forbiddenError`        | the caller is identified and still not allowed                            |
+| `SerafinMovedPermanentlyError` | `movedPermanentlyError` | the resource lives somewhere else now                                     |
+| `SerafinValidationError`       | —                       | wraps a validation failure with the pipeline and action                   |
+| `SerafinCapabilityError`       | —                       | `pipe()` refused a pipe — see [Capabilities](./source-query#capabilities) |
 
 The set maps onto HTTP status codes on purpose, so a transport can turn a name into a status without
 knowing which pipeline raised it. Signatures are in the [API reference](/pipeline/api/helpers#errors).
@@ -38,7 +38,7 @@ knowing which pipeline raised it. Signatures are in the [API reference](/pipelin
 ## Validation failures
 
 Input validation wraps the ajv error in a `SerafinValidationError` that names where it happened —
-a pipeline is a chain, so knowing that *some* query was invalid is not enough:
+a pipeline is a chain, so knowing that _some_ query was invalid is not enough:
 
 ```
 Validation failed in MemoryPipeline::read(query): Invalid parameters: data must NOT have additional properties

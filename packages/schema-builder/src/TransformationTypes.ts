@@ -28,13 +28,14 @@ export type DeepPartial<T> = {
  * distributes over unions: an optional or nullable nested object (`X | undefined`, `X | null`)
  * is made deeply partial while the `undefined` / `null` members are kept as-is.
  */
-export type DeepPartialValue<V> = V extends Array<infer U>
-    ? Array<DeepPartialValue<U>>
-    : V extends ReadonlyArray<infer U>
-      ? ReadonlyArray<DeepPartialValue<U>>
-      : V extends object
-        ? { [P in keyof DeepPartial<V>]: DeepPartial<V>[P] }
-        : V
+export type DeepPartialValue<V> =
+    V extends Array<infer U>
+        ? Array<DeepPartialValue<U>>
+        : V extends ReadonlyArray<infer U>
+          ? ReadonlyArray<DeepPartialValue<U>>
+          : V extends object
+            ? { [P in keyof DeepPartial<V>]: DeepPartial<V>[P] }
+            : V
 
 /**
  * Make all properties of T required.
@@ -239,18 +240,19 @@ export type PathReplace<PATH extends unknown[], T, U> = PATH extends [infer PATH
  * When `T` has no object member (a primitive or array schema), it resolves to the empty map `{}` —
  * `objectProperties` is safe to call on any schema and simply yields no properties to spread.
  */
-export type PropertiesOf<T> = IsAny<T> extends true
-    ? any
-    : [ObjectMember<T>] extends [never]
-      ? // Not an object schema (e.g. a string, number or array schema): no properties to extract.
-        {}
-      : string extends keyof ObjectMember<T>
-        ? // `T` has a string index signature (a record / `additionalProperties` result): a precise
-          // per-key mapping is meaningless, so fall back to the loose `objectSchema`-input type. This
-          // also keeps the mapping `T`-independent for such types, so it does not perturb the structural
-          // identity of `SchemaBuilder` (which `PropertyAccessor` relies on for its recursive types).
-          { [k: string]: SchemaBuilder<any> | [SchemaBuilder<any>, undefined] }
-        : MergedObjectProperties<ObjectMember<T>>
+export type PropertiesOf<T> =
+    IsAny<T> extends true
+        ? any
+        : [ObjectMember<T>] extends [never]
+          ? // Not an object schema (e.g. a string, number or array schema): no properties to extract.
+            {}
+          : string extends keyof ObjectMember<T>
+            ? // `T` has a string index signature (a record / `additionalProperties` result): a precise
+              // per-key mapping is meaningless, so fall back to the loose `objectSchema`-input type. This
+              // also keeps the mapping `T`-independent for such types, so it does not perturb the structural
+              // identity of `SchemaBuilder` (which `PropertyAccessor` relies on for its recursive types).
+              { [k: string]: SchemaBuilder<any> | [SchemaBuilder<any>, undefined] }
+            : MergedObjectProperties<ObjectMember<T>>
 
 /**
  * The object (non-array) members of a possibly-union `T`. Primitives and arrays/tuples are dropped, so
@@ -387,9 +389,7 @@ export type ExpandEnumKey<V extends string, Prefix extends string, Suffix extend
  * {@link ExpandEnumKey} and typed `U`. Used by `expandEnumToProperties`.
  */
 export type ExpandEnumToProperties<T, Values extends string, U, Prefix extends string, Suffix extends string, REQUIRED extends boolean> = T &
-    (REQUIRED extends false
-        ? { [V in Values as ExpandEnumKey<V, Prefix, Suffix>]?: U }
-        : { [V in Values as ExpandEnumKey<V, Prefix, Suffix>]: U })
+    (REQUIRED extends false ? { [V in Values as ExpandEnumKey<V, Prefix, Suffix>]?: U } : { [V in Values as ExpandEnumKey<V, Prefix, Suffix>]: U })
 
 /**
  * Convert a JSON Schema `type` keyword to the matching TypeScript type, used by

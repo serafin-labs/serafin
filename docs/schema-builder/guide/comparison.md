@@ -22,21 +22,21 @@ That makes the two libraries answer different questions:
 
 ## At a glance
 
-| Topic                     | Zod                                                          | Schema Builder                                                                       |
-| ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Source of truth           | A Zod schema object                                         | A **JSON Schema** document (`.schema`)                                               |
-| JSON Schema               | Export via `z.toJSONSchema` (can be lossy / approximate)    | **Is** the model — 1:1, always available, round-trips                                |
-| TypeScript type           | `z.infer<typeof s>`                                          | `typeof s.T`                                                                          |
-| Spec coverage             | Zod's own feature set                                       | JSON Schema 2020-12 keywords + OpenAPI 3.1 (`discriminator`, `externalDocs`, …)      |
-| Validation                | Built-in, Zod's own engine                                  | [Ajv](https://ajv.js.org) (`.validate`), compiled & cached                           |
-| Immutability              | Methods return new schemas                                  | Every transformation returns a **new builder**                                       |
-| Extract object shape      | `.shape`                                                    | [`.objectProperties()`](./object-properties) (also traverses `allOf`/`anyOf`/`oneOf`)  |
-| Compose object shapes     | `.extend()`, `.merge()`, `...A.shape`                       | `...a.objectProperties()`, `mergeProperties`, `intersectProperties`, `addProperties`   |
-| Derive related shapes     | `.pick` / `.omit` / `.partial`                              | `pickProperties` / `omitProperties` / `toOptionals` / `toNullable` / `renameProperty`|
-| Transform existing keys   | limited                                                     | `transformProperties`, `transformPropertiesToArray`, `unwrapArrayProperties`         |
-| Combinators               | `z.union`, `z.intersection`, `z.discriminatedUnion`         | `oneOf`, `anyOf`, `allOf`, `not`, `oneOfDiscriminated`, `ifThenElse`                  |
-| Parsing / coercion        | First-class (`.parse`, `.coerce`, `.transform` of values)   | Not a goal — Schema Builder shapes _schemas_, not runtime values                     |
-| Codegen                   | —                                                           | `toTypescript()` emits equivalent `SchemaBuilder` source (experimental)              |
+| Topic                   | Zod                                                       | Schema Builder                                                                        |
+| ----------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Source of truth         | A Zod schema object                                       | A **JSON Schema** document (`.schema`)                                                |
+| JSON Schema             | Export via `z.toJSONSchema` (can be lossy / approximate)  | **Is** the model — 1:1, always available, round-trips                                 |
+| TypeScript type         | `z.infer<typeof s>`                                       | `typeof s.T`                                                                          |
+| Spec coverage           | Zod's own feature set                                     | JSON Schema 2020-12 keywords + OpenAPI 3.1 (`discriminator`, `externalDocs`, …)       |
+| Validation              | Built-in, Zod's own engine                                | [Ajv](https://ajv.js.org) (`.validate`), compiled & cached                            |
+| Immutability            | Methods return new schemas                                | Every transformation returns a **new builder**                                        |
+| Extract object shape    | `.shape`                                                  | [`.objectProperties()`](./object-properties) (also traverses `allOf`/`anyOf`/`oneOf`) |
+| Compose object shapes   | `.extend()`, `.merge()`, `...A.shape`                     | `...a.objectProperties()`, `mergeProperties`, `intersectProperties`, `addProperties`  |
+| Derive related shapes   | `.pick` / `.omit` / `.partial`                            | `pickProperties` / `omitProperties` / `toOptionals` / `toNullable` / `renameProperty` |
+| Transform existing keys | limited                                                   | `transformProperties`, `transformPropertiesToArray`, `unwrapArrayProperties`          |
+| Combinators             | `z.union`, `z.intersection`, `z.discriminatedUnion`       | `oneOf`, `anyOf`, `allOf`, `not`, `oneOfDiscriminated`, `ifThenElse`                  |
+| Parsing / coercion      | First-class (`.parse`, `.coerce`, `.transform` of values) | Not a goal — Schema Builder shapes _schemas_, not runtime values                      |
+| Codegen                 | —                                                         | `toTypescript()` emits equivalent `SchemaBuilder` source (experimental)               |
 
 ## The transformation angle
 

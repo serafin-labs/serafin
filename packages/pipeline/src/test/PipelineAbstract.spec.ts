@@ -238,7 +238,11 @@ type IsAny<T> = 0 extends 1 & T ? true : false
 // parameter at its `any` default.
 {
     type Ctx = { _private?: boolean }
-    type NextCtx<A> = A extends (next: infer N, ...rest: any[]) => any ? (N extends (...args: infer P) => any ? P[P["length"] extends 3 ? 2 : 1] : never) : never
+    type NextCtx<A> = A extends (next: infer N, ...rest: any[]) => any
+        ? N extends (...args: infer P) => any
+            ? P[P["length"] extends 3 ? 2 : 1]
+            : never
+        : never
     const _create: IsAny<NextCtx<PipeCreateAction<IdentityInterface, {}, {}, {}, Ctx>>> = false
     const _read: IsAny<NextCtx<PipeReadAction<IdentityInterface, {}, {}, Ctx>>> = false
     const _patch: IsAny<NextCtx<PipePatchAction<IdentityInterface, {}, {}, {}, Ctx>>> = false
@@ -446,13 +450,10 @@ describe("PipelineAbstract", function () {
     it("should resolve a relation nested inside another relation's query", async function () {
         const countrySchema = SchemaBuilder.emptySchema().addString("id").addString("label")
         const companyWithCountrySchema = SchemaBuilder.emptySchema().addString("id").addString("name").addString("countryId")
-        const countries = new RecordingPipeline({ ...defaultSchemaBuilders(countrySchema), context: relationContextSchema }, [
-            { id: "fr", label: "France" },
-        ])
-        const companies = new RecordingPipeline(
-            { ...defaultSchemaBuilders(companyWithCountrySchema), context: relationContextSchema },
-            [{ id: "c1", name: "Acme", countryId: "fr" }],
-        ).addRelationWithOne("country", countries, { id: ":countryId" })
+        const countries = new RecordingPipeline({ ...defaultSchemaBuilders(countrySchema), context: relationContextSchema }, [{ id: "fr", label: "France" }])
+        const companies = new RecordingPipeline({ ...defaultSchemaBuilders(companyWithCountrySchema), context: relationContextSchema }, [
+            { id: "c1", name: "Acme", countryId: "fr" },
+        ]).addRelationWithOne("country", countries, { id: ":countryId" })
         const employees = new RecordingPipeline({ ...defaultSchemaBuilders(employeeSchema), context: relationContextSchema }, [
             { id: "e1", companyId: "c1" },
         ]).addRelationWithOne("company", companies, { id: ":companyId" })
@@ -468,9 +469,7 @@ describe("PipelineAbstract", function () {
         const { employees } = relatedPipelines()
         const relation = (employees as any).relations.company
         const alreadyDeep = { [Symbol.for("@serafin/pipeline.relationDepth")]: maximumRelationDepth }
-        await expect(relation.resolve([{ id: "e1", companyId: "c1" }], {}, alreadyDeep)).to.be.rejectedWith(
-            /nested deeper than the maximum/,
-        )
+        await expect(relation.resolve([{ id: "e1", companyId: "c1" }], {}, alreadyDeep)).to.be.rejectedWith(/nested deeper than the maximum/)
     })
 
     it("should join a normalized result back together with inlineRelations", async function () {

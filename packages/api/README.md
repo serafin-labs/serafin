@@ -32,16 +32,16 @@ app.listen(3000)
 
 For a pipeline exposed as `book`, depending on the actions the pipeline implements:
 
-| Route | Action |
-| --- | --- |
-| `GET /v1/books` | Find the books matching the query string |
-| `GET /v1/books/{id}` | Get a book, 404 if it does not exist |
-| `POST /v1/books` | Create a book, or several from a list. A single created book is given a `Location` header |
-| `PATCH /v1/books/{id}` | Patch a book with a JSON merge patch (`application/json` or `application/merge-patch+json`) |
-| `PATCH /v1/books` | Patch the books matching the query string, when the patch query can select several |
-| `DELETE /v1/books/{id}` | Delete a book |
-| `DELETE /v1/books` | Delete the books matching the query string, when the delete query can select several |
-| `GET /v1/openapi.json` | The OpenAPI document |
+| Route                   | Action                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| `GET /v1/books`         | Find the books matching the query string                                                    |
+| `GET /v1/books/{id}`    | Get a book, 404 if it does not exist                                                        |
+| `POST /v1/books`        | Create a book, or several from a list. A single created book is given a `Location` header   |
+| `PATCH /v1/books/{id}`  | Patch a book with a JSON merge patch (`application/json` or `application/merge-patch+json`) |
+| `PATCH /v1/books`       | Patch the books matching the query string, when the patch query can select several          |
+| `DELETE /v1/books/{id}` | Delete a book                                                                               |
+| `DELETE /v1/books`      | Delete the books matching the query string, when the delete query can select several        |
+| `GET /v1/openapi.json`  | The OpenAPI document                                                                        |
 
 Responses are `{ data, meta }`. Other methods are answered with `405` and an `Allow` header, `OPTIONS` with the allowed methods. Restrict the exposed actions with `api.use(pipeline, "book", { actions: ["read"] })`.
 
@@ -88,13 +88,13 @@ api.openApi = api.openApi
 
 ## Options
 
-| Option | Default | |
-| --- | --- | --- |
-| `context(req)` | | The internal context of a request, such as the authenticated user. May be async |
-| `isInternal(name)` | starts with `_` | Which context properties the client cannot set |
-| `unknownParameters` | `"reject"` | `"ignore"` to drop the unknown query parameters, with a warning, rather than answer `400` |
-| `onSuccess(req, res, data)` | | Called before a successful response is sent |
-| `onError(req, res, error)` | | Called before an error response is sent |
-| `formatError(response, error, req)` | | Changes the body of an error response |
-| `logger` | `console` | Where unexpected errors and ignored parameters are logged, with `error` and `warn` |
-| `bodyLimit` | `"1mb"` | The maximum size of a request body |
+| Option                              | Default         |                                                                                           |
+| ----------------------------------- | --------------- | ----------------------------------------------------------------------------------------- |
+| `context(req)`                      |                 | The internal context of a request, such as the authenticated user. May be async           |
+| `isInternal(name)`                  | starts with `_` | Which context properties the client cannot set                                            |
+| `unknownParameters`                 | `"reject"`      | `"ignore"` to drop the unknown query parameters, with a warning, rather than answer `400` |
+| `onSuccess(req, res, data)`         |                 | Called before a successful response is sent                                               |
+| `onError(req, res, error)`          |                 | Called before an error response is sent                                                   |
+| `formatError(response, error, req)` |                 | Changes the body of an error response                                                     |
+| `logger`                            | `console`       | Where unexpected errors and ignored parameters are logged, with `error` and `warn`        |
+| `bodyLimit`                         | `"1mb"`         | The maximum size of a request body                                                        |

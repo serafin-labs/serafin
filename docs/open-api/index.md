@@ -6,7 +6,6 @@ TypeScript definitions for [OpenAPI 3.2](https://spec.openapis.org/oas/v3.2.html
 npm i @serafin/open-api
 ```
 
-
 ## Types
 
 Every object of the specification is typed: `OpenAPIObject`, `OperationObject`, `ParameterObject`, `SchemaObject`, and so on.
@@ -42,13 +41,13 @@ The builder is immutable: every method returns a new builder, and the document i
 
 Every kind of element (servers, tags, paths, operations, webhooks, components) follows the same conventions:
 
-| Method | Behavior |
-| --- | --- |
-| `add*` | Adds the element, fails if it already exists |
-| `set*` | Adds the element, or overwrites it |
-| `replace*` | Replaces the element, fails if it does not exist. Accepts a function of a mutable copy of the current value |
-| `remove*` | Removes the element, fails if it does not exist |
-| `get*`, `has*` | Read the element |
+| Method         | Behavior                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `add*`         | Adds the element, fails if it already exists                                                                |
+| `set*`         | Adds the element, or overwrites it                                                                          |
+| `replace*`     | Replaces the element, fails if it does not exist. Accepts a function of a mutable copy of the current value |
+| `remove*`      | Removes the element, fails if it does not exist                                                             |
+| `get*`, `has*` | Read the element                                                                                            |
 
 The builder keeps the document consistent and fails with an `OpenApiBuilderError` rather than producing a broken document:
 

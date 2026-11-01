@@ -88,7 +88,12 @@ describe("OpenAPI documentation", function () {
     it("documents required parameters", function () {
         const deleteQuery = SchemaBuilder.emptySchema().addString("id").addString("reason")
         const openApi = documented((api) => api.use(new EchoPipeline({ ...echoSchemaBuilders(), deleteQuery }), "book"))
-        expect(openApi.getOperation("/books/{id}", "delete")!.parameters![1]).to.eql({ in: "query", name: "reason", required: true, schema: { type: "string" } })
+        expect(openApi.getOperation("/books/{id}", "delete")!.parameters![1]).to.eql({
+            in: "query",
+            name: "reason",
+            required: true,
+            schema: { type: "string" },
+        })
         expect(openApi.hasOperation("/books", "delete")).to.be.false
     })
 

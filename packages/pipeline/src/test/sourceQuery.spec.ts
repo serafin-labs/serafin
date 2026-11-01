@@ -19,7 +19,16 @@ type PatchValues = ReturnType<typeof memorySchemaBuilders<Widget>>["patchValues"
 
 const widgets = (): Widget[] => [
     { id: "1", name: "bolt", size: 3, tags: ["metal", "small"] },
-    { id: "2", name: "nut", size: 7, tags: ["metal"], parts: [{ sku: "a", qty: 2 }, { sku: "b", qty: 5 }] },
+    {
+        id: "2",
+        name: "nut",
+        size: 7,
+        tags: ["metal"],
+        parts: [
+            { sku: "a", qty: 2 },
+            { sku: "b", qty: 5 },
+        ],
+    },
     // no size, so a query for an absent property has something to match
     { id: "3", name: "washer" },
 ]
@@ -53,7 +62,10 @@ describe("SourceQuery", function () {
         ]
         // and the matcher agrees at runtime: each of them selects at least one of the two resources
         for (const query of queries) {
-            expect(widgets().some((widget) => matchQuery(query, widget)), JSON.stringify(query)).to.eql(true)
+            expect(
+                widgets().some((widget) => matchQuery(query, widget)),
+                JSON.stringify(query),
+            ).to.eql(true)
         }
     })
 
