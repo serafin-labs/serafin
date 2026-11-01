@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "ryanluker.vscode-coverage-gutters",
+        "eamodio.toggle-excluded-files"
+    ]
+}
