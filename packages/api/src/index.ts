@@ -1,4 +1,5 @@
 export * from "./Api.js"
-export * from "./transport/TransportInterface.js"
-export * from "./transport/rest/Rest.js"
-export * from "./transport/graphql/GraphQL.js"
+export * from "./TransportInterface.js"
+export * from "./rest/RestTransport.js"
+export { documentPipeline, type Routes } from "./rest/documentPipeline.js"
+export type { ErrorDetail, ErrorResponse } from "./rest/errors.js"
