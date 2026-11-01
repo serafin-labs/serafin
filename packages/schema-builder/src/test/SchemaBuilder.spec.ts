@@ -1,0 +1,2487 @@
+import { expect } from "chai"
+import { SchemaBuilder, SB } from "../SchemaBuilder.js"
+import { JSONSchema } from "../JsonSchema.js"
+
+describe("Schema Builder", function () {
+    it("should be initialized with a JSON schema", function () {
+        let schemaBuilder = new SchemaBuilder({})
+        expect(schemaBuilder).to.exist
+        expect(schemaBuilder.schema).to.exist
+    })
+
+    it("should fail to initialize with a JSON schema that contains $ref", function () {
+        expect(() => new SchemaBuilder({ $ref: "aReference" })).to.throw()
+    })
+
+    it("should fail to initialize with a JSON schema that contains $dynamicRef", function () {
+        expect(() => new SchemaBuilder({ $dynamicRef: "aDynamicReference" })).to.throw()
+    })
+
+    it("should create oneOf, allOf, anyOf and not schemas", function () {
+        let schemaBuilder = SB.oneOf(SB.stringSchema(), SB.emptySchema(), SB.booleanSchema())
+        expect((schemaBuilder.schema.oneOf as any).length).to.eqls(3)
+        let schemaBuilder2 = SB.allOf(SB.stringSchema(), SB.emptySchema({ title: "test" }))
+        expect((schemaBuilder2.schema.allOf as any).length).to.eqls(2)
+        let schemaBuilder3 = SB.anyOf(SB.stringSchema(), SB.emptySchema(), SB.booleanSchema(), SB.numberSchema())
+        expect((schemaBuilder3.schema.anyOf as any).length).to.eqls(4)
+        let schemaBuilder4 = SB.not(SB.stringSchema())
+        expect(schemaBuilder4.schema.not).to.exist
+    })
+
+    it("should create simple properties and validate data", function () {
+        let subObjectSchemaBuilder = SB.emptySchema().addString("s")
+        let schemaBuilder = SB.emptySchema()
+            .addString("s1")
+            .addString("s2", {}, false)
+            .addNumber("n1")
+            .addNumber("n2", {}, false)
+            .addInteger("i1")
+            .addInteger("i2", {}, false)
+            .addBoolean("b1")
+            .addBoolean("b2", {}, false)
+            .addEnum("e1", ["a", "b", "c"])
+            .addEnum("e2", ["a", "b", "c"], {}, false)
+            .addEnum("e3", [false])
+            .addEnum("e4", [1, 2])
+            .addEnum("e5", [1, true, "true"] as const)
+            .addProperty("o1", subObjectSchemaBuilder)
+            .addProperty("o2", subObjectSchemaBuilder, false)
+            .addArray("sa1", SB.stringSchema())
+            .addArray("sa2", SB.stringSchema(), {}, false)
+            .addArray("a1", subObjectSchemaBuilder)
+            .addArray("a2", subObjectSchemaBuilder, {}, false)
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s1: "test",
+                n1: 42.42,
+                i1: 42,
+                b1: true,
+                e1: "a",
+                e3: false,
+                e4: 2,
+                e5: "true",
+                o1: { s: "test" },
+                sa1: ["test"],
+                a1: [{ s: "test" }],
+            }),
+        ).to.not.throw()
+        expect(() => schemaBuilder.validate({} as any)).to.throw()
+    })
+
+    it("should create tuple schemas and validate data", function () {
+        const tuple = SB.tupleSchema([SB.stringSchema(), SB.numberSchema(), SB.booleanSchema()])
+        expect(tuple.schema.type).to.equal("array")
+        expect((tuple.schema.prefixItems as any).length).to.equal(3)
+        expect(tuple.schema.items).to.equal(false)
+        expect(tuple.schema.minItems).to.equal(3)
+        expect(() => tuple.validate(["a", 1, true] as any)).to.not.throw()
+        // missing items
+        expect(() => tuple.validate(["a", 1] as any)).to.throw()
+        // wrong type at position
+        expect(() => tuple.validate([1, "a", true] as any)).to.throw()
+        // extra items
+        expect(() => tuple.validate(["a", 1, true, "x"] as any)).to.throw()
+    })
+
+    it("should create nullable tuple schemas", function () {
+        const tuple = SB.tupleSchema([SB.stringSchema(), SB.numberSchema()], {}, true)
+        expect(tuple.schema.type).to.eql(["array", "null"])
+        expect(() => tuple.validate(["a", 1] as any)).to.not.throw()
+        expect(() => tuple.validate(null as any)).to.not.throw()
+    })
+
+    it("should create tuple schemas with a rest element", function () {
+        const tuple = SB.tupleSchema([SB.stringSchema(), SB.numberSchema()], { rest: SB.booleanSchema() })
+        expect(tuple.schema.type).to.equal("array")
+        expect((tuple.schema.prefixItems as any).length).to.equal(2)
+        expect(tuple.schema.items).to.eql({ type: "boolean" })
+        expect(tuple.schema.minItems).to.equal(2)
+        // exact-length still valid
+        expect(() => tuple.validate(["a", 1] as any)).to.not.throw()
+        // rest elements must match the rest schema
+        expect(() => tuple.validate(["a", 1, true, false] as any)).to.not.throw()
+        // wrong type in rest
+        expect(() => tuple.validate(["a", 1, "nope"] as any)).to.throw()
+        // missing prefix item
+        expect(() => tuple.validate(["a"] as any)).to.throw()
+    })
+
+    it("should addTuple with a rest element", function () {
+        const schemaBuilder = SB.emptySchema().addTuple("xs", [SB.stringSchema()], { rest: SB.numberSchema() })
+        expect(() => schemaBuilder.validate({ xs: ["a"] })).to.not.throw()
+        expect(() => schemaBuilder.validate({ xs: ["a", 1, 2, 3] })).to.not.throw()
+        expect(() => schemaBuilder.validate({ xs: ["a", "b"] } as any)).to.throw()
+        expect(() => schemaBuilder.validate({ xs: [] } as any)).to.throw()
+    })
+
+    it("should addTuple on an object schema and validate data", function () {
+        const schemaBuilder = SB.emptySchema()
+            .addTuple("pair", [SB.stringSchema(), SB.numberSchema()])
+            .addTuple("optionalPair", [SB.stringSchema(), SB.numberSchema()], {}, false)
+        expect(() => schemaBuilder.validate({ pair: ["a", 1] })).to.not.throw()
+        expect(() => schemaBuilder.validate({ pair: ["a", 1], optionalPair: ["b", 2] })).to.not.throw()
+        expect(() => schemaBuilder.validate({} as any)).to.throw()
+        expect(() => schemaBuilder.validate({ pair: ["a"] } as any)).to.throw()
+        expect(() => schemaBuilder.validate({ pair: [1, "a"] } as any)).to.throw()
+    })
+
+    it("should create a multi-type schema and validate data", function () {
+        const schemaBuilder = SB.typesSchema(["number", "string"])
+        const value: number | string = schemaBuilder.T
+        expect(schemaBuilder.schema.type).to.eql(["number", "string"])
+        expect(() => schemaBuilder.validate(1 as any)).to.not.throw()
+        expect(() => schemaBuilder.validate("a" as any)).to.not.throw()
+        expect(() => schemaBuilder.validate(true as any)).to.throw()
+        expect(() => schemaBuilder.validate(null as any)).to.throw()
+    })
+
+    it("should collapse a single-element multi-type schema to a plain type", function () {
+        const schemaBuilder = SB.typesSchema(["string"])
+        expect(schemaBuilder.schema.type).to.equal("string")
+    })
+
+    it("should de-duplicate repeated types in a multi-type schema", function () {
+        const schemaBuilder = SB.typesSchema(["number", "number", "string"] as const)
+        expect(schemaBuilder.schema.type).to.eql(["number", "string"])
+    })
+
+    it("should create a nullable multi-type schema", function () {
+        const schemaBuilder = SB.typesSchema(["number", "string"], {}, true)
+        const value: number | string | null = schemaBuilder.T
+        expect(schemaBuilder.schema.type).to.eql(["number", "string", "null"])
+        expect(() => schemaBuilder.validate(null as any)).to.not.throw()
+        expect(() => schemaBuilder.validate(1 as any)).to.not.throw()
+    })
+
+    it("should carry shared constraints on a multi-type schema, applied per relevant type", function () {
+        const schemaBuilder = SB.typesSchema(["number", "string"], { minLength: 3, minimum: 0 })
+        // minLength applies to strings only
+        expect(() => schemaBuilder.validate("abc" as any)).to.not.throw()
+        expect(() => schemaBuilder.validate("ab" as any)).to.throw()
+        // minimum applies to numbers only
+        expect(() => schemaBuilder.validate(5 as any)).to.not.throw()
+        expect(() => schemaBuilder.validate(-1 as any)).to.throw()
+    })
+
+    it("should addTypes on an object schema and validate data", function () {
+        const schemaBuilder = SB.emptySchema().addTypes("id", ["number", "string"]).addTypes("nick", ["string", "null"], {}, false)
+        const value: { id: number | string; nick?: string | null } = schemaBuilder.T
+        expect(() => schemaBuilder.validate({ id: 1 })).to.not.throw()
+        expect(() => schemaBuilder.validate({ id: "x", nick: "n" })).to.not.throw()
+        expect(() => schemaBuilder.validate({ id: "x", nick: null })).to.not.throw()
+        expect(() => schemaBuilder.validate({} as any)).to.throw()
+        expect(() => schemaBuilder.validate({ id: true } as any)).to.throw()
+    })
+
+    it("should add multiple properties at the same time and validate data", function () {
+        let schemaBuilder = SB.emptySchema().addProperties({
+            s1: SB.stringSchema(),
+            s2: [SB.stringSchema(), undefined],
+            sb: [SB.stringSchema(), SB.booleanSchema()],
+        })
+
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s1: "test",
+                sb: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s1: "test",
+                s2: "test",
+                sb: "true",
+            }),
+        ).to.not.throw()
+        expect(() => schemaBuilder.validate({} as any)).to.throw()
+    })
+
+    it("should change validation config and copy it throught transformations", function () {
+        let schemaBuilder1 = SB.emptySchema().addString("s").addNumber("n")
+        let schemaBuilder2 = schemaBuilder1.configureValidation({ coerceTypes: true })
+        expect(schemaBuilder1).to.exist
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                n: 42,
+                s: "test",
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                n: "42",
+                s: "test",
+            } as any),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder1.validate({
+                n: "42",
+                s: "test",
+            } as any),
+        ).to.throw()
+    })
+
+    it("should fail to add a property that already exists", function () {
+        expect(() => SB.emptySchema().addString("s1").addBoolean("s1")).to.throw()
+        expect(() => SB.emptySchema().addString("s1").addBoolean("s1", {}, false)).to.throw()
+    })
+
+    it("should fail to add a property to a non-object schema", function () {
+        expect(() => SB.stringSchema().addString("s1")).to.throw()
+        expect(() => SB.stringSchema().addString("s1", {}, false)).to.throw()
+    })
+
+    it("should create a schema with additional properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addAdditionalProperties()
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+                test: 42,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: {},
+                test: 42,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should fail to create additional properties if it is alread set", function () {
+        expect(() => SB.emptySchema().addString("s").addAdditionalProperties().addAdditionalProperties()).to.throw()
+    })
+
+    it("should set optional properties", function () {
+        let schemaBuilder = SB.emptySchema()
+            .addString("s", { default: "test" })
+            .addBoolean("b", { default: false })
+            .addBoolean("c", {}, false)
+            .setOptionalProperties(["s"])
+        expect(((schemaBuilder.schema.properties as any).s as JSONSchema).default).to.not.exist
+        expect(((schemaBuilder.schema.properties as any).b as JSONSchema).default).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                b: true,
+            }),
+        ).to.not.throw()
+    })
+
+    it("should set required properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addBoolean("b", {}, false).setRequiredProperties(["b"])
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+            } as any),
+        ).to.throw()
+    })
+
+    it("should convert to optionals", function () {
+        let schemaBuilder = SB.emptySchema().addString("s", { default: "test" }).addBoolean("b").toOptionals()
+        expect(((schemaBuilder.schema.properties as any).s as JSONSchema).default).to.not.exist
+        expect(() => schemaBuilder.validate({})).to.not.throw()
+    })
+
+    it("should convert to deep optionals", function () {
+        let innerSchema = SB.emptySchema().addString("ss", { default: "test" }).addBoolean("sb")
+        let schemaBuilder = SB.emptySchema().addBoolean("b", { default: true }).addProperty("s", innerSchema).toDeepOptionals()
+        expect(((schemaBuilder.schema.properties as any).b as JSONSchema).default).to.not.exist
+        expect(((((schemaBuilder.schema.properties as any).s as JSONSchema).properties as any).ss as JSONSchema).default).to.not.exist
+        expect(() => schemaBuilder.validate({ s: { ss: "test" } })).to.not.throw()
+    })
+
+    it("should convert optional, nullable and array nested objects to deep optionals", function () {
+        const address = SB.objectSchema({}, { city: SB.stringSchema(), zip: SB.stringSchema() })
+        const schema = SB.objectSchema(
+            {},
+            {
+                id: SB.stringSchema(),
+                address: [address, undefined],
+                billing: address,
+                addresses: SB.arraySchema(address),
+                previousAddresses: [SB.arraySchema(address), undefined],
+            },
+        )
+        const deep = schema.toDeepOptionals()
+        type Deep = typeof deep.T
+        const optionalNested: Deep = { address: { city: "Paris" } }
+        const requiredNested: Deep = { billing: { zip: "75001" } }
+        const arrayNested: Deep = { addresses: [{ city: "Paris" }], previousAddresses: [{ zip: "75001" }] }
+        const explicitUndefined: Deep = { address: undefined, previousAddresses: undefined }
+        // @ts-expect-error nested properties keep their type
+        const wrongNestedType: Deep = { address: { city: 42 } }
+        for (const value of [optionalNested, requiredNested, arrayNested, explicitUndefined]) {
+            expect(() => deep.validate(value)).to.not.throw()
+        }
+        expect(() => deep.validate(wrongNestedType)).to.throw()
+
+        const patch = schema.omitProperties(["id"]).toNullable().toDeepOptionals()
+        type Patch = typeof patch.T
+        const nullableNested: Patch = { address: { city: "Paris" }, previousAddresses: [{ city: "Paris" }] }
+        const nullValues: Patch = { address: null, previousAddresses: null }
+        for (const value of [nullableNested, nullValues]) {
+            expect(() => patch.validate(value)).to.not.throw()
+        }
+    })
+
+    it("should add nullable properties", function () {
+        let schemaBuilder = SB.emptySchema().addEnum("s", ["a", "b", "c"], {}, false, true).addArray("a", SB.stringSchema(), {}, false, true)
+        expect(() => schemaBuilder.validate({ s: null, a: null })).to.not.throw()
+    })
+
+    it("should convert to nullable", function () {
+        let schemaBuilder = SB.emptySchema().addEnum("s", ["a", "b", "c"], {}, false).addArray("a", SB.stringSchema(), {}, false)
+        expect(() => schemaBuilder.validate({ s: null, a: null } as any)).to.throw()
+        expect(() => schemaBuilder.toNullable().validate({ s: null, a: null })).to.not.throw()
+    })
+
+    it("should rename a property", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addBoolean("b", {}, false).renameProperty("s", "s2").renameProperty("b", "b2")
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s2: "test",
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+            } as any),
+        ).to.throw()
+    })
+
+    it("should pick properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addBoolean("b", {}, false).pickProperties(["b"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                b: true,
+            }),
+        ).to.not.throw()
+        let o = {
+            s: "test",
+            b: true,
+        }
+        expect(() => schemaBuilder.validate(o as any)).to.throw()
+    })
+
+    it("should omit properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addBoolean("b", {}, false).omitProperties(["s"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                b: true,
+            }),
+        ).to.not.throw()
+        let o = {
+            s: "test",
+            b: true,
+        }
+        expect(() => schemaBuilder.validate(o as any)).to.throw()
+    })
+
+    it("should pick additional properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addAdditionalProperties().pickAdditionalProperties(["s"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+                test: 42,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: {},
+                test: 42,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should remove additional properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addAdditionalProperties().pickAdditionalProperties(["s"], [])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+            }),
+        ).to.not.throw()
+        let o = {
+            s: "test",
+            test: 42,
+        }
+        expect(() => schemaBuilder.validate(o as any)).to.throw()
+    })
+
+    it("should pick specific additional properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s").addAdditionalProperties().pickAdditionalProperties(["s"], ["test"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+                test: 42,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+                test2: 42,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should transform properties type", function () {
+        let schemaBuilder = SB.emptySchema().addArray("s", SB.stringSchema()).transformProperties(SB.stringSchema(), ["s"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: ["test"],
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: [{ a: "test" }],
+            } as any),
+        ).to.throw()
+        let schemaBuilder2 = SB.emptySchema().addArray("s", SB.stringSchema()).transformProperties(SB.stringSchema())
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: ["test"],
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: [{ a: "test" }],
+            } as any),
+        ).to.throw()
+    })
+
+    it("should unwrap array properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("s", {}, false).addArray("a", SB.booleanSchema()).unwrapArrayProperties(["a"])
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                a: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: "test",
+            } as any),
+        ).to.throw()
+        let schemaBuilder2 = SB.emptySchema().addString("s", {}, false).addArray("a", SB.booleanSchema()).unwrapArrayProperties()
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                a: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: "test",
+            } as any),
+        ).to.throw()
+    })
+
+    it("should transform properties to array", function () {
+        let schemaBuilder = SB.emptySchema().addString("s", {}, false).transformPropertiesToArray(["s"], { minItems: 2 })
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                s: ["test"],
+            }),
+        ).to.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: ["test1", "test2"],
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder.validate({
+                s: [{ a: "test" }],
+            } as any),
+        ).to.throw()
+        let schemaBuilder2 = SB.emptySchema().addString("s").transformPropertiesToArray()
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: ["test"],
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: [{ a: "test" }],
+            } as any),
+        ).to.throw()
+    })
+
+    it("should intersect properties", function () {
+        let schemaBuilder1 = SB.emptySchema().addString("s").addBoolean("b")
+        let schemaBuilder2 = SB.emptySchema().addString("s", {}, false).intersectProperties(schemaBuilder1)
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: "test",
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                b: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should intersectProperties work with an empty schema", function () {
+        expect(() => SB.emptySchema().intersectProperties(SB.emptySchema().addString("test"))).to.not.throw()
+    })
+
+    it("should merge properties", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v")).addBoolean("b")
+        let schemaBuilder2 = SB.emptySchema().addBoolean("s", {}, false).mergeProperties(schemaBuilder1)
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: true,
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should overwrite properties", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v")).addBoolean("b").addBoolean("s2", {}, false).addBoolean("s3", {})
+        let schemaBuilder2 = SB.emptySchema().addBoolean("s", {}, false).addString("s2").addString("s3").overwriteProperties(schemaBuilder1)
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+                b: true,
+                s3: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: false,
+                b: true,
+                s3: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should fail to transform with schemas that are not simple", function () {
+        let schemaBuilder = SB.allOf(SB.emptySchema().addString("s"), SB.emptySchema().addBoolean("b"))
+        expect(schemaBuilder.hasSchemasCombinationKeywords).to.be.true
+        expect(schemaBuilder.isSimpleObjectSchema).to.be.false
+        expect(schemaBuilder.isObjectSchema).to.be.false
+        expect(schemaBuilder.hasAdditionalProperties).to.be.false
+        expect(() => schemaBuilder.setOptionalProperties([])).to.throw()
+        expect(() => schemaBuilder.setRequiredProperties([])).to.throw()
+        expect(() => schemaBuilder.renameProperty("s", "s1")).to.throw()
+        expect(() => schemaBuilder.pickProperties(["s"])).to.throw()
+        expect(() => schemaBuilder.omitProperties(["s"])).to.throw()
+        expect(() => schemaBuilder.pickAdditionalProperties(["s"])).to.throw()
+        expect(() => schemaBuilder.transformProperties(SB.stringSchema(), ["s"])).to.throw()
+        expect(() => schemaBuilder.transformPropertiesToArray()).to.throw()
+        expect(() => schemaBuilder.intersectProperties(SB.emptySchema())).to.throw()
+        expect(() => schemaBuilder.mergeProperties(SB.emptySchema())).to.throw()
+        expect(() => schemaBuilder.overwriteProperties(SB.emptySchema())).to.throw()
+    })
+
+    it("should initialize a complex schema and validate data", function () {
+        let taskSchema = SB.objectSchema(
+            {
+                title: "Task",
+            },
+            {
+                name: SB.stringSchema(),
+                progress: SB.numberSchema(),
+                isCompleted: [SB.booleanSchema(), undefined],
+            },
+        )
+
+        let userSchema = SB.objectSchema(
+            {
+                title: "User",
+            },
+            {
+                id: SB.stringSchema({ pattern: "\\w" }),
+                firstName: SB.stringSchema(),
+                lastName: SB.stringSchema(),
+                role: SB.enumSchema(["admin", "user"]),
+                email: SB.stringSchema({ format: "email" }),
+                tags: SB.arraySchema(SB.stringSchema(), { minItems: 1 }),
+                age: [SB.integerSchema(), undefined],
+                friendsIds: [SB.arraySchema(SB.stringSchema()), undefined],
+                tasks: SB.arraySchema(taskSchema),
+            },
+        )
+
+        expect(userSchema).to.exist
+        expect(
+            userSchema.validate.bind(userSchema, {
+                id: "1",
+                firstName: "John",
+                lastName: "Doe",
+                email: "john-doe@test.com",
+                role: "admin",
+                tags: ["test"],
+                tasks: [
+                    {
+                        name: "something to do",
+                        progress: 0,
+                    },
+                ],
+            }),
+        ).to.not.throw()
+        expect(
+            userSchema.validate.bind(userSchema, {
+                id: "1_",
+                firstName: "John",
+                lastName: "Doe",
+                email: "john-doe-test.com",
+                role: "test",
+                tags: [],
+                tasks: [
+                    {
+                        name: "something to do",
+                        progress: 0,
+                        isCompleted: false,
+                    },
+                ],
+            } as any),
+        ).to.throw()
+
+        let queryUserSchema = userSchema
+            .setSchemaAttributes({ title: "UserQuery" })
+            .pickProperties(["firstName", "lastName", "age", "email", "tags"])
+            .transformPropertiesToArray()
+            .unwrapArrayProperties()
+            .addBoolean("anOption")
+            .toOptionals()
+        type QueryUser = typeof queryUserSchema.T
+        let q: QueryUser = {
+            tags: "admin",
+            age: [30, 31],
+        }
+        expect(queryUserSchema).to.exist
+        expect(() => queryUserSchema.validate(q)).to.not.throw()
+        expect(
+            queryUserSchema.validate.bind(queryUserSchema, {
+                tags: "admin",
+                age: "test",
+            } as any),
+        ).to.throw()
+    })
+
+    it("should set an inline schema", function () {
+        let schemaBuilder = SB.fromJsonSchema({
+            type: "object",
+            properties: {
+                anEmptySchema: {},
+                aMultiTypeSchema: {
+                    type: ["integer", "string", "object", "array"],
+                    description: "this is a test",
+                    items: {
+                        type: "boolean",
+                    },
+                    additionalProperties: false,
+                    properties: {
+                        ok: {
+                            type: "boolean",
+                        },
+                    },
+                },
+                aString: {
+                    type: "string",
+                    minLength: 1,
+                },
+                aConstString: {
+                    type: "string",
+                    const: "constant",
+                },
+                aSpecialEnum: {
+                    type: ["string", "number"],
+                    enum: ["A", "B", 1, 2],
+                },
+                aNullableString: {
+                    type: ["string", "null"],
+                },
+                aNullProperty: {
+                    type: "null",
+                },
+                aBoolean: {
+                    type: "boolean",
+                },
+                anInteger: {
+                    type: "integer",
+                    minimum: 0,
+                },
+                aSubObject: {
+                    type: "object",
+                    additionalProperties: {
+                        type: "number",
+                    },
+                    properties: {
+                        aSubProperty: {
+                            type: "number",
+                            maximum: 100,
+                        },
+                    },
+                },
+                aOneOfObject: {
+                    oneOf: [
+                        {
+                            type: "integer",
+                        },
+                        {
+                            type: "boolean",
+                        },
+                        {
+                            type: "object",
+                            additionalProperties: false,
+                            properties: {
+                                test: { type: "string" },
+                            },
+                        },
+                    ],
+                },
+                anArray: {
+                    type: "array",
+                    items: {
+                        type: "string",
+                        enum: ["a", "b", "c"],
+                    },
+                },
+                aMultiArray: {
+                    type: "array",
+                    prefixItems: [
+                        {
+                            type: "string",
+                        },
+                        {
+                            type: "boolean",
+                        },
+                    ],
+                },
+            },
+            required: ["aBoolean", "anArray"],
+            additionalProperties: false,
+        } as const)
+        let a: typeof schemaBuilder.T
+        expect(schemaBuilder).to.exist
+        expect(() =>
+            schemaBuilder.validate({
+                aBoolean: false,
+                aSubObject: {
+                    aSubProperty: 42,
+                },
+                anArray: ["a"],
+                aNullableString: null,
+            }),
+        ).to.not.throw()
+
+        expect(() =>
+            schemaBuilder.validate({
+                aBoolean: true,
+                anInteger: -1,
+            } as any),
+        ).to.throw()
+
+        expect(() =>
+            schemaBuilder.validate({
+                aBoolean: true,
+                anArray: ["a"],
+                aString: null,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should replace a property", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v")).addBoolean("b")
+        let schemaBuilder2 = schemaBuilder1.replaceProperty("s", SB.booleanSchema())
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: false,
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+                b: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should deep replace a property", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v"))
+        let schemaBuilder2 = schemaBuilder1.replaceProperty("s", (s) => s.replaceProperty("v", SB.integerSchema()))
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: 42 },
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+            } as any),
+        ).to.throw()
+    })
+
+    it("should add or replace a property", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v"))
+        let schemaBuilder2 = schemaBuilder1.addOrReplaceProperty("b", SB.booleanSchema()).addOrReplaceProperty("s", SB.booleanSchema())
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                s: false,
+                b: true,
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+                b: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should get a subschema", function () {
+        let schemaBuilder1 = SB.emptySchema().addProperty("s", SB.emptySchema().addString("v"), false)
+        let schemaBuilder2 = schemaBuilder1.getSubschema("s").getSubschema("v")
+        expect(schemaBuilder2).to.exist
+        expect(() => schemaBuilder2.validate("test")).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                s: { v: "test" },
+            } as any),
+        ).to.throw()
+    })
+
+    it("should throw a clear error when getSubschema is called with an unknown property", function () {
+        const schemaBuilder = SB.emptySchema({ title: "Container" }).addString("s").addNumber("n")
+        expect(() => (schemaBuilder as any).getSubschema("missing")).to.throw(
+            "Schema Builder Error: 'getSubschema' called with unknown property 'missing' on Container schema. Known properties: s, n.",
+        )
+    })
+
+    it("should throw a clear error when getSubschema is called on a schema with combination keywords", function () {
+        const schemaBuilder = SB.oneOf(SB.emptySchema().addString("s"), SB.emptySchema().addNumber("n"))
+        expect(() => (schemaBuilder as any).getSubschema("s")).to.throw(
+            "Schema Builder Error: 'getSubschema' can only be used with an object schema that does not use oneOf, anyOf, allOf or not",
+        )
+    })
+
+    it("should report '(none)' when getSubschema is called on a schema that declares no properties", function () {
+        const schemaBuilder = SB.emptySchema({ title: "Empty" })
+        expect(() => (schemaBuilder as any).getSubschema("missing")).to.throw(
+            "Schema Builder Error: 'getSubschema' called with unknown property 'missing' on Empty schema. Known properties: (none).",
+        )
+    })
+
+    it("should return the declared property's subschema even when additionalProperties is set", function () {
+        const schemaBuilder = SB.emptySchema().addString("declared").addAdditionalProperties(SB.numberSchema())
+        const sub = (schemaBuilder as any).getSubschema("declared")
+        expect(sub.schema.type).to.equal("string")
+    })
+
+    it("should fall back to the additionalProperties schema for undeclared properties", function () {
+        const schemaBuilder = SB.emptySchema().addString("declared").addAdditionalProperties(SB.numberSchema())
+        const sub = (schemaBuilder as any).getSubschema("unknown")
+        expect(sub.schema.type).to.equal("number")
+    })
+
+    it("should return an any schema when additionalProperties is true and the property is undeclared", function () {
+        const schemaBuilder = SB.emptySchema().addString("declared").addAdditionalProperties()
+        const sub = (schemaBuilder as any).getSubschema("unknown")
+        // anySchema is created from an empty `{}` — no `type` keyword.
+        expect(sub.schema.type).to.equal(undefined)
+    })
+
+    it("should still throw for an undeclared property when additionalProperties is false", function () {
+        const schemaBuilder = SB.emptySchema({ title: "Strict" }).addString("declared")
+        expect(() => (schemaBuilder as any).getSubschema("unknown")).to.throw(
+            "Schema Builder Error: 'getSubschema' called with unknown property 'unknown' on Strict schema. Known properties: declared.",
+        )
+    })
+
+    it("should get a array subschema", function () {
+        let schemaBuilder1 = SB.arraySchema(SB.emptySchema().addString("test"), {}, true)
+        let schemaBuilder2 = schemaBuilder1.getItemsSubschema()
+        expect(schemaBuilder2).to.exist
+        expect(() =>
+            schemaBuilder2.validate({
+                test: "42",
+            }),
+        ).to.not.throw()
+        expect(() =>
+            schemaBuilder2.validate({
+                test: true,
+            } as any),
+        ).to.throw()
+    })
+
+    it("should get schema properties", function () {
+        let schemaBuilder = SB.emptySchema().addString("req").addNumber("opt", {}, false).addAdditionalProperties()
+        const properties = schemaBuilder.properties
+        const requiredProperties = schemaBuilder.requiredProperties
+        const optionalProperties = schemaBuilder.optionalProperties
+        expect(properties).to.eql(["req", "opt"])
+        expect(requiredProperties).to.eql(["req"])
+        expect(optionalProperties).to.eql(["opt"])
+    })
+
+    it("should get property accessor", function () {
+        let schemaBuilder = SB.emptySchema().addProperty("o", SB.emptySchema().addString("s").addBoolean("o"))
+        const pa = schemaBuilder.getPropertyAccessor().o.s
+        expect(pa.path).to.eql(["o", "s"])
+    })
+
+    it("should generate code for a schema", function () {
+        let taskSchema = SB.objectSchema(
+            {
+                title: "Task",
+            },
+            {
+                name: SB.stringSchema(),
+                progress: SB.numberSchema(),
+                isCompleted: [SB.booleanSchema(), undefined],
+            },
+        )
+        expect(taskSchema.toTypescript()).to.eqls([
+            "taskSchema",
+            'SB.objectSchema({"title":"Task"}, {"name": SB.stringSchema(), "progress": SB.numberSchema(), "isCompleted": [SB.booleanSchema(), undefined]})',
+        ])
+    })
+
+    it("should render nullable primitives regardless of the `type` array ordering", function () {
+        // Schemas built via the SB.*Schema(..., true) helpers put "null" last,
+        // but schemas declared by hand (or via fromJsonSchema) can put it first.
+        // toTypescript should render either ordering as a nullable primitive.
+        const nullLast = SB.fromJsonSchema({ type: ["string", "null"] } as const)
+        expect(nullLast.toTypescript()[1]).to.equal("SB.stringSchema({}, true)")
+
+        const nullFirst = SB.fromJsonSchema({ type: ["null", "string"] } as const)
+        expect(nullFirst.toTypescript()[1]).to.equal("SB.stringSchema({}, true)")
+
+        const numberNullFirst = SB.fromJsonSchema({ type: ["null", "number"] } as const)
+        expect(numberNullFirst.toTypescript()[1]).to.equal("SB.numberSchema({}, true)")
+
+        const booleanNullFirst = SB.fromJsonSchema({ type: ["null", "boolean"] } as const)
+        expect(booleanNullFirst.toTypescript()[1]).to.equal("SB.booleanSchema({}, true)")
+    })
+
+    describe("Error messages testings", function () {
+        const advancedSchema = SB.emptySchema({ title: "AdvancedSchema", description: "This is an advanced schema" })
+            .addString("asOptNull", {}, false, true)
+            .addProperty(
+                "ao",
+                SB.emptySchema()
+                    .addProperty(
+                        "bo",
+                        SB.emptySchema()
+                            .addProperty("co", SB.emptySchema().addString("ds").addBoolean("db").addArray("das", SB.stringSchema()))
+                            .addEnum("ce", ["ce1", "ce2", "ce3"])
+                            .addInteger("ciMinMax", { title: "ci", minimum: 10, maximum: 100 })
+                            .addNumber("cn"),
+                    )
+                    .addArray(
+                        "bao",
+                        SB.emptySchema()
+                            .addString("esOpt", {}, false)
+                            .addBoolean("ebOptNull", {}, false, true)
+                            .addArray("ea", SB.numberSchema())
+                            .addBoolean("ebOpt", {}, false),
+                    ),
+            )
+            .addString("as")
+            .addArray("aaeOpt", SB.enumSchema(["aae1", "aae2", "aae3"]), {}, false)
+            .addProperty("ao2Opt", SB.emptySchema().addAdditionalProperties(), false)
+
+        it("should return detailed error messages for nested properties", function () {
+            try {
+                advancedSchema.validate({
+                    ao: {
+                        bo: { co: { ds: "a", db: true, das: ["a", "b", "c"] }, ce: "ce1", ciMinMax: 9, cn: 12.34 },
+                        bao: [{ esOpt: "test", ebOptNull: null, ea: [1, 2, 3] }],
+                    },
+                    ao2Opt: { a: 42 },
+                    aaeOpt: ["aae1", "aae2", "aae3", "aae4"],
+                    asOptNull: "",
+                } as any)
+            } catch (error) {
+                expect(error).to.exist
+                expect((error as any).message).to.equal(
+                    "Invalid parameters: data must have required property 'as', data/ao/bo/ciMinMax must be >= 10, data/aaeOpt/3 must be equal to one of the allowed values",
+                )
+            }
+        })
+    })
+
+    describe("Test Enum/Const Schema", function () {
+        it("should create a schema with const values", function () {
+            let schema = SB.objectSchema(
+                {},
+                {
+                    name: SB.constSchema("good"),
+                    progress: SB.constSchema(42),
+                    isCompleted: SB.constSchema(true),
+                },
+            )
+            type Schema = typeof schema.T
+            const goodData: Schema = {
+                name: "good",
+                progress: 42,
+                isCompleted: true,
+            }
+            const badData: any = {
+                name: "bad",
+                progress: 21,
+                isCompleted: false,
+            }
+
+            expect(() => schema.validate(goodData)).to.not.throw()
+            expect(() => schema.validate(badData)).to.throw(
+                "Invalid parameters: data/name must be equal to constant, data/progress must be equal to constant, data/isCompleted must be equal to constant",
+            )
+        })
+
+        it("includes `null` in `type` when `null` appears in the values", function () {
+            const onlyNull = SB.enumSchema([null] as const)
+            expect(onlyNull.schema.type).to.equal("null")
+            expect(onlyNull.schema.enum).to.eql([null])
+
+            const stringOrNull = SB.enumSchema(["a", null] as const)
+            expect(stringOrNull.schema.type).to.eql(["string", "null"])
+            expect(stringOrNull.schema.enum).to.eql(["a", null])
+            expect(() => stringOrNull.validate(null as any)).to.not.throw()
+            expect(() => stringOrNull.validate("a")).to.not.throw()
+            expect(() => stringOrNull.validate("b" as any)).to.throw()
+
+            const numberOrNull = SB.enumSchema([1, 2, null] as const)
+            expect(numberOrNull.schema.type).to.eql(["number", "null"])
+            expect(() => numberOrNull.validate(null as any)).to.not.throw()
+            expect(() => numberOrNull.validate(1)).to.not.throw()
+            expect(() => numberOrNull.validate(3 as any)).to.throw()
+        })
+
+        it("adds `null` to both `type` and `enum` when nullable is true", function () {
+            const nullableString = SB.enumSchema(["a"] as const, {}, true)
+            expect(nullableString.schema.type).to.eql(["string", "null"])
+            expect(nullableString.schema.enum).to.eql(["a", null])
+            expect(() => nullableString.validate(null)).to.not.throw()
+            expect(() => nullableString.validate("a")).to.not.throw()
+        })
+
+        it("does not duplicate `null` in `type`/`enum` when both nullable and a literal null are present", function () {
+            const schema = SB.enumSchema(["a", null] as const, {}, true)
+            const type = schema.schema.type as string[]
+            expect(type.filter((t) => t === "null")).to.have.length(1)
+            const enumValues = schema.schema.enum as unknown[]
+            expect(enumValues.filter((v) => v === null)).to.have.length(1)
+        })
+
+        it("should use oneOf with literal values for type narrowing", function () {
+            let schema = SB.objectSchema(
+                {},
+                {
+                    name: SB.enumSchema(["test", "test2"] as const),
+                    conditionalObject: SB.oneOf(
+                        SB.objectSchema({}, { type: SB.constSchema("foo"), foo: SB.stringSchema() }),
+                        SB.objectSchema({}, { type: SB.enumSchema("bar"), bar: SB.numberSchema() }),
+                        SB.objectSchema({}, { type: SB.enumSchema(["baz"] as const), baz: SB.booleanSchema() }),
+                    ),
+                },
+            )
+            type Schema = typeof schema.T
+            const goodDataFoo: Schema = {
+                name: "test",
+                conditionalObject: { type: "foo", foo: "test" },
+            }
+            const goodDataBar: Schema = {
+                name: "test2",
+                conditionalObject: { type: "bar", bar: 42 },
+            }
+            const badData: any = {
+                name: "test",
+                conditionalObject: { type: "foo", bar: 42 },
+            }
+            expect(() => schema.validate(goodDataFoo)).to.not.throw()
+            expect(() => schema.validate(goodDataBar)).to.not.throw()
+            expect(() => schema.validate(badData)).to.throw("Invalid parameters: data/conditionalObject must have required property 'foo'")
+        })
+
+        it("oneOfDiscriminated builds a tagged union with OpenAPI discriminator", function () {
+            const cat = SB.objectSchema({}, { meow: SB.booleanSchema() })
+            const dog = SB.objectSchema({}, { bark: SB.stringSchema() })
+            const pet = SB.oneOfDiscriminated("kind", { cat, dog })
+
+            const oneOf = pet.schema.oneOf as JSONSchema[]
+            expect(oneOf).to.have.lengthOf(2)
+            expect((oneOf[0].properties as any).kind).to.eql({ const: "cat" })
+            expect((oneOf[1].properties as any).kind).to.eql({ const: "dog" })
+            expect(oneOf[0].required).to.include("kind")
+            expect(oneOf[1].required).to.include("kind")
+            expect(pet.schema.discriminator).to.eql({ propertyName: "kind" })
+
+            type Pet = typeof pet.T
+            const aCat: Pet = { kind: "cat", meow: true }
+            const aDog: Pet = { kind: "dog", bark: "woof" }
+            expect(() => pet.validate(aCat)).to.not.throw()
+            expect(() => pet.validate(aDog)).to.not.throw()
+            expect(() => pet.validate({ kind: "cat", bark: "woof" } as any)).to.throw()
+            expect(() => pet.validate({ kind: "dog", meow: true } as any)).to.throw()
+
+            if (aCat.kind === "cat") {
+                expect(aCat.meow).to.be.a("boolean")
+            }
+        })
+
+        it("oneOfDiscriminated rejects non-object variants", function () {
+            expect(() => SB.oneOfDiscriminated("kind", { foo: SB.stringSchema() as any })).to.throw(
+                "'oneOfDiscriminated' variant 'foo' is not an object schema",
+            )
+        })
+
+        it("playground with different typing of enumSchema", function () {
+            enum TestEnum {
+                foo = "foo",
+                bar = "bar",
+                baz = "baz",
+            }
+            const TestEnumValues = Object.values(TestEnum)
+
+            const literalSchema = SB.objectSchema(
+                {},
+                {
+                    enumLiteralString: SB.enumSchema("test"),
+                    enumLiteralEnum: SB.enumSchema(TestEnum.foo),
+                },
+            )
+            type LiteralSchema = typeof literalSchema.T
+            expect(() => literalSchema.validate({ enumLiteralString: "test", enumLiteralEnum: TestEnum.foo })).to.not.throw()
+            expect(() => literalSchema.validate({ enumLiteralString: "test", enumLiteralEnum: "foo" as TestEnum.foo })).to.not.throw()
+            expect(() => literalSchema.validate({ enumLiteralString: "test", enumLiteralEnum: "baz" as TestEnum.foo })).to.throw(
+                "Invalid parameters: data/enumLiteralEnum must be equal to one of the allowed values",
+            )
+
+            const stringEnumSchema = SB.objectSchema(
+                {},
+                {
+                    enumArrayUniqueValueString: SB.enumSchema(["foo"]),
+                    enumArrayUniqueConstValueString: SB.enumSchema(["foo"] as const),
+                    enumArrayMultipleValuesString: SB.enumSchema(["foo", "bar"]),
+                    enumArrayMultipleConstValuesString: SB.enumSchema(["foo", "bar"] as const),
+                },
+            )
+
+            type StringEnumSchema = typeof stringEnumSchema.T
+            expect(() =>
+                stringEnumSchema.validate({
+                    enumArrayUniqueValueString: "foo",
+                    enumArrayUniqueConstValueString: "foo",
+                    enumArrayMultipleValuesString: "bar",
+                    enumArrayMultipleConstValuesString: "bar",
+                }),
+            ).to.not.throw()
+            expect(() =>
+                stringEnumSchema.validate({
+                    // @ts-expect-error deliberately outside the enum: the type rejects it and so must validation
+                    enumArrayUniqueValueString: "baz",
+                    enumArrayUniqueConstValueString: "foo",
+                    // @ts-expect-error deliberately outside the enum: the type rejects it and so must validation
+                    enumArrayMultipleValuesString: "baz",
+                    enumArrayMultipleConstValuesString: "foo",
+                }),
+            ).to.throw(
+                "Invalid parameters: data/enumArrayUniqueValueString must be equal to one of the allowed values, data/enumArrayMultipleValuesString must be equal to one of the allowed values",
+            )
+
+            const enumEnumSchema = SB.objectSchema(
+                {},
+                {
+                    enumArrayUniqueConstValue: SB.enumSchema([TestEnum.foo] as const),
+                    enumArrayUniqueValue: SB.enumSchema([TestEnum.foo]),
+                    enumArrayMultipleValues: SB.enumSchema([TestEnum.foo, TestEnum.bar]),
+                    enumArrayMultipleConstValues: SB.enumSchema([TestEnum.foo, TestEnum.bar] as const),
+
+                    enumMultipleValuesEnumValues: SB.enumSchema(TestEnumValues),
+                },
+            )
+
+            type EnumEnumSchema = typeof enumEnumSchema.T
+            expect(() =>
+                enumEnumSchema.validate({
+                    enumArrayUniqueConstValue: TestEnum.foo,
+                    enumArrayUniqueValue: TestEnum.foo,
+                    enumArrayMultipleValues: TestEnum.bar,
+                    enumArrayMultipleConstValues: TestEnum.bar,
+                    enumMultipleValuesEnumValues: TestEnum.bar,
+                }),
+            ).to.not.throw()
+            expect(() =>
+                enumEnumSchema.validate({
+                    enumArrayUniqueConstValue: TestEnum.baz,
+                    enumArrayUniqueValue: TestEnum.baz,
+                    enumArrayMultipleValues: TestEnum.baz,
+                    enumArrayMultipleConstValues: TestEnum.baz,
+
+                    enumMultipleValuesEnumValues: "baz",
+                } as any),
+            ).to.throw(
+                "Invalid parameters: data/enumArrayUniqueConstValue must be equal to one of the allowed values, data/enumArrayUniqueValue must be equal to one of the allowed values, data/enumArrayMultipleValues must be equal to one of the allowed values, data/enumArrayMultipleConstValues must be equal to one of the allowed values",
+            )
+        })
+    })
+
+    describe("constSchema Test", function () {
+        it("should create a schema with const values", function () {
+            const schema = SB.objectSchema(
+                {},
+                {
+                    string: SB.constSchema("string"),
+                    number: SB.constSchema(42),
+                    true: SB.constSchema(true),
+                    false: SB.constSchema(false),
+                    null: SB.constSchema(null),
+                },
+            )
+
+            expect(() => schema.validate({ string: "string", number: 42, true: true, false: false, null: null })).to.not.throw()
+            expect(() => schema.validate({ string: "string", number: 42, true: true, false: false, null: "null" } as any)).to.throw(
+                "Invalid parameters: data/null must be equal to constant",
+            )
+        })
+    })
+
+    describe("Static factory helpers", function () {
+        it("nullSchema creates a `{ type: 'null' }` schema that accepts only null", function () {
+            const s = SB.nullSchema()
+            expect(s.schema.type).to.equal("null")
+            expect(() => s.validate(null)).to.not.throw()
+            expect(() => s.validate("nope" as any)).to.throw()
+        })
+
+        it("anySchema accepts arbitrary values", function () {
+            const s = SB.anySchema()
+            expect(s.schema.type).to.equal(undefined)
+            expect(() => s.validate(42 as any)).to.not.throw()
+            expect(() => s.validate("any" as any)).to.not.throw()
+            expect(() => s.validate({ ok: true } as any)).to.not.throw()
+        })
+
+        it("neverSchema produces a schema with `type: []` that nothing validates against", function () {
+            const s = SB.neverSchema()
+            expect(s.schema.type).to.eql([])
+            expect(() => (s as any).validate(undefined)).to.throw()
+            expect(() => (s as any).validate(null)).to.throw()
+            expect(() => (s as any).validate("anything")).to.throw()
+        })
+
+        it("primitive *Schema helpers add `null` to `type` when nullable is true", function () {
+            expect(SB.stringSchema({}, true).schema.type).to.eql(["string", "null"])
+            expect(SB.numberSchema({}, true).schema.type).to.eql(["number", "null"])
+            expect(SB.integerSchema({}, true).schema.type).to.eql(["integer", "null"])
+            expect(SB.booleanSchema({}, true).schema.type).to.eql(["boolean", "null"])
+        })
+
+        it("emptySchema nullable produces a `['object', 'null']` schema", function () {
+            const s = SB.emptySchema({}, true)
+            expect(s.schema.type).to.eql(["object", "null"])
+            expect(s.schema.additionalProperties).to.equal(false)
+            expect(() => s.validate(null as any)).to.not.throw()
+            expect(() => s.validate({} as any)).to.not.throw()
+        })
+
+        it("objectSchema nullable produces a `['object', 'null']` schema with properties", function () {
+            const s = SB.objectSchema({}, { a: SB.stringSchema() }, true)
+            expect(s.schema.type).to.eql(["object", "null"])
+            expect(() => s.validate(null as any)).to.not.throw()
+            expect(() => s.validate({ a: "ok" })).to.not.throw()
+            expect(() => s.validate({ a: 1 } as any)).to.throw()
+        })
+
+        it("arraySchema nullable produces a `['array', 'null']` schema", function () {
+            const s = SB.arraySchema(SB.stringSchema(), {}, true)
+            expect(s.schema.type).to.eql(["array", "null"])
+            expect(() => s.validate(null)).to.not.throw()
+            expect(() => s.validate(["a", "b"])).to.not.throw()
+        })
+
+        it("globalAJVValidationConfig exposes the merged static config", function () {
+            const cfg = SB.globalAJVValidationConfig
+            expect(cfg).to.be.an("object")
+            // Defaults seeded on the class
+            expect(cfg.coerceTypes).to.equal(false)
+        })
+
+        it("validate is a no-op success path that exercises cacheValidationFunction", function () {
+            const s = SB.emptySchema().addString("s")
+            s.cacheValidationFunction() // explicit prime
+            expect(() => s.validate({ s: "ok" })).to.not.throw()
+            // second call uses the cached function
+            expect(() => s.validate({ s: "ok again" })).to.not.throw()
+        })
+    })
+
+    describe("Instance edge cases", function () {
+        it("addProperties throws on a name collision with the existing schema", function () {
+            const s = SB.emptySchema({ title: "Box" }).addString("a")
+            expect(() => s.addProperties({ a: SB.stringSchema() })).to.throw("Schema Builder Error: 'a' already exists in Box schema")
+        })
+
+        it("addProperties throws when called on a non-object schema", function () {
+            expect(() => (SB.stringSchema() as any).addProperties({ a: SB.stringSchema() })).to.throw("you can only add properties to an object schema")
+        })
+
+        it("addProperty throws when called on a non-object schema", function () {
+            expect(() => (SB.stringSchema() as any).addProperty("a", SB.stringSchema())).to.throw("you can only add properties to an object schema")
+        })
+
+        it("replaceProperty throws when called on a non-object schema", function () {
+            expect(() => (SB.stringSchema() as any).replaceProperty("a", SB.stringSchema())).to.throw("you can only replace properties of an object schema")
+        })
+
+        it("renameProperty throws when the source property does not exist", function () {
+            const s = SB.emptySchema({ title: "Box" }).addString("a")
+            expect(() => (s as any).renameProperty("missing", "x")).to.throw("'renameProperty' called with unknown property 'missing' on Box schema")
+        })
+
+        it("renameProperty throws when the target name already exists", function () {
+            const s = SB.emptySchema({ title: "Box" }).addString("a").addString("b")
+            expect(() => (s as any).renameProperty("a", "b")).to.throw("'renameProperty' target 'b' already exists in Box schema")
+        })
+
+        it("renameProperty throws when source and target are the same", function () {
+            const s = SB.emptySchema({ title: "Box" }).addString("a")
+            expect(() => (s as any).renameProperty("a", "a")).to.throw("'renameProperty' source and target are both 'a' on Box schema")
+        })
+
+        it("replaceProperty throws when the property does not exist", function () {
+            const s = SB.emptySchema({ title: "Box" }).addString("a")
+            expect(() => (s as any).replaceProperty("missing", SB.numberSchema())).to.throw(
+                "'replaceProperty' called with unknown property 'missing' on Box schema",
+            )
+        })
+
+        it("addOrReplaceProperty adds a new property via addProperty (which would reject duplicates)", function () {
+            // Sanity-check that the add/replace dispatch works in both branches.
+            const base = SB.emptySchema().addString("existing")
+            const added = base.addOrReplaceProperty("brandNew", SB.numberSchema())
+            expect((added.schema.properties as any).brandNew.type).to.equal("number")
+            expect((added.schema.properties as any).existing.type).to.equal("string")
+
+            const replaced = base.addOrReplaceProperty("existing", SB.booleanSchema())
+            expect((replaced.schema.properties as any).existing.type).to.equal("boolean")
+        })
+
+        it("renameProperty preserves required when renaming a required property", function () {
+            const s = SB.emptySchema().addString("a").addBoolean("b", {}, false)
+            const renamed = s.renameProperty("a", "a2")
+            expect(renamed.schema.required).to.eql(["a2"])
+        })
+
+        it("toNullable does not duplicate `null` when a property's type is already `['T', 'null']`", function () {
+            const s = SB.emptySchema().addString("a", {}, false, true).toNullable()
+            const a: any = (s.schema.properties as any).a
+            expect(a.type).to.eql(["string", "null"])
+        })
+
+        it("toNullable wraps a property in `anyOf` when it has no `type` (e.g. const)", function () {
+            const s = SB.emptySchema().addProperty("c", SB.constSchema("X"), false).toNullable()
+            const c: any = (s.schema.properties as any).c
+            expect(c.anyOf).to.be.an("array")
+            expect(c.anyOf).to.have.length(2)
+            expect(c.anyOf[1]).to.eql({ type: "null" })
+        })
+
+        it("toNullable adds `null` to an existing `enum` if not already present", function () {
+            const s = SB.emptySchema().addEnum("e", ["a", "b"], {}, false).toNullable()
+            const e: any = (s.schema.properties as any).e
+            expect(e.enum).to.eql(["a", "b", null])
+        })
+
+        it("transformPropertiesToArray leaves an already-array property unchanged", function () {
+            const s = SB.emptySchema().addArray("a", SB.stringSchema()).transformPropertiesToArray(["a"])
+            // Original schema unchanged: no oneOf wrapping
+            expect((s.schema.properties as any).a.oneOf).to.equal(undefined)
+            expect((s.schema.properties as any).a.type).to.equal("array")
+        })
+
+        it("unwrapArrayProperties leaves a non-array property unchanged", function () {
+            const s = SB.emptySchema()
+                .addString("s")
+                .unwrapArrayProperties(["s"] as any)
+            expect((s.schema.properties as any).s.type).to.equal("string")
+        })
+
+        it("unwrapArrayProperties handles a single-element `prefixItems` tuple", function () {
+            const inner = SB.emptySchema().addProperty("a", SB.fromJsonSchema({ type: "array", prefixItems: [{ type: "string" } as any] } as const))
+            const result = (inner as any).unwrapArrayProperties(["a"])
+            const a: any = (result.schema.properties as any).a
+            expect(a.oneOf).to.be.an("array")
+            expect(a.oneOf[0]).to.eql({ type: "string" })
+        })
+
+        it("unwrapArrayProperties wraps a multi-element `prefixItems` tuple in oneOf", function () {
+            const inner = SB.fromJsonSchema({
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                    a: { type: "array", prefixItems: [{ type: "string" }, { type: "number" }] },
+                },
+            } as const)
+            const result = (inner as any).unwrapArrayProperties(["a"])
+            const a: any = (result.schema.properties as any).a
+            expect(a.oneOf).to.be.an("array")
+            expect(a.oneOf[0]).to.eql({ oneOf: [{ type: "string" }, { type: "number" }] })
+        })
+
+        it("getItemsSubschema throws when the schema is not an array schema", function () {
+            const s = SB.emptySchema().addString("s")
+            expect(() => (s as any).getItemsSubschema()).to.throw("'getItemsSubschema' can only be used with an array schema with non-tuple items")
+        })
+
+        it("getItemsSubschema throws when the schema uses `prefixItems` (tuple form)", function () {
+            const tuple = SB.fromJsonSchema({ type: "array", prefixItems: [{ type: "string" }, { type: "number" }] } as const)
+            expect(() => (tuple as any).getItemsSubschema()).to.throw("'getItemsSubschema' can only be used with an array schema with non-tuple items")
+        })
+
+        it("addAdditionalProperties without a builder sets it to `true`", function () {
+            const s = SB.emptySchema().addString("s").addAdditionalProperties()
+            expect(s.schema.additionalProperties).to.equal(true)
+        })
+
+        it("isObjectSchema is true for a typeless schema that declares `properties`", function () {
+            const s = new SchemaBuilder({ properties: { a: { type: "string" } } })
+            expect(s.isObjectSchema).to.equal(true)
+        })
+
+        it("isArraySchema is true for a typed array schema and for a typeless schema with `items`", function () {
+            const arr = SB.arraySchema(SB.stringSchema())
+            expect(arr.isArraySchema).to.equal(true)
+            const inferred = new SchemaBuilder({ items: { type: "string" } })
+            expect(inferred.isArraySchema).to.equal(true)
+        })
+
+        it("properties/requiredProperties/optionalProperties return null on schemas that use combination keywords", function () {
+            const s = SB.oneOf(SB.emptySchema().addString("s"), SB.emptySchema().addNumber("n"))
+            expect(s.properties).to.equal(null)
+            expect(s.requiredProperties).to.equal(null)
+            expect(s.optionalProperties).to.equal(null)
+        })
+
+        it("setSchemaAttributes shallow-merges general attributes onto a fresh schema", function () {
+            const s = SB.emptySchema().addString("s")
+            const updated = s.setSchemaAttributes({ title: "Updated", description: "desc" })
+            expect(updated.schema.title).to.equal("Updated")
+            expect(updated.schema.description).to.equal("desc")
+            // does not mutate the original
+            expect(s.schema.title).to.equal(undefined)
+        })
+
+        it("pickAdditionalProperties with capture names makes them required (locked behavior)", function () {
+            // The captured names land in `required` (intentional — see the JSDoc note).
+            const s = SB.emptySchema().addString("s").addAdditionalProperties(SB.numberSchema()).pickAdditionalProperties(["s"], ["captured"])
+            expect((s.schema as any).required).to.include("captured")
+            expect(() => s.validate({ s: "x", captured: 1 })).to.not.throw()
+            // Missing the captured property fails validation because it's now required.
+            expect(() => s.validate({ s: "x" } as any)).to.throw()
+        })
+
+        it("pickAdditionalProperties with capture names defaults the captured schema to `{}` when additionalProperties was `true`", function () {
+            const s = SB.emptySchema().addString("s").addAdditionalProperties().pickAdditionalProperties(["s"], ["captured"])
+            expect((s.schema.properties as any).captured).to.eql({})
+        })
+
+        it("setStringConstraints merges string-specific keywords onto a string schema", function () {
+            const s = SB.stringSchema().setStringConstraints({ minLength: 2, maxLength: 8, pattern: "^[a-z]+$", format: "email" })
+            expect(s.schema.minLength).to.equal(2)
+            expect(s.schema.maxLength).to.equal(8)
+            expect(s.schema.pattern).to.equal("^[a-z]+$")
+            expect(s.schema.format).to.equal("email")
+            // works on nullable string as well
+            const n = SB.stringSchema({}, true).setStringConstraints({ minLength: 1 })
+            expect(n.schema.minLength).to.equal(1)
+        })
+
+        it("setStringConstraints throws when called on a non-string schema", function () {
+            const n = SB.numberSchema() as any
+            expect(() => n.setStringConstraints({ minLength: 1 })).to.throw(/string schema/)
+        })
+
+        it("setNumberConstraints merges numeric keywords on number and integer schemas", function () {
+            const n = SB.numberSchema().setNumberConstraints({ minimum: 0, maximum: 10, multipleOf: 2, exclusiveMinimum: -1, exclusiveMaximum: 11 })
+            expect(n.schema.minimum).to.equal(0)
+            expect(n.schema.maximum).to.equal(10)
+            expect(n.schema.multipleOf).to.equal(2)
+            expect(n.schema.exclusiveMinimum).to.equal(-1)
+            expect(n.schema.exclusiveMaximum).to.equal(11)
+            const i = SB.integerSchema().setNumberConstraints({ minimum: 0 })
+            expect(i.schema.minimum).to.equal(0)
+        })
+
+        it("setNumberConstraints throws when called on a non-numeric schema", function () {
+            const s = SB.stringSchema() as any
+            expect(() => s.setNumberConstraints({ minimum: 0 })).to.throw(/number or integer schema/)
+        })
+
+        it("setArrayConstraints merges array keywords on an array schema", function () {
+            const a = SB.arraySchema(SB.stringSchema()).setArrayConstraints({ minItems: 1, maxItems: 3, uniqueItems: true })
+            expect(a.schema.minItems).to.equal(1)
+            expect(a.schema.maxItems).to.equal(3)
+            expect(a.schema.uniqueItems).to.equal(true)
+        })
+
+        it("setArrayConstraints throws when called on a non-array schema", function () {
+            const s = SB.stringSchema() as any
+            expect(() => s.setArrayConstraints({ minItems: 1 })).to.throw(/array schema/)
+        })
+
+        it("setObjectConstraints merges object keywords on an object schema", function () {
+            const o = SB.emptySchema().addString("a").addString("b").setObjectConstraints({ minProperties: 1, maxProperties: 5 })
+            expect(o.schema.minProperties).to.equal(1)
+            expect(o.schema.maxProperties).to.equal(5)
+        })
+
+        it("setObjectConstraints throws when called on a non-object schema", function () {
+            const s = SB.stringSchema() as any
+            expect(() => s.setObjectConstraints({ minProperties: 1 })).to.throw(/object schema/)
+        })
+
+        it("setSchemaAttributes accepts type-aware default and examples", function () {
+            const s = SB.stringSchema().setSchemaAttributes({ default: "x", examples: ["a", "b"] })
+            expect(s.schema.default).to.equal("x")
+            expect(s.schema.examples).to.eql(["a", "b"])
+        })
+
+        it("constraint setters do not mutate the original builder", function () {
+            const s = SB.stringSchema()
+            s.setStringConstraints({ minLength: 1 })
+            expect(s.schema.minLength).to.equal(undefined)
+        })
+
+        it("constraint setters preserve nullable type arrays", function () {
+            const s = SB.stringSchema({}, true).setStringConstraints({ minLength: 1 })
+            expect(s.schema.type).to.eql(["string", "null"])
+        })
+
+        it("setContains attaches a contains schema and bounds to an array schema", function () {
+            const a = SB.arraySchema(SB.numberSchema()).setContains(SB.numberSchema().setNumberConstraints({ minimum: 10 }), { minContains: 1, maxContains: 3 })
+            expect(a.schema.contains).to.eql({ type: "number", minimum: 10 })
+            expect(a.schema.minContains).to.equal(1)
+            expect(a.schema.maxContains).to.equal(3)
+            // validation
+            expect(() => a.validate([1, 2, 10])).to.not.throw()
+            expect(() => a.validate([1, 2, 3])).to.throw()
+        })
+
+        it("setContains clears contains/minContains/maxContains when passed null", function () {
+            const a = SB.arraySchema(SB.numberSchema()).setContains(SB.numberSchema(), { minContains: 2 })
+            const cleared = (a.setContains as any).call(a, null)
+            expect(cleared.schema.contains).to.equal(undefined)
+            expect(cleared.schema.minContains).to.equal(undefined)
+            expect(cleared.schema.maxContains).to.equal(undefined)
+        })
+
+        it("setContains throws when called on a non-array schema", function () {
+            const s = SB.stringSchema() as any
+            expect(() => s.setContains(SB.numberSchema())).to.throw(/array schema/)
+        })
+
+        it("setContains does not mutate the original builder", function () {
+            const a = SB.arraySchema(SB.numberSchema())
+            a.setContains(SB.numberSchema(), { minContains: 1 })
+            expect(a.schema.contains).to.equal(undefined)
+            expect(a.schema.minContains).to.equal(undefined)
+        })
+
+        it("setPropertyNames attaches and clears a propertyNames schema", function () {
+            const o = SB.emptySchema()
+                .addAdditionalProperties(SB.numberSchema())
+                .setPropertyNames(SB.stringSchema().setStringConstraints({ pattern: "^[a-z]+$" }))
+            expect((o.schema.propertyNames as any).pattern).to.equal("^[a-z]+$")
+            expect(() => o.validate({ abc: 1 })).to.not.throw()
+            expect(() => o.validate({ ABC: 1 })).to.throw()
+            const cleared = (o.setPropertyNames as any).call(o, null)
+            expect(cleared.schema.propertyNames).to.equal(undefined)
+        })
+
+        it("setPropertyNames throws when called on a non-object schema", function () {
+            const s = SB.stringSchema() as any
+            expect(() => s.setPropertyNames(SB.stringSchema())).to.throw(/object schema/)
+        })
+
+        it("addDependentRequired enforces co-presence of properties", function () {
+            const s = SB.emptySchema().addString("a", {}, false).addString("b", {}, false).addDependentRequired("a", ["b"])
+            expect((s.schema.dependentRequired as any).a).to.eql(["b"])
+            expect(() => s.validate({})).to.not.throw()
+            expect(() => s.validate({ b: "x" })).to.not.throw()
+            expect(() => s.validate({ a: "x", b: "y" })).to.not.throw()
+            expect(() => s.validate({ a: "x" } as any)).to.throw()
+        })
+
+        it("addDependentSchemas applies a conditional schema when a property is present", function () {
+            const s = SB.emptySchema()
+                .addString("a", {}, false)
+                .addAdditionalProperties()
+                .addDependentSchemas("a", SB.emptySchema().addString("b").addAdditionalProperties())
+            expect((s.schema.dependentSchemas as any).a.required).to.eql(["b"])
+            expect(() => s.validate({})).to.not.throw()
+            expect(() => s.validate({ a: "x", b: "y" })).to.not.throw()
+            expect(() => s.validate({ a: "x" } as any)).to.throw()
+        })
+
+        it("setUnevaluatedProperties accepts a schema, true, false and null", function () {
+            const base = SB.emptySchema().addString("a")
+            const withSchema = base.setUnevaluatedProperties(SB.stringSchema())
+            expect((withSchema.schema.unevaluatedProperties as any).type).to.equal("string")
+            const withTrue = base.setUnevaluatedProperties(true)
+            expect(withTrue.schema.unevaluatedProperties).to.equal(true)
+            const withFalse = base.setUnevaluatedProperties(false)
+            expect(withFalse.schema.unevaluatedProperties).to.equal(false)
+            const cleared = (withFalse.setUnevaluatedProperties as any).call(withFalse, null)
+            expect(cleared.schema.unevaluatedProperties).to.equal(undefined)
+        })
+
+        it("setUnevaluatedItems accepts a schema, true, false and null", function () {
+            const base = SB.arraySchema(SB.numberSchema())
+            const withSchema = base.setUnevaluatedItems(SB.numberSchema())
+            expect((withSchema.schema.unevaluatedItems as any).type).to.equal("number")
+            const withTrue = base.setUnevaluatedItems(true)
+            expect(withTrue.schema.unevaluatedItems).to.equal(true)
+            const withFalse = base.setUnevaluatedItems(false)
+            expect(withFalse.schema.unevaluatedItems).to.equal(false)
+            const cleared = (withFalse.setUnevaluatedItems as any).call(withFalse, null)
+            expect(cleared.schema.unevaluatedItems).to.equal(undefined)
+        })
+
+        it("setContent attaches contentMediaType, contentEncoding and contentSchema", function () {
+            const s = SB.stringSchema().setContent({
+                mediaType: "application/json",
+                encoding: "base64",
+                schema: SB.emptySchema().addString("name"),
+            })
+            expect(s.schema.contentMediaType).to.equal("application/json")
+            expect(s.schema.contentEncoding).to.equal("base64")
+            expect((s.schema.contentSchema as any).properties.name).to.exist
+        })
+
+        it("setContent({ mediaType }) sets only mediaType and drops previously-set keys", function () {
+            const s = SB.stringSchema().setContent({ mediaType: "application/json", encoding: "base64" }).setContent({ mediaType: "text/plain" })
+            expect(s.schema.contentMediaType).to.equal("text/plain")
+            expect(s.schema.contentEncoding).to.equal(undefined)
+        })
+
+        it("setContent(null) clears all three content keywords", function () {
+            const s = SB.stringSchema().setContent({ mediaType: "application/json", encoding: "base64" }).setContent(null)
+            expect(s.schema.contentMediaType).to.equal(undefined)
+            expect(s.schema.contentEncoding).to.equal(undefined)
+            expect(s.schema.contentSchema).to.equal(undefined)
+        })
+
+        it("setContent throws when called on a non-string schema", function () {
+            const n = SB.numberSchema() as any
+            expect(() => n.setContent({ mediaType: "application/json" })).to.throw(/string schema/)
+        })
+
+        it("SB.ifThenElse builds an if/then/else schema with union type", function () {
+            const s = SB.ifThenElse(
+                SB.emptySchema()
+                    .addProperty("kind", SB.enumSchema(["a"] as const))
+                    .addAdditionalProperties(),
+                SB.emptySchema().addString("a").addAdditionalProperties(),
+                SB.emptySchema().addNumber("b").addAdditionalProperties(),
+            )
+            expect(s.schema.if).to.exist
+            expect(s.schema.then).to.exist
+            expect(s.schema.else).to.exist
+            expect(() => s.validate({ kind: "a", a: "x" } as any)).to.not.throw()
+            expect(() => s.validate({ b: 1 } as any)).to.not.throw()
+            expect(() => s.validate({ kind: "a", b: 1 } as any)).to.throw()
+        })
+
+        it("setIfThenElse attaches a conditional and clears it with null", function () {
+            const base = SB.emptySchema().addString("a", {}, false).addNumber("b", {}, false).addAdditionalProperties()
+            const withCond = base.setIfThenElse({
+                if: SB.emptySchema()
+                    .addProperty("a", SB.constSchema("yes" as const))
+                    .addAdditionalProperties(),
+                then: SB.emptySchema()
+                    .addString("b" as any)
+                    .addAdditionalProperties(),
+            })
+            expect(withCond.schema.if).to.exist
+            expect(withCond.schema.then).to.exist
+            expect(withCond.schema.else).to.equal(undefined)
+            const cleared = withCond.setIfThenElse(null)
+            expect(cleared.schema.if).to.equal(undefined)
+            expect(cleared.schema.then).to.equal(undefined)
+            expect(cleared.schema.else).to.equal(undefined)
+        })
+
+        it("setIfThenElse without then/else drops previously-set branches", function () {
+            const base = SB.emptySchema().addString("a", {}, false).addAdditionalProperties().setIfThenElse({
+                if: SB.emptySchema().addAdditionalProperties(),
+                then: SB.emptySchema().addAdditionalProperties(),
+                else: SB.emptySchema().addAdditionalProperties(),
+            })
+            const replaced = base.setIfThenElse({ if: SB.emptySchema().addAdditionalProperties() })
+            expect(replaced.schema.if).to.exist
+            expect(replaced.schema.then).to.equal(undefined)
+            expect(replaced.schema.else).to.equal(undefined)
+        })
+
+        it("setId attaches and clears $id", function () {
+            const s = SB.emptySchema().addString("name").setId("https://example.com/foo.json")
+            expect(s.schema.$id).to.equal("https://example.com/foo.json")
+            const cleared = s.setId(null)
+            expect(cleared.schema.$id).to.equal(undefined)
+        })
+
+        it("track setters throw on the wrong schema kind", function () {
+            const s = SB.stringSchema() as any
+            const a = SB.arraySchema(SB.numberSchema()) as any
+            expect(() => s.addDependentRequired("x", ["y"])).to.throw(/object schema/)
+            expect(() => s.addDependentSchemas("x", SB.numberSchema())).to.throw(/object schema/)
+            expect(() => s.setUnevaluatedProperties(true)).to.throw(/object schema/)
+            expect(() => s.setUnevaluatedItems(true)).to.throw(/array schema/)
+            // unevaluatedProperties is object-only even on arrays
+            expect(() => a.setUnevaluatedProperties(true)).to.throw(/object schema/)
+        })
+    })
+
+    describe("toTypescript", function () {
+        it("emits SB.allOf for an allOf schema", function () {
+            const s = SB.allOf(SB.stringSchema(), SB.numberSchema())
+            expect(s.toTypescript()[1]).to.equal("SB.allOf(SB.stringSchema(), SB.numberSchema())")
+        })
+
+        it("emits SB.oneOf for a oneOf schema", function () {
+            const s = SB.oneOf(SB.stringSchema(), SB.booleanSchema())
+            expect(s.toTypescript()[1]).to.equal("SB.oneOf(SB.stringSchema(), SB.booleanSchema())")
+        })
+
+        it("emits SB.anyOf for an anyOf schema", function () {
+            const s = SB.anyOf(SB.stringSchema(), SB.numberSchema())
+            expect(s.toTypescript()[1]).to.equal("SB.anyOf(SB.stringSchema(), SB.numberSchema())")
+        })
+
+        it("emits SB.not for a not schema", function () {
+            const s = SB.not(SB.stringSchema())
+            expect(s.toTypescript()[1]).to.equal("SB.not(SB.stringSchema())")
+        })
+
+        it("emits SB.typesSchema for a multi-type schema", function () {
+            expect(SB.typesSchema(["number", "string"]).toTypescript()[1]).to.equal('SB.typesSchema(["number", "string"])')
+        })
+
+        it("emits SB.typesSchema with the nullable flag for a multi-type schema including null", function () {
+            expect(SB.typesSchema(["number", "string"], {}, true).toTypescript()[1]).to.equal('SB.typesSchema(["number", "string"], {}, true)')
+        })
+
+        it("emits SB.typesSchema with shared constraints for a multi-type schema", function () {
+            expect(SB.typesSchema(["number", "string"], { minLength: 3 }).toTypescript()[1]).to.equal('SB.typesSchema(["number", "string"], {"minLength":3})')
+        })
+
+        it("emits SB.nullSchema for a null-typed schema", function () {
+            expect(SB.nullSchema().toTypescript()[1]).to.equal("SB.nullSchema()")
+        })
+
+        it("emits SB.neverSchema for a `type: []` schema", function () {
+            expect(SB.neverSchema().toTypescript()[1]).to.equal("SB.neverSchema()")
+        })
+
+        it("emits SB.arraySchema (with nested helper) for an array schema", function () {
+            const s = SB.arraySchema(SB.stringSchema())
+            expect(s.toTypescript()[1]).to.equal("SB.arraySchema(SB.stringSchema())")
+        })
+
+        it("emits SB.arraySchema with nullable suffix when the array is `['array', 'null']`", function () {
+            const s = SB.arraySchema(SB.stringSchema(), {}, true)
+            expect(s.toTypescript()[1]).to.equal("SB.arraySchema(SB.stringSchema(), {}, true)")
+        })
+
+        it("emits SB.enumSchema for a schema with an `enum` keyword", function () {
+            const s = SB.enumSchema(["a", "b"] as const)
+            expect(s.toTypescript()[1]).to.equal('SB.enumSchema(["a","b"], )')
+        })
+
+        it("collapses a single-entry `type` array down to a primitive", function () {
+            const s = SB.fromJsonSchema({ type: ["string"] } as const)
+            expect(s.toTypescript()[1]).to.equal("SB.stringSchema()")
+        })
+
+        it("emits `.addAdditionalProperties(...)` for objects that accept extra properties", function () {
+            const withSchema = SB.emptySchema().addString("s").addAdditionalProperties(SB.numberSchema())
+            expect(withSchema.toTypescript()[1]).to.contain(".addAdditionalProperties(SB.numberSchema())")
+
+            const withTrue = SB.emptySchema().addString("s").addAdditionalProperties()
+            expect(withTrue.toTypescript()[1]).to.contain(".addAdditionalProperties()")
+        })
+
+        it("emits SB.tupleSchema for an array schema with prefixItems", function () {
+            const tuple = SB.tupleSchema([SB.stringSchema(), SB.numberSchema()])
+            const code = tuple.toTypescript()[1]
+            expect(code).to.contain("SB.tupleSchema([SB.stringSchema(), SB.numberSchema()])")
+        })
+
+        it("emits SB.tupleSchema with `rest` option when items is a schema", function () {
+            const tuple = SB.tupleSchema([SB.stringSchema()], { rest: SB.numberSchema() })
+            const code = tuple.toTypescript()[1]
+            expect(code).to.contain("SB.tupleSchema([SB.stringSchema()]")
+            expect(code).to.contain("rest: SB.numberSchema()")
+        })
+
+        it("preserves a non-default minItems override when emitting SB.tupleSchema", function () {
+            const tuple = SB.fromJsonSchema({
+                type: "array",
+                prefixItems: [{ type: "string" }, { type: "number" }],
+                items: false,
+                minItems: 1,
+            } as const)
+            const code = tuple.toTypescript()[1]
+            expect(code).to.contain('"minItems":1')
+        })
+
+        it("returns a named-schema reference when recursing into a child that has a `title`", function () {
+            const inner = SB.objectSchema({ title: "Inner" }, { v: SB.stringSchema() })
+            const outer = SB.objectSchema({}, { inner })
+            const [varName, code] = outer.toTypescript()
+            expect(varName).to.equal("schema") // outer has no title
+            // The reference to the named child schema is emitted by variable name,
+            // not by inlining its full definition.
+            expect(code).to.contain("innerSchema")
+            expect(code).to.not.contain('"title":"Inner"')
+        })
+
+        it("derives the variable name from the schema title", function () {
+            const s = SB.emptySchema({ title: "Outer" }).addString("s")
+            expect(s.toTypescript()[0]).to.equal("outerSchema")
+        })
+
+        it("falls back to SB.fromJsonSchema for unhandled shapes", function () {
+            // A multi-type array mixing a non-primitive (object) is not expressible via typesSchema.
+            const s = SB.fromJsonSchema({ type: ["object", "string"] } as const)
+            const code = s.toTypescript()[1]
+            expect(code.startsWith("SB.fromJsonSchema(")).to.equal(true)
+        })
+
+        it("emits .setId", function () {
+            const s = SB.stringSchema().setId("https://example.com/foo.json")
+            const code = s.toTypescript()[1]
+            expect(code).to.contain('.setId("https://example.com/foo.json")')
+        })
+
+        it("emits .setContains for arrays with a contains keyword", function () {
+            const a = SB.arraySchema(SB.numberSchema()).setContains(SB.numberSchema(), { minContains: 1, maxContains: 3 })
+            const code = a.toTypescript()[1]
+            expect(code).to.contain(".setContains(SB.numberSchema()")
+            expect(code).to.contain("minContains: 1")
+            expect(code).to.contain("maxContains: 3")
+        })
+
+        it("emits .setUnevaluatedProperties and .setUnevaluatedItems with boolean and schema variants", function () {
+            const o = SB.emptySchema().addString("s").setUnevaluatedProperties(false)
+            expect(o.toTypescript()[1]).to.contain(".setUnevaluatedProperties(false)")
+            const a = SB.arraySchema(SB.numberSchema()).setUnevaluatedItems(SB.numberSchema())
+            expect(a.toTypescript()[1]).to.contain(".setUnevaluatedItems(SB.numberSchema())")
+        })
+
+        it("emits .setPropertyNames for object schemas with propertyNames", function () {
+            const o = SB.emptySchema()
+                .addAdditionalProperties(SB.numberSchema())
+                .setPropertyNames(SB.stringSchema().setStringConstraints({ pattern: "^[a-z]+$" }))
+            const code = o.toTypescript()[1]
+            expect(code).to.contain(".setPropertyNames(SB.stringSchema(")
+            expect(code).to.contain('"pattern":"^[a-z]+$"')
+        })
+
+        it("emits .addDependentRequired and .addDependentSchemas for object dependencies", function () {
+            const o = SB.emptySchema()
+                .addString("a", {}, false)
+                .addString("b", {}, false)
+                .addAdditionalProperties()
+                .addDependentRequired("a", ["b"])
+                .addDependentSchemas("b", SB.emptySchema().addAdditionalProperties())
+            const code = o.toTypescript()[1]
+            expect(code).to.contain('.addDependentRequired("a", ["b"]')
+            expect(code).to.contain('.addDependentSchemas("b",')
+        })
+
+        it("emits .setContent for string schemas with content keywords", function () {
+            const s = SB.stringSchema().setContent({ mediaType: "application/json", encoding: "base64", schema: SB.emptySchema().addString("name") })
+            const code = s.toTypescript()[1]
+            expect(code).to.contain('.setContent({ mediaType: "application/json", encoding: "base64", schema:')
+        })
+
+        it("emits .setIfThenElse for if/then/else conditionals", function () {
+            const s = SB.emptySchema().addString("a", {}, false).addAdditionalProperties().setIfThenElse({
+                if: SB.emptySchema().addAdditionalProperties(),
+                then: SB.emptySchema().addAdditionalProperties(),
+                else: SB.emptySchema().addAdditionalProperties(),
+            })
+            const code = s.toTypescript()[1]
+            expect(code).to.contain(".setIfThenElse({ if:")
+            expect(code).to.contain(", then:")
+            expect(code).to.contain(", else:")
+        })
+
+        it("end-to-end: kitchen-sink schema using all helpers round-trips through generated code", function () {
+            // Build a single schema that exercises every helper at least once.
+            const original = SB.emptySchema()
+                .addString("name", {}, true)
+                .addProperty(
+                    "tags",
+                    SB.arraySchema(SB.stringSchema())
+                        .setArrayConstraints({ minItems: 1, uniqueItems: true })
+                        .setContains(SB.stringSchema().setStringConstraints({ pattern: "^tag-" }), { minContains: 1 })
+                        .setUnevaluatedItems(false),
+                    false,
+                )
+                .addProperty("age", SB.integerSchema().setNumberConstraints({ minimum: 0, maximum: 150 }), false)
+                .addProperty(
+                    "payload",
+                    SB.stringSchema().setContent({ mediaType: "application/json", encoding: "base64", schema: SB.emptySchema().addString("inner") }),
+                    false,
+                )
+                .addAdditionalProperties()
+                .setObjectConstraints({ minProperties: 1, maxProperties: 10 })
+                .setPropertyNames(SB.stringSchema().setStringConstraints({ pattern: "^[a-zA-Z][a-zA-Z0-9_]*$" }))
+                .addDependentRequired("name", ["age"])
+                .addDependentSchemas("age", SB.emptySchema().addString("name").addAdditionalProperties())
+                .setUnevaluatedProperties(false)
+                .setIfThenElse({
+                    if: SB.emptySchema()
+                        .addProperty("age", SB.integerSchema().setNumberConstraints({ minimum: 18 }))
+                        .addAdditionalProperties(),
+                    then: SB.emptySchema().addString("name").addAdditionalProperties(),
+                })
+                .setId("https://example.com/person.json")
+                .setSchemaAttributes({ title: "Person", description: "a kitchen-sink schema" })
+
+            const [varName, code] = original.toTypescript()
+            expect(varName).to.equal("personSchema")
+
+            // Evaluate the generated code as JS, with SB in scope, to produce a fresh SchemaBuilder.
+            // `as const` is TS-only; strip it for the plain-JS eval (it has no runtime effect).
+            const evalCode = code.replace(/ as const/g, "")
+            let regenerated: typeof original
+            try {
+                regenerated = new Function("SB", `return ${evalCode}`)(SB) as typeof original
+            } catch (e: any) {
+                throw new Error(`Failed to evaluate generated code: ${e.message}\n\nGenerated code:\n${code}`)
+            }
+            expect(regenerated).to.be.instanceOf(SchemaBuilder)
+
+            // The two schemas must be deeply equal.
+            expect(regenerated.schema).to.eql(original.schema)
+
+            // Sanity-check the generated code mentions every keyword that requires a dedicated chain.
+            // Constraints (minLength/minimum/minItems/minProperties/...) ride through the
+            // factory's `schema` argument, so they don't produce a chain — verify them in the JSON instead.
+            for (const fragment of [
+                ".setContains(",
+                ".setUnevaluatedItems(",
+                ".setUnevaluatedProperties(",
+                ".setPropertyNames(",
+                ".addDependentRequired(",
+                ".addDependentSchemas(",
+                ".setContent(",
+                ".setIfThenElse(",
+                ".setId(",
+            ]) {
+                expect(code, `expected generated code to contain ${fragment}`).to.contain(fragment)
+            }
+            for (const inline of ['"minItems":1', '"minimum":0', '"maximum":150', '"minProperties":1', '"maxProperties":10', '"pattern":"^tag-"']) {
+                expect(code, `expected generated code to inline ${inline}`).to.contain(inline)
+            }
+        })
+
+        it("invokes the customizeOutput hook for every emitted fragment", function () {
+            const inner = SB.objectSchema({ title: "Inner" }, { v: SB.stringSchema() })
+            const outer = SB.objectSchema({}, { inner })
+            const seen: string[] = []
+            const [, code] = outer.toTypescript((output, schema) => {
+                seen.push(schema.schema.title ?? "(no title)")
+                return `/*hooked*/${output}`
+            })
+            expect(code.startsWith("/*hooked*/")).to.equal(true)
+            // The inner reference (named schema) and at least the string subschemas
+            // pass through customizeOutput too.
+            expect(seen).to.include("Inner")
+        })
+    })
+
+    describe("Test Pattern Properties", function () {
+        it("should create a schema with pattern properties", function () {
+            //SB.setGlobalValidationConfig({ verbose: true })
+            let schema = SB.objectSchema({}, { notPatternProperties: SB.stringSchema() })
+                .addPatternProperty("X-", "", SB.stringSchema())
+                .addPatternProperty("o-", "", SB.objectSchema({}, { test: SB.stringSchema() }))
+            type Schema = typeof schema.T
+            const goodData: Schema = {
+                notPatternProperties: "test",
+                "X-value1": "v1",
+                "X-value2": "v2",
+                "o-object1": { test: "Hello" },
+                "o-object2": { test: "World" },
+            }
+            const badData: any = {
+                notPatternProperties: "test",
+                "X-value1": 21,
+                "X-GoodValue": "Good Value",
+                "X-value2": true,
+                "o-object1": { id: "Hello" },
+                "o-object2": { test: { id: "wrong data" } },
+            }
+            expect(() => schema.validate(goodData)).to.not.throw()
+            expect(() => schema.validate(badData)).to.throw(
+                "Invalid parameters: data/X-value1 must be string, data/X-value2 must be string, data/o-object1 must have required property 'test', data/o-object1 must NOT have additional properties, data/o-object2/test must be string",
+            )
+        })
+    })
+
+    describe("objectProperties", function () {
+        it("extracts required and optional properties in the objectSchema format", function () {
+            const userSchema = SB.objectSchema(
+                {},
+                {
+                    id: SB.stringSchema(),
+                    age: [SB.integerSchema(), undefined],
+                },
+            )
+            const properties = userSchema.objectProperties()
+            expect(properties.id).to.be.instanceOf(SchemaBuilder)
+            expect(properties.id.schema).to.deep.equal({ type: "string" })
+            expect(Array.isArray(properties.age)).to.equal(true)
+            expect(properties.age[0].schema).to.deep.equal({ type: "integer" })
+            expect(properties.age[1]).to.equal(undefined)
+        })
+
+        it("can be spread to compose a new object schema that round-trips the type", function () {
+            const a = SB.objectSchema({}, { id: SB.stringSchema(), age: [SB.integerSchema(), undefined] })
+            const b = SB.objectSchema({}, { active: SB.booleanSchema() })
+            const composed = SB.objectSchema({ title: "Composed" }, { ...a.objectProperties(), ...b.objectProperties() })
+            type Composed = typeof composed.T
+            const value: Composed = { id: "x", active: true }
+            expect(() => composed.validate(value)).to.not.throw()
+            expect(composed.schema).to.deep.equal({
+                title: "Composed",
+                type: "object",
+                properties: { id: { type: "string" }, age: { type: "integer" }, active: { type: "boolean" } },
+                required: ["id", "active"],
+                additionalProperties: false,
+            })
+        })
+
+        it("returns deep copies that do not affect the source schema when mutated", function () {
+            const source = SB.objectSchema({}, { nested: SB.objectSchema({}, { v: SB.stringSchema() }) })
+            const extracted = source.objectProperties().nested
+            const mutated = extracted.addNumber("extra")
+            expect(mutated.schema).to.not.equal(source.schema.properties!.nested)
+            expect((source.schema.properties!.nested as JSONSchema).properties).to.deep.equal({ v: { type: "string" } })
+        })
+
+        it("merges a oneOf branch property of differing types into a reused oneOf", function () {
+            const schema = SB.oneOf(
+                SB.objectSchema({}, { value: SB.stringSchema(), kind: SB.constSchema("a") }),
+                SB.objectSchema({}, { value: SB.numberSchema(), kind: SB.constSchema("b") }),
+            )
+            const properties = schema.objectProperties()
+            // The union (oneOf) is collapsed into a single map: each shared property's type is the
+            // union of its per-branch types, not a union of two property maps.
+            const value: SchemaBuilder<string | number> = properties.value
+            const kind: SchemaBuilder<"a" | "b"> = properties.kind
+            // 'value' exists in both branches with different types -> oneOf of the two
+            expect(value.schema).to.deep.equal({ oneOf: [{ type: "string" }, { type: "number" }] })
+            expect(kind.schema).to.deep.equal({ oneOf: [{ const: "a" }, { const: "b" }] })
+        })
+
+        it("de-duplicates identical contributions across oneOf branches", function () {
+            const schema = SB.oneOf(
+                SB.objectSchema({}, { shared: SB.stringSchema(), a: SB.numberSchema() }),
+                SB.objectSchema({}, { shared: SB.stringSchema(), b: SB.numberSchema() }),
+            )
+            const properties = schema.objectProperties()
+            // identical 'shared' schema in both branches -> single string schema, not a oneOf
+            expect(properties.shared.schema).to.deep.equal({ type: "string" })
+            // 'a' only exists in one branch -> optional (intersection of required is empty)
+            expect(Array.isArray(properties.a)).to.equal(true)
+        })
+
+        it("treats a property required in every oneOf branch as required and others as optional", function () {
+            const schema = SB.oneOf(SB.objectSchema({}, { id: SB.stringSchema(), only: SB.numberSchema() }), SB.objectSchema({}, { id: SB.stringSchema() }))
+            const properties = schema.objectProperties()
+            expect(properties.id).to.be.instanceOf(SchemaBuilder)
+            expect(Array.isArray(properties.only)).to.equal(true)
+        })
+
+        it("merges allOf branches with union of required properties", function () {
+            const schema = SB.allOf(SB.objectSchema({}, { a: SB.stringSchema() }), SB.objectSchema({}, { b: [SB.numberSchema(), undefined] }))
+            const properties = schema.objectProperties()
+            expect(properties.a).to.be.instanceOf(SchemaBuilder)
+            expect(Array.isArray(properties.b)).to.equal(true)
+        })
+
+        it("combines a property contributed by both allOf branches into an allOf", function () {
+            const schema = SB.allOf(
+                SB.objectSchema({}, { value: SB.stringSchema({ minLength: 1 }) }),
+                SB.objectSchema({}, { value: SB.stringSchema({ maxLength: 5 }) }),
+            )
+            const properties = schema.objectProperties()
+            expect(properties.value.schema).to.deep.equal({
+                allOf: [
+                    { type: "string", minLength: 1 },
+                    { type: "string", maxLength: 5 },
+                ],
+            })
+        })
+
+        it("flattens own properties together with an allOf group", function () {
+            const schema = SB.emptySchema()
+                .addString("own")
+                .intersectProperties(SB.objectSchema({}, { extra: SB.numberSchema() }))
+            // build a schema that mixes own properties and an allOf to exercise traversal
+            const mixed = new SchemaBuilder({
+                type: "object",
+                properties: { own: { type: "string" } },
+                required: ["own"],
+                allOf: [{ type: "object", properties: { extra: { type: "number" } }, required: ["extra"] }],
+            })
+            const properties = mixed.objectProperties() as Record<string, SchemaBuilder<any> | [SchemaBuilder<any>, undefined]>
+            expect(properties.own).to.be.instanceOf(SchemaBuilder)
+            expect(properties.extra).to.be.instanceOf(SchemaBuilder)
+            expect(schema.schema).to.exist
+        })
+
+        it("returns an empty map when used on a non-object schema", function () {
+            expect(SB.stringSchema().objectProperties()).to.deep.equal({})
+            expect(SB.numberSchema().objectProperties()).to.deep.equal({})
+            expect(SB.arraySchema(SB.stringSchema()).objectProperties()).to.deep.equal({})
+        })
+
+        it("keeps SchemaBuilder structurally comparable under an unresolved type parameter", function () {
+            // Compile-time regression guard. A member whose *declared* type names `T` through a type
+            // that cannot be evaluated while `T` is an unresolved type parameter (as `PropertiesOf<T>`
+            // cannot) makes every `SchemaBuilder<T>` opaque to structural comparison, and generic
+            // callers lose `SchemaBuilder<A & B>` -> `SchemaBuilder<A>`. `@serafin/pipeline` relies on
+            // exactly this when it widens a schema with a relation's option and hands it back where the
+            // un-widened builder is expected. If this stops compiling, a member has reintroduced `T`.
+            function widen<A extends object>(sb: SchemaBuilder<A>): SchemaBuilder<A> {
+                return sb.addProperty("withFoo", SB.booleanSchema(), false)
+            }
+
+            const widened = widen(SB.objectSchema({}, { id: SB.stringSchema() }))
+            expect(widened.schema.properties).to.have.keys("id", "withFoo")
+            expect(widened.schema.required).to.eql(["id"])
+        })
+    })
+})
+
+describe("Schema Builder - advanced transformations", function () {
+    const resource = () =>
+        SB.objectSchema(
+            {},
+            {
+                id: SB.stringSchema(),
+                age: SB.integerSchema(),
+                active: SB.booleanSchema(),
+                state: SB.enumSchema(["pending", "approved", "canceled"]),
+                tags: SB.arraySchema(SB.stringSchema()),
+            },
+        )
+
+    describe("keepOriginal option", function () {
+        it("transformProperties replaces the type when keepOriginal is false", function () {
+            const s = SB.emptySchema().addString("id").transformProperties(SB.numberSchema(), ["id"], { keepOriginal: false })
+            expect(s.schema.properties!.id).to.deep.equal({ type: "number" })
+            expect(() => s.validate({ id: 1 } as any)).to.not.throw()
+            expect(() => s.validate({ id: "abc" } as any)).to.throw()
+        })
+
+        it("transformProperties keeps a oneOf by default", function () {
+            const s = SB.emptySchema().addString("id").transformProperties(SB.numberSchema(), ["id"])
+            expect(s.schema.properties!.id).to.have.property("oneOf")
+            expect(() => s.validate({ id: 1 } as any)).to.not.throw()
+            expect(() => s.validate({ id: "abc" })).to.not.throw()
+        })
+
+        it("transformPropertiesToArray replaces with an array when keepOriginal is false", function () {
+            const s = SB.emptySchema().addString("s").transformPropertiesToArray(["s"], { minItems: 1 }, { keepOriginal: false })
+            expect((s.schema.properties!.s as JSONSchema).type).to.equal("array")
+            expect(() => s.validate({ s: ["a"] } as any)).to.not.throw()
+            expect(() => s.validate({ s: "a" } as any)).to.throw()
+        })
+
+        it("unwrapArrayProperties replaces with the element type when keepOriginal is false", function () {
+            const s = SB.emptySchema().addArray("a", SB.booleanSchema()).unwrapArrayProperties(["a"], { keepOriginal: false })
+            expect((s.schema.properties!.a as JSONSchema).type).to.equal("boolean")
+            expect(() => s.validate({ a: true } as any)).to.not.throw()
+            expect(() => s.validate({ a: [true] } as any)).to.throw()
+        })
+    })
+
+    describe("renameProperties / prefixProperties / suffixProperties", function () {
+        it("renames several properties at once and keeps required in sync", function () {
+            const s = resource().renameProperties({ id: "userId", age: "years" })
+            expect(Object.keys(s.schema.properties!).sort()).to.deep.equal(["active", "state", "tags", "userId", "years"])
+            expect(s.schema.required).to.include.members(["userId", "years", "active"])
+            expect(s.schema.required).to.not.include("id")
+        })
+
+        it("throws when renaming an unknown property", function () {
+            expect(() => resource().renameProperties({ nope: "x" } as any)).to.throw()
+        })
+
+        it("throws when a rename collides with an existing name", function () {
+            expect(() => resource().renameProperties({ id: "age" } as any)).to.throw()
+        })
+
+        it("prefixes all properties or a subset", function () {
+            expect(Object.keys(resource().prefixProperties("user", ["id"]).schema.properties!)).to.include("userid")
+            const all = resource().prefixProperties("_")
+            expect(Object.keys(all.schema.properties!)).to.deep.equal(["_id", "_age", "_active", "_state", "_tags"])
+        })
+
+        it("capitalizes the original key when { capitalize: true } is given", function () {
+            const s = resource().prefixProperties("user", ["id"], { capitalize: true })
+            expect(Object.keys(s.schema.properties!)).to.include("userId")
+            expect(Object.keys(s.schema.properties!)).to.not.include("userid")
+            // type-level: the key is `userId`, not `userid`
+            const userId: SchemaBuilder<string> = s.objectProperties().userId
+            expect(userId.schema).to.deep.equal({ type: "string" })
+        })
+
+        it("suffixes a subset of properties", function () {
+            const s = resource().suffixProperties("Date", ["state"])
+            expect(Object.keys(s.schema.properties!)).to.include("stateDate")
+            expect(Object.keys(s.schema.properties!)).to.not.include("state")
+        })
+    })
+
+    describe("expandEnumToProperties", function () {
+        it("generates one suffixed property per enum value", function () {
+            const s = resource().expandEnumToProperties("state", SB.stringSchema({ format: "date-time" }), { suffix: "Date" })
+            expect(Object.keys(s.schema.properties!)).to.include.members(["pendingDate", "approvedDate", "canceledDate"])
+            expect(s.schema.required).to.include.members(["pendingDate", "approvedDate", "canceledDate"])
+            expect(s.schema.properties!.state).to.exist
+        })
+
+        it("capitalizes the value when a prefix is given and honors required:false", function () {
+            const s = resource().expandEnumToProperties("state", SB.booleanSchema(), { prefix: "is", required: false })
+            expect(Object.keys(s.schema.properties!)).to.include.members(["isPending", "isApproved", "isCanceled"])
+            expect(s.schema.required ?? []).to.not.include("isPending")
+        })
+
+        it("reads the enum from a nested property via an accessor resolver and infers its type", function () {
+            const s = SB.objectSchema(
+                {},
+                {
+                    meta: SB.objectSchema({}, { state: SB.enumSchema(["on", "off"]) }),
+                },
+            ).expandEnumToProperties((pa) => pa.meta.state, SB.stringSchema(), { suffix: "At" })
+            expect(Object.keys(s.schema.properties!)).to.include.members(["onAt", "offAt"])
+            // type-level: the generated keys are inferred from the nested enum
+            const onAt: SchemaBuilder<string> = s.objectProperties().onAt
+            const offAt: SchemaBuilder<string> = s.objectProperties().offAt
+            expect(onAt.schema).to.deep.equal({ type: "string" })
+            expect(offAt.schema).to.deep.equal({ type: "string" })
+        })
+
+        it("throws when no enum is found at the resolved path", function () {
+            expect(() => resource().expandEnumToProperties((pa) => pa.tags, SB.stringSchema())).to.throw()
+        })
+    })
+
+    describe("omitReadOnlyProperties / omitWriteOnlyProperties", function () {
+        it("removes readOnly properties from the emitted schema", function () {
+            const s = SB.emptySchema().addString("id", { readOnly: true }).addString("name").omitReadOnlyProperties()
+            expect(Object.keys(s.schema.properties!)).to.deep.equal(["name"])
+            expect(s.schema.required ?? []).to.not.include("id")
+        })
+
+        it("removes writeOnly properties from the emitted schema", function () {
+            const s = SB.emptySchema().addString("password", { writeOnly: true }).addString("name").omitWriteOnlyProperties()
+            expect(Object.keys(s.schema.properties!)).to.deep.equal(["name"])
+        })
+    })
+
+    describe("pickByType / omitByType", function () {
+        it("keeps only properties of the given JSON type", function () {
+            expect(Object.keys(resource().pickByType("string").schema.properties!).sort()).to.deep.equal(["id", "state"])
+            expect(Object.keys(resource().pickByType("boolean").schema.properties!)).to.deep.equal(["active"])
+        })
+
+        it("matches integer when picking number", function () {
+            expect(Object.keys(resource().pickByType("number").schema.properties!)).to.deep.equal(["age"])
+        })
+
+        it("omits properties of the given JSON type", function () {
+            expect(Object.keys(resource().omitByType("string").schema.properties!).sort()).to.deep.equal(["active", "age", "tags"])
+        })
+    })
+
+    describe("propertyNamesEnum / propertyNamesArray", function () {
+        it("builds an enum schema of the property names", function () {
+            const s = resource().propertyNamesEnum()
+            expect(s.schema.enum).to.deep.equal(["id", "age", "active", "state", "tags"])
+            expect(() => s.validate("id" as any)).to.not.throw()
+            expect(() => s.validate("nope" as any)).to.throw()
+        })
+
+        it("builds an array schema of the property names", function () {
+            const s = resource().propertyNamesArray()
+            expect(s.schema.type).to.equal("array")
+            expect(() => s.validate(["id", "age"] as any)).to.not.throw()
+            expect(() => s.validate(["nope"] as any)).to.throw()
+        })
+    })
+
+    describe("toCamelCaseKeys / toSnakeCaseKeys", function () {
+        it("converts snake_case and kebab-case keys to camelCase", function () {
+            const s = SB.objectSchema({}, { first_name: SB.stringSchema(), "is-active": SB.booleanSchema() }).toCamelCaseKeys()
+            expect(Object.keys(s.schema.properties!)).to.deep.equal(["firstName", "isActive"])
+        })
+
+        it("converts camelCase keys to snake_case and round-trips", function () {
+            const camel = SB.objectSchema({}, { firstName: SB.stringSchema(), isActive: SB.booleanSchema() })
+            const snake = camel.toSnakeCaseKeys()
+            expect(Object.keys(snake.schema.properties!)).to.deep.equal(["first_name", "is_active"])
+            expect(Object.keys(snake.toCamelCaseKeys().schema.properties!)).to.deep.equal(["firstName", "isActive"])
+        })
+    })
+
+    describe("describeProperties / setPropertiesAttributes", function () {
+        it("sets descriptions on the matching top-level properties", function () {
+            const s = resource().describeProperties({ id: "The identifier", age: "Age in years" })
+            expect((s.schema.properties!.id as JSONSchema).description).to.equal("The identifier")
+            expect((s.schema.properties!.age as JSONSchema).description).to.equal("Age in years")
+        })
+
+        it("appends and prepends to an existing description", function () {
+            const base = SB.emptySchema().addString("id", { description: "id" })
+            expect((base.describeProperties({ id: "(uuid)" }, { mode: "append" }).schema.properties!.id as JSONSchema).description).to.equal("id (uuid)")
+            expect((base.describeProperties({ id: "uuid:" }, { mode: "prepend" }).schema.properties!.id as JSONSchema).description).to.equal("uuid: id")
+        })
+
+        it("descends into oneOf branches when deep is true", function () {
+            const s = SB.oneOf(
+                SB.objectSchema({}, { id: SB.stringSchema() }),
+                SB.objectSchema({}, { id: SB.numberSchema(), other: SB.stringSchema() }),
+            ).describeProperties({ id: "Identifier" }, { deep: true })
+            const branches = s.schema.oneOf as JSONSchema[]
+            expect((branches[0].properties!.id as JSONSchema).description).to.equal("Identifier")
+            expect((branches[1].properties!.id as JSONSchema).description).to.equal("Identifier")
+        })
+
+        it("does not descend by default", function () {
+            const s = SB.oneOf(SB.objectSchema({}, { id: SB.stringSchema() })).describeProperties({ id: "x" } as any)
+            const branches = s.schema.oneOf as JSONSchema[]
+            expect((branches[0].properties!.id as JSONSchema).description).to.be.undefined
+        })
+
+        it("merges arbitrary attributes", function () {
+            const s = resource().setPropertiesAttributes({ age: { default: 18, description: "years" } })
+            expect((s.schema.properties!.age as JSONSchema).default).to.equal(18)
+            expect((s.schema.properties!.age as JSONSchema).description).to.equal("years")
+        })
+    })
+
+    describe("pickEnumValues / omitEnumValues / mapEnumValues", function () {
+        const colors = () => SB.enumSchema(["red", "green", "blue"])
+
+        it("narrows an enum to the kept values", function () {
+            const s = colors().pickEnumValues(["red", "blue"])
+            expect(s.schema.enum).to.deep.equal(["red", "blue"])
+            expect(() => s.validate("green" as any)).to.throw()
+        })
+
+        it("removes the given enum values", function () {
+            const s = colors().omitEnumValues(["green"])
+            expect(s.schema.enum).to.deep.equal(["red", "blue"])
+        })
+
+        it("remaps enum values", function () {
+            const s = colors().mapEnumValues({ red: "RED" })
+            expect(s.schema.enum).to.deep.equal(["RED", "green", "blue"])
+        })
+
+        it("recomputes the type when values of a different type are removed", function () {
+            const s = SB.enumSchema(["a", 1, true]).omitEnumValues([1, true])
+            expect(s.schema.type).to.equal("string")
+        })
+
+        it("throws when used on a non-enum schema", function () {
+            expect(() => SB.stringSchema().pickEnumValues(["a"] as any)).to.throw()
+        })
+    })
+
+    describe("narrowDiscriminated", function () {
+        const shape = () =>
+            SB.oneOfDiscriminated("kind", {
+                circle: SB.objectSchema({}, { radius: SB.numberSchema() }),
+                square: SB.objectSchema({}, { side: SB.numberSchema() }),
+            })
+
+        it("extracts the matching branch", function () {
+            const circle = shape().narrowDiscriminated("kind", "circle")
+            expect(Object.keys(circle.schema.properties!)).to.include.members(["radius", "kind"])
+            expect(() => circle.validate({ kind: "circle", radius: 2 } as any)).to.not.throw()
+            expect(() => circle.validate({ kind: "square", side: 2 } as any)).to.throw()
+        })
+
+        it("throws when no branch matches", function () {
+            expect(() => shape().narrowDiscriminated("kind", "triangle" as any)).to.throw()
+        })
+
+        it("throws when not a oneOf schema", function () {
+            expect(() => SB.stringSchema().narrowDiscriminated("x" as any, "y" as any)).to.throw()
+        })
+    })
+})
+
+describe("Test Side Effects With global AJV config", function () {
+    it("should change the global configuration of validation an validate differently", function () {
+        SB.setGlobalValidationConfig({ allErrors: true })
+        let testSchema = SB.objectSchema(
+            {},
+            {
+                name: SB.stringSchema(),
+                progress: SB.numberSchema(),
+                isCompleted: [SB.booleanSchema(), undefined],
+            },
+        )
+        expect(() => testSchema.validate({} as any)).to.throw(
+            "Invalid parameters: data must have required property 'name', data must have required property 'progress'",
+        )
+        SB.setGlobalValidationConfig({ allErrors: false })
+        expect(() => testSchema.validate({} as any)).to.throw("Invalid parameters: data must have required property 'name'")
+    })
+})
