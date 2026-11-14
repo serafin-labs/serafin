@@ -1,6 +1,6 @@
 {
     "name": "@serafin/pipeline",
-    "version": "0.19.4",
+    "version": "1.0.0-alpha.0",
     "description": "CRUD data access library with a functional approach",
     "keywords": [
         "crud",

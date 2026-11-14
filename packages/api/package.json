@@ -1,6 +1,6 @@
 {
     "name": "@serafin/api",
-    "version": "0.15.1",
+    "version": "1.0.0-alpha.0",
     "description": "A RESTful self-descriptive API based on Serafin pipelines",
     "keywords": [
         "api",

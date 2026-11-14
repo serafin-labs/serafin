@@ -49,6 +49,8 @@ pnpm changeset
 
 On `master`, the release workflow opens a "Version packages" pull request with the pending changesets. Merging it publishes the new versions to npm, with provenance.
 
+The `v1` branch is in [prerelease mode](https://github.com/changesets/changesets/blob/main/docs/prereleases.md): its versions are `1.0.0-alpha.N`, or `3.2.0-alpha.N` for `@serafin/open-api` whose version follows the OpenAPI specification. They are published under the `alpha` dist-tag, so `npm i @serafin/pipeline@alpha` installs them while `latest` stays on the previous versions. Run `pnpm changeset pre exit` before merging `v1` into `master`.
+
 ## License
 
 [MIT](./LICENSE)

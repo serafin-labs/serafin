@@ -2,7 +2,8 @@ name: Release
 
 on:
     push:
-        branches: [master]
+        # v1 publishes the v1 prereleases (Changesets pre mode), under the dist-tag of the prerelease
+        branches: [master, v1]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -32,3 +33,6 @@ jobs:
                   publish: pnpm run release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  # Only to publish a package for the first time, as trusted publishing can only be set up
+                  # for a package that exists. Remove the secret once every package has a trusted publisher.
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
