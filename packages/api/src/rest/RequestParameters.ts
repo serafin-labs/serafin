@@ -1,8 +1,8 @@
 import type { SchemaBuilder } from "@serafin/schema-builder"
 import type { Request } from "express"
 import qs from "qs"
-import { HttpError } from "./errors.js"
-import { onlyAllowsArray, schemaProperties, type Schema } from "./schemas.js"
+import { HttpError } from "../errors.js"
+import { onlyAllowsArray, schemaProperties, type Schema } from "../schemas.js"
 
 /**
  * Reads the query string parameters of a request into a pipeline query (or create options) and a context.

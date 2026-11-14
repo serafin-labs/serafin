@@ -1,0 +1,9 @@
+{
+    "extends": "./tsconfig.json",
+    "exclude": [],
+    "compilerOptions": {
+        "incremental": false,
+        "noEmit": true,
+        "types": ["mocha", "node"]
+    }
+}

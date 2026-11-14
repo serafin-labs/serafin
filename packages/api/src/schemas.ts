@@ -1,4 +1,5 @@
 import type { SchemaObject } from "@serafin/open-api"
+import type { SchemaBuilder } from "@serafin/schema-builder"
 
 export type Schema = SchemaObject | boolean
 
@@ -69,4 +70,17 @@ export function schemaDescription(schema: Schema): string | undefined {
     }
     const descriptions = new Set([...(schema.oneOf ?? []), ...(schema.anyOf ?? [])].map(schemaDescription).filter((d): d is string => d !== undefined))
     return descriptions.size === 1 ? [...descriptions][0] : undefined
+}
+
+/**
+ * The meta of an action: the meta shared by every action, with the action's own meta.
+ */
+export function metaSchema(meta: SchemaBuilder<any>, actionMeta: SchemaBuilder<any>): Schema {
+    try {
+        return meta.overwriteProperties(actionMeta).schema
+    } catch {
+        // not plain object schemas: combine them, and close the combination rather than each of them
+        const open = ({ additionalProperties, ...schema }: Record<string, any>) => schema
+        return { allOf: [open(meta.schema), open(actionMeta.schema)], unevaluatedProperties: false }
+    }
 }

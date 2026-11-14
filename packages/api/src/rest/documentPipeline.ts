@@ -1,7 +1,6 @@
 import type { ComponentType, ComponentTypes, OpenApiBuilder, OperationObject, ParameterObject, ResponsesObject } from "@serafin/open-api"
-import type { SchemaBuilder } from "@serafin/schema-builder"
 import type { ExposedPipeline } from "../TransportInterface.js"
-import { isObjectSchema, schemaDescription, schemaProperties, type Schema } from "./schemas.js"
+import { isObjectSchema, metaSchema, schemaDescription, schemaProperties, type Schema } from "../schemas.js"
 
 /**
  * The routes registered for a pipeline.
@@ -77,19 +76,6 @@ function queryParameters(schema: Schema, include: (name: string) => boolean = ()
             ...(required.has(name) ? { required: true } : {}),
             ...(isObjectSchema(property) ? { style: "deepObject", explode: true } : {}),
         }))
-}
-
-/**
- * The meta of an action: the meta shared by every action, with the action's own meta.
- */
-function metaSchema(meta: SchemaBuilder<any>, actionMeta: SchemaBuilder<any>): Schema {
-    try {
-        return meta.overwriteProperties(actionMeta).schema
-    } catch {
-        // not plain object schemas: combine them, and close the combination rather than each of them
-        const open = ({ additionalProperties, ...schema }: Record<string, any>) => schema
-        return { allOf: [open(meta.schema), open(actionMeta.schema)], unevaluatedProperties: false }
-    }
 }
 
 /**

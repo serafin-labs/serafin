@@ -1,12 +1,13 @@
-import { PipelineAbstract, notFoundError } from "@serafin/pipeline"
+import { notFoundError } from "@serafin/pipeline"
 import express, { type NextFunction, type Request, type RequestHandler, type Response } from "express"
 import VError from "verror"
 import type { Api } from "../Api.js"
-import type { ExposedPipeline, PipelineAction, TransportInterface } from "../TransportInterface.js"
+import { errorResponse, HttpError, type ErrorResponse } from "../errors.js"
+import { exposedActions, hasId, selectsSeveral } from "../exposed.js"
+import { schemaProperties } from "../schemas.js"
+import type { ExposedPipeline, TransportInterface } from "../TransportInterface.js"
 import { documentPipeline, type Routes } from "./documentPipeline.js"
-import { errorResponse, HttpError, type ErrorResponse } from "./errors.js"
 import { RequestParameters } from "./RequestParameters.js"
-import { allowsArray, schemaProperties, type Schema } from "./schemas.js"
 
 export type RestCallback<T, REQ extends Request = Request, RES extends Response = Response> = (req: REQ, res: RES, data: T) => void
 
@@ -98,7 +99,6 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
         const { pipeline, name, pluralName } = exposed
         const schemas = pipeline.schemaBuilders
         const actions = exposedActions(exposed)
-        const hasId = (schema: Schema) => "id" in schemaProperties(schema).properties
         const routes: Routes = {
             find: actions.has("read"),
             get: actions.has("read") && hasId(schemas.readQuery.schema),
@@ -303,24 +303,4 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
     private get logger() {
         return this.options.logger ?? console
     }
-}
-
-/**
- * The actions to expose: the ones asked for, or every action the pipeline implements.
- */
-function exposedActions({ pipeline, actions }: ExposedPipeline): Set<PipelineAction> {
-    if (actions) {
-        return new Set(actions)
-    }
-    const base = PipelineAbstract.prototype as unknown as Record<string, unknown>
-    const implemented = (action: PipelineAction) => (pipeline as unknown as Record<string, unknown>)[`_${action}`] !== base[`_${action}`]
-    return new Set((["create", "read", "patch", "delete"] as const).filter(implemented))
-}
-
-/**
- * Whether a patch or delete query can select several resources: either it does not require an id, or its id accepts a list.
- */
-function selectsSeveral(schema: Schema): boolean {
-    const { properties, required } = schemaProperties(schema)
-    return !required.has("id") || allowsArray(properties.id)
 }

@@ -2,6 +2,10 @@
 
 The [Model Context Protocol](https://modelcontextprotocol.io) describes each tool a server exposes with an **`inputSchema`** — a plain JSON Schema object that tells the client (and the model) what arguments the tool accepts. An optional **`outputSchema`** can describe the structured result.
 
+::: tip Exposing pipelines
+To expose [pipelines](/pipeline/) as tools, without writing them by hand, use [`@serafin/mcp`](/mcp/).
+:::
+
 That makes `SchemaBuilder` a natural fit: define the tool's arguments once, hand the JSON Schema to the protocol, and reuse the inferred type to write a fully-typed handler — no duplicated shape, no drift between what you advertise and what you validate.
 
 ## Defining a tool's input schema

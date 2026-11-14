@@ -4,7 +4,7 @@ layout: home
 hero:
     name: Serafin
     text: Self-descriptive APIs in TypeScript
-    tagline: Describe your data once, as a schema. Get its type, a data access layer around it, REST endpoints on top, and their OpenAPI documentation.
+    tagline: Describe your data once, as a schema. Get its type, a data access layer around it, REST endpoints and AI agent tools on top, and their OpenAPI documentation.
     image:
         src: /logo.png
         alt: Serafin
@@ -40,4 +40,9 @@ features:
       details: Expose pipelines as REST endpoints, documented by a generated OpenAPI document.
       link: /api/
       linkText: "@serafin/api"
+    - icon: 🤖
+      title: MCP
+      details: Expose the same pipelines to AI agents as Model Context Protocol tools.
+      link: /mcp/
+      linkText: "@serafin/mcp"
 ---

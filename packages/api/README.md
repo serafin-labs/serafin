@@ -26,6 +26,8 @@ app.listen(3000)
 
 `express`, `@serafin/pipeline`, `@serafin/schema-builder` and `@serafin/open-api` are peer dependencies, so the application and the Api share the same instances. Versions 4 and 5 of express are supported.
 
+To expose the same pipelines to AI agents as Model Context Protocol tools, add the `McpTransport` of [`@serafin/mcp`](https://serafin-labs.github.io/serafin/mcp/).
+
 📚 **Full documentation: [serafin-labs.github.io/serafin/api](https://serafin-labs.github.io/serafin/api/).**
 
 ## Endpoints

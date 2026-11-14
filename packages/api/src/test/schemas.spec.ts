@@ -1,5 +1,5 @@
 import { expect } from "chai"
-import { allowsArray, isObjectSchema, onlyAllowsArray, schemaDescription, schemaProperties } from "../rest/schemas.js"
+import { allowsArray, isObjectSchema, onlyAllowsArray, schemaDescription, schemaProperties } from "../schemas.js"
 
 describe("schemas", function () {
     it("collects the properties of an object schema and of its branches", function () {

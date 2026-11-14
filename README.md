@@ -2,7 +2,7 @@
 
 # Serafin
 
-TypeScript libraries to build self-descriptive APIs: describe your data once, as a schema, and get its type, a data access layer around it, REST endpoints on top, and their OpenAPI documentation.
+TypeScript libraries to build self-descriptive APIs: describe your data once, as a schema, and get its type, a data access layer around it, REST endpoints and AI agent tools on top, and their OpenAPI documentation.
 
 📚 **Documentation: [serafin-labs.github.io/serafin](https://serafin-labs.github.io/serafin/)**
 
@@ -12,6 +12,7 @@ TypeScript libraries to build self-descriptive APIs: describe your data once, as
 | [`@serafin/pipeline`](./packages/pipeline)             | [![npm](https://img.shields.io/npm/v/@serafin/pipeline.svg)](https://www.npmjs.com/package/@serafin/pipeline)             | CRUD data access where a data source and the behaviour around it compose |
 | [`@serafin/open-api`](./packages/open-api)             | [![npm](https://img.shields.io/npm/v/@serafin/open-api.svg)](https://www.npmjs.com/package/@serafin/open-api)             | OpenAPI 3.2 types, and an immutable builder to change documents safely   |
 | [`@serafin/api`](./packages/api)                       | [![npm](https://img.shields.io/npm/v/@serafin/api.svg)](https://www.npmjs.com/package/@serafin/api)                       | Expose pipelines as REST endpoints, documented with OpenAPI              |
+| [`@serafin/mcp`](./packages/mcp)                       | [![npm](https://img.shields.io/npm/v/@serafin/mcp.svg)](https://www.npmjs.com/package/@serafin/mcp)                       | Expose pipelines to AI agents as Model Context Protocol tools            |
 
 ## Development
 

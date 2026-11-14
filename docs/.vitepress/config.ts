@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 
 // Twoslash code blocks type-check against the built declarations of the packages:
 // `pnpm build` must have produced their `lib/esm/` before building the docs.
-const packages = ["schema-builder", "pipeline", "open-api", "api"]
+const packages = ["schema-builder", "pipeline", "open-api", "api", "mcp"]
 const declarations = Object.fromEntries(
     packages.map((name) => [`@serafin/${name}`, [fileURLToPath(new URL(`../../packages/${name}/lib/esm/index.d.ts`, import.meta.url))]]),
 )
@@ -132,7 +132,7 @@ export default defineConfig({
     base,
     lang: "en-US",
     title: "Serafin",
-    description: "TypeScript libraries to build self-descriptive APIs: schemas, pipelines, OpenAPI documents and REST endpoints.",
+    description: "TypeScript libraries to build self-descriptive APIs: schemas, pipelines, OpenAPI documents, REST endpoints and MCP tools.",
     cleanUrls: true,
     lastUpdated: true,
 
@@ -164,6 +164,7 @@ export default defineConfig({
             { text: "Pipeline", link: "/pipeline/guide/getting-started", activeMatch: "^/pipeline/" },
             { text: "OpenAPI", link: "/open-api/", activeMatch: "^/open-api/" },
             { text: "API", link: "/api/", activeMatch: "^/api/" },
+            { text: "MCP", link: "/mcp/", activeMatch: "^/mcp/" },
             {
                 text: "npm",
                 items: packages.map((name) => ({ text: `@serafin/${name}`, link: `https://www.npmjs.com/package/@serafin/${name}` })),
