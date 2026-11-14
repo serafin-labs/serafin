@@ -28,8 +28,9 @@ export interface McpOptions {
      */
     path?: string | false
     /**
-     * The context the tools run in, that the agent cannot set, such as the authenticated user.
-     * It is merged over the context arguments of the tool call.
+     * The internal context the tools run in, such as the authenticated user. It is merged over the context arguments
+     * of the agent: the properties it sets override theirs, but the agent still sets the ones it leaves out, unless
+     * they are internal (see `isInternal`).
      */
     context?: (extra: McpRequestExtra) => Record<string, unknown> | Promise<Record<string, unknown>>
     /**
@@ -45,10 +46,19 @@ export interface McpOptions {
     byQuery?: boolean
     /**
      * The maximum length of the results of a tool call, in characters of JSON. Results are left out, from the last one,
-     * until the response fits, and the response says how many were returned. `Infinity` turns the limit off.
+     * until the response fits, and the response says how many were returned. The meta and the first result are always
+     * returned, however long, so that any resource can be read. `Infinity` turns the limit off.
      * @default 50000
      */
     maxCharacters?: number
+    /**
+     * The origins of the web pages allowed to call the tools over HTTP, such as `https://agent.example.com`.
+     * Browsers send the origin of the page with every request, and requests from any other origin are refused,
+     * so that a web page cannot call the tools, e.g. of a server on localhost through DNS rebinding.
+     * Agents that are not browsers send no origin, and are always allowed.
+     * @default [] no web page
+     */
+    allowedOrigins?: string[]
     /**
      * Instructions for the agent on how to use the server.
      * @default the description of the OpenAPI document of the Api
@@ -84,9 +94,14 @@ export class McpTransport implements TransportInterface {
     private api: Api | undefined
     private readonly tools = new Map<string, PipelineTool>()
     private readonly isInternal: (name: string) => boolean
+    private readonly maxCharacters: number
 
     constructor(private readonly options: McpOptions = {}) {
         this.isInternal = options.isInternal ?? ((name) => name.startsWith("_"))
+        this.maxCharacters = options.maxCharacters ?? 50000
+        if (!(this.maxCharacters > 0)) {
+            throw new Error(`maxCharacters must be a positive number, or Infinity, got ${options.maxCharacters}`)
+        }
     }
 
     init(api: Api) {
@@ -96,20 +111,37 @@ export class McpTransport implements TransportInterface {
         this.api = api
         const path = this.options.path ?? "/mcp"
         if (path !== false) {
+            const allowedOrigins = new Set(this.options.allowedOrigins ?? [])
+            const refuse = (res: Response, status: number, message: string) =>
+                res.status(status).json({ jsonrpc: "2.0", error: { code: -32000, message }, id: null })
             const handler: RequestHandler = (req, res, next) => {
+                const { origin } = req.headers
+                if (origin !== undefined && !allowedOrigins.has(origin)) {
+                    refuse(res, 403, `The origin ${origin} is not allowed`)
+                    return
+                }
                 this.handle(req, res).catch(next)
             }
             const notAllowed: RequestHandler = (req, res) => {
-                res.status(405)
-                    .set("Allow", "POST")
-                    .json({ jsonrpc: "2.0", error: { code: -32000, message: `${req.method} is not allowed, the server is stateless: use POST` }, id: null })
+                refuse(res.set("Allow", "POST"), 405, `${req.method} is not allowed, the server is stateless: use POST`)
             }
             api.application.post(`${api.basePath}${path}`, handler)
             api.application.all(`${api.basePath}${path}`, notAllowed)
         }
     }
 
+    /**
+     * Refuse a pipeline whose tools cannot be built, or are named as the tools of another pipeline.
+     */
+    validate(exposed: ExposedPipeline) {
+        this.toolsOf(exposed)
+    }
+
     use(exposed: ExposedPipeline) {
+        this.toolsOf(exposed).forEach((tool) => this.tools.set(tool.tool.name, tool))
+    }
+
+    private toolsOf(exposed: ExposedPipeline): PipelineTool[] {
         if (!this.api) {
             throw new Error("The transport must be added to an Api with `api.configure` before exposing pipelines")
         }
@@ -118,7 +150,7 @@ export class McpTransport implements TransportInterface {
         if (taken.length > 0) {
             throw new Error(`Cannot expose '${exposed.pluralName}' as tools: the tools ${taken.join(", ")} already exist`)
         }
-        tools.forEach((tool) => this.tools.set(tool.tool.name, tool))
+        return tools
     }
 
     /**
@@ -146,7 +178,7 @@ export class McpTransport implements TransportInterface {
             }
             try {
                 const internal = this.options.context ? await this.options.context(extra) : {}
-                return this.result(await tool.call(request.params.arguments ?? {}, internal))
+                return this.result(tool, await tool.call(request.params.arguments ?? {}, internal))
             } catch (error) {
                 return this.error(request.params.name, error)
             }
@@ -170,16 +202,16 @@ export class McpTransport implements TransportInterface {
 
     /**
      * The results as structured content, and as text for the clients that only read text.
-     * Results are left out, from the last one, until the response fits in `maxCharacters`.
+     * Results are left out, from the last one, until the response fits in `maxCharacters`, but for the first one.
      */
-    private result({ data, meta }: ToolResults): CallToolResult {
-        const max = this.options.maxCharacters ?? 50000
+    private result({ action }: PipelineTool, { data, meta }: ToolResults): CallToolResult {
+        const max = this.maxCharacters
         // room for the `truncated` property
         let length = JSON.stringify({ data: [], meta, truncated: { returned: data.length, total: data.length } }).length
         let returned = 0
         while (returned < data.length) {
             length += JSON.stringify(data[returned]).length + 1
-            if (length > max) {
+            if (length > max && returned > 0) {
                 break
             }
             returned++
@@ -187,9 +219,13 @@ export class McpTransport implements TransportInterface {
         const content = returned === data.length ? { data, meta } : { data: data.slice(0, returned), meta, truncated: { returned, total: data.length } }
         const text = [{ type: "text" as const, text: JSON.stringify(content) }]
         if (returned < data.length) {
+            const done = { create: "created", patch: "changed", delete: "deleted" }
             text.push({
                 type: "text",
-                text: `Only ${returned} of the ${data.length} results are returned, to stay under ${max} characters. Narrow the query to get the others.`,
+                text:
+                    action === "read"
+                        ? `Only ${returned} of the ${data.length} results are returned, to stay under ${max} characters. Narrow the query to get the others.`
+                        : `The ${data.length} resources were ${done[action]}, but only ${returned} of them are returned, to stay under ${max} characters.`,
             })
         }
         return { structuredContent: content, content: text }

@@ -20,11 +20,15 @@ export interface ToolResults {
     meta: unknown
 }
 
+export type ToolAction = "read" | "create" | "patch" | "delete"
+
 /**
  * A tool of a pipeline: its definition, and how to call the pipeline with the arguments the agent gave.
  */
 export interface PipelineTool {
     tool: Tool
+    /** The action of the pipeline the tool calls. */
+    action: ToolAction
     /**
      * @param args the arguments of the agent
      * @param internal the internal context, merged over the context arguments
@@ -44,6 +48,13 @@ const upperFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 /** MCP only accepts object schemas as properties: `true` accepts anything, `false` nothing. */
 const objectSchema = (schema: Schema): object => (typeof schema === "object" ? schema : schema ? {} : { not: {} })
 
+/** Output schemas describe what the pipeline answers, so they let pipes add properties to the meta. */
+const openSchema = (schema: object): object =>
+    Object.fromEntries(Object.entries(schema).filter(([keyword]) => keyword !== "additionalProperties" && keyword !== "unevaluatedProperties"))
+
+/** `Object.hasOwn`, which the CommonJS build targets too early for. */
+const hasOwn = (object: object, name: string) => Object.prototype.hasOwnProperty.call(object, name)
+
 /** Tool names may only hold letters, digits, `_`, `-` and `.`. */
 const toolName = (...parts: string[]) => parts.join("_").replace(/[^A-Za-z0-9._-]/g, "_")
 
@@ -54,7 +65,7 @@ const toolName = (...parts: string[]) => parts.join("_").replace(/[^A-Za-z0-9._-
 class ToolArguments {
     readonly properties: Record<string, Schema>
     readonly required: string[]
-    /** The names the context shares with the query or the values, which the agent could not tell apart. */
+    /** The names the query, the values and the context share, which the agent could not tell apart. */
     readonly conflicts: string[]
 
     constructor(
@@ -64,8 +75,8 @@ class ToolArguments {
     ) {
         this.properties = { ...query.properties, ...(values !== undefined ? { values } : {}), ...context.properties }
         this.required = [...query.required, ...(values !== undefined ? ["values"] : []), ...context.required]
-        const others = [...Object.keys(query.properties), ...(values !== undefined ? ["values"] : [])]
-        this.conflicts = Object.keys(context.properties).filter((n) => others.includes(n))
+        const names = [...Object.keys(query.properties), ...(values !== undefined ? ["values"] : []), ...Object.keys(context.properties)]
+        this.conflicts = [...new Set(names.filter((n, i) => names.indexOf(n) !== i))]
     }
 
     /**
@@ -78,9 +89,10 @@ class ToolArguments {
         let values: unknown
         const unknown: string[] = []
         for (const [name, value] of Object.entries(args)) {
-            if (name in this.query.properties) {
+            // own properties only: `constructor` or `__proto__` are not arguments
+            if (hasOwn(this.query.properties, name)) {
                 query[name] = value
-            } else if (name in this.context.properties) {
+            } else if (hasOwn(this.context.properties, name)) {
                 context[name] = value
             } else if (name === "values" && this.values !== undefined) {
                 values = value
@@ -92,7 +104,7 @@ class ToolArguments {
         if (unknown.length > 0) {
             throw new HttpError(400, `Unknown argument${plural(unknown)}: ${unknown.join(", ")}`)
         }
-        const missing = this.required.filter((name) => args[name] === undefined)
+        const missing = this.required.filter((name) => !hasOwn(args, name))
         if (missing.length > 0) {
             throw new HttpError(400, `Missing argument${plural(missing)}: ${missing.join(", ")}`)
         }
@@ -113,8 +125,8 @@ export function pipelineTools(exposed: ExposedPipeline, { isInternal, byQuery }:
     const schemas = pipeline.schemaBuilders
     const actions = exposedActions(exposed)
     const Name = upperFirst(name)
-    // tools on several resources need a distinct name when both names are the same
-    const many = pluralName === name ? `many_${pluralName}` : pluralName
+    // tools on several resources need a distinct name when both names are the same, once made valid tool names
+    const many = toolName(pluralName) === toolName(name) ? `many_${pluralName}` : pluralName
 
     const context = schemaProperties(schemas.context.schema)
     const publicContext = {
@@ -131,15 +143,16 @@ export function pipelineTools(exposed: ExposedPipeline, { isInternal, byQuery }:
 
     const tools: PipelineTool[] = []
     const add = (
-        action: "read" | "create" | "patch" | "delete",
+        action: ToolAction,
         tool: { name: string; title: string; description: string; annotations: ToolAnnotations },
         args: ToolArguments,
         call: (parts: ReturnType<ToolArguments["split"]>) => Promise<ToolResults>,
     ) => {
         if (args.conflicts.length > 0) {
-            throw new Error(`Cannot expose '${pluralName}' as tools: ${tool.name} and the context share the arguments ${args.conflicts.join(", ")}`)
+            throw new Error(`Cannot expose '${pluralName}' as tools: several arguments of ${tool.name} are named ${args.conflicts.join(", ")}`)
         }
         tools.push({
+            action,
             tool: {
                 name: tool.name,
                 title: tool.title,
@@ -154,10 +167,10 @@ export function pipelineTools(exposed: ExposedPipeline, { isInternal, byQuery }:
                     type: "object",
                     properties: {
                         data: { type: "array", items: schemas.model.schema },
-                        meta: objectSchema(metaSchema(schemas.meta, schemas[`${action}Meta`])),
+                        meta: openSchema(objectSchema(metaSchema(schemas.meta, schemas[`${action}Meta`]))),
                         truncated: {
                             type: "object",
-                            description: "Set when results were left out to keep the response short: narrow the query to get them",
+                            description: "Set when results were left out of the response to keep it short",
                             properties: { returned: { type: "integer" }, total: { type: "integer" } },
                             required: ["returned", "total"],
                         },

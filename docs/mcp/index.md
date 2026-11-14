@@ -45,11 +45,15 @@ The arguments of a tool are the properties of the query of the action (or of the
 
 Patching and deleting by query is off by default: an agent could change or delete every resource with an empty query. Turn it on with `byQuery: true`.
 
+The `context` option gives the internal context of the call, such as the authenticated user, and overrides the context arguments of the agent. The agent still sets the public properties it leaves out: keep a property out of its reach with `isInternal`, by default for names starting with `_`.
+
 ## Results and errors
 
 A tool call answers the results of the pipeline, `{ data, meta }`, as structured content described by the output schema of the tool, and as JSON text for the clients that only read text.
 
-Results can be long, and the context of an agent is not: results are left out, from the last one, until the response fits in `maxCharacters` (50,000 by default). The response then has a `truncated` property, `{ returned, total }`, and tells the agent to narrow its query.
+Results can be long, and the context of an agent is not: results are left out, from the last one, until the response fits in `maxCharacters` (50,000 by default). The response then has a `truncated` property, `{ returned, total }`, and tells the agent to narrow its query, or that its create, patch or delete is done all the same. The meta and the first result are always returned, so that any resource can be read.
+
+The pipeline still reads every result of a query: give its read query a limit, or a page, for the agent to read long lists bit by bit.
 
 Errors are tool results with `isError` set, holding the same `ErrorResponse` as the REST transport, so the agent can read what is wrong and correct its call:
 
@@ -62,6 +66,8 @@ Unexpected errors are logged and still carry their message. Hide it with `format
 ## Serving
 
 The tools are served on the express application of the Api, on `/mcp` under its `basePath`, over [Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#streamable-http) without session: every request is answered on its own, so the server scales like the REST endpoints. Protect it as the rest of the application, e.g. with the bearer auth middleware of the SDK, whose `req.auth` reaches the `context` option as `extra.authInfo`.
+
+Requests from web pages are refused, unless their origin is in `allowedOrigins`: browsers send the origin of the page with every request, while other agents send none. A page cannot call the tools then, even those of a server on localhost through DNS rebinding. Also check the `Host` header of a server on localhost, e.g. with the `localhostHostValidation` middleware of the SDK.
 
 To serve the tools over another MCP transport, such as stdio for a local agent, connect a server of the transport to it:
 
@@ -84,6 +90,7 @@ The server is named after the OpenAPI document of the Api, whose description is 
 | `isInternal(name)`             | starts with `_`                         | Which context properties the agent cannot set                                                             |
 | `byQuery`                      | `false`                                 | Also expose the tools that patch or delete every resource matching a query                                |
 | `maxCharacters`                | `50000`                                 | The maximum length of the results of a tool call, in characters of JSON. `Infinity` turns it off          |
+| `allowedOrigins`               | `[]`                                    | The origins of the web pages allowed to call the tools over HTTP                                          |
 | `instructions`                 | the description of the OpenAPI document | Instructions for the agent on how to use the server                                                       |
 | `formatError(response, error)` |                                         | Changes the error returned to the agent                                                                   |
 | `logger`                       | `console`                               | Where unexpected errors are logged                                                                        |

@@ -67,6 +67,31 @@ describe("Api", function () {
         expect(api.pipelines.map((p) => p.pluralName)).to.eql(["books", "writers", "novels"])
     })
 
+    it("exposes a pipeline through none of the transports when one of them refuses it", function () {
+        const { books, authors } = library()
+        const first = new RecordingTransport()
+        const refusing = Object.assign(new RecordingTransport(), {
+            validate: (exposed: ExposedPipeline) => {
+                if (exposed.name === "book") {
+                    throw new Error("refused")
+                }
+            },
+        })
+        const api = new Api(express(), { openApi: info }).configure(first).configure(refusing)
+        expect(() => api.use(books, "book")).to.throw("refused")
+        api.use(authors, "author")
+        expect(first.exposed.map((e) => e.name)).to.eql(["author"])
+        expect(api.pipelines.map((p) => p.name)).to.eql(["author"])
+
+        const later = Object.assign(new RecordingTransport(), {
+            validate: () => {
+                throw new Error("refused later")
+            },
+        })
+        expect(() => api.configure(later)).to.throw("refused later")
+        expect(later.exposed).to.eql([])
+    })
+
     it("refuses two pipelines with the same plural name", function () {
         const { books } = library()
         const api = new Api(express(), { openApi: info }).use(books, "book")

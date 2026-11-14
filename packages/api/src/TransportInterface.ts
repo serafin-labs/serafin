@@ -35,6 +35,12 @@ export interface TransportInterface {
     init(api: Api): void
 
     /**
+     * Called for every pipeline exposed on the Api, before it is passed to any transport: throw to refuse it,
+     * so that no other transport exposed it already.
+     */
+    validate?(exposed: ExposedPipeline): void
+
+    /**
      * Called for every pipeline exposed on the Api, including the ones exposed before the transport was added.
      */
     use(exposed: ExposedPipeline): void

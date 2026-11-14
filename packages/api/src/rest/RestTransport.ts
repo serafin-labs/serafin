@@ -91,10 +91,31 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
         this.api = api
     }
 
+    /**
+     * Refuse a pipeline whose query and context share parameter names, as the query string holds both.
+     */
+    validate(exposed: ExposedPipeline) {
+        const schemas = exposed.pipeline.schemaBuilders
+        const actions = exposedActions(exposed)
+        const contextNames = Object.keys(schemaProperties(schemas.context.schema).properties).filter((n) => !this.isInternal(n))
+        for (const [action, schema] of [
+            ["read", schemas.readQuery],
+            ["create", schemas.createOptions],
+            ["patch", schemas.patchQuery],
+            ["delete", schemas.deleteQuery],
+        ] as const) {
+            const conflicts = Object.keys(schemaProperties(schema.schema).properties).filter((n) => contextNames.includes(n))
+            if (actions.has(action) && conflicts.length > 0) {
+                throw new Error(`Cannot expose '${exposed.pluralName}': ${action} parameters and context parameters share the names ${conflicts.join(", ")}`)
+            }
+        }
+    }
+
     use(exposed: ExposedPipeline) {
         if (!this.api) {
             throw new Error("The transport must be added to an Api with `api.configure` before exposing pipelines")
         }
+        this.validate(exposed)
         const api = this.api
         const { pipeline, name, pluralName } = exposed
         const schemas = pipeline.schemaBuilders
@@ -107,20 +128,6 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
             patchMany: actions.has("patch") && selectsSeveral(schemas.patchQuery.schema),
             deleteOne: actions.has("delete") && hasId(schemas.deleteQuery.schema),
             deleteMany: actions.has("delete") && selectsSeveral(schemas.deleteQuery.schema),
-        }
-
-        // the query string is shared by the query and the context: their parameters must be distinct
-        const contextNames = Object.keys(schemaProperties(schemas.context.schema).properties).filter((n) => !this.isInternal(n))
-        for (const [action, schema] of [
-            ["read", schemas.readQuery],
-            ["create", schemas.createOptions],
-            ["patch", schemas.patchQuery],
-            ["delete", schemas.deleteQuery],
-        ] as const) {
-            const conflicts = Object.keys(schemaProperties(schema.schema).properties).filter((n) => contextNames.includes(n))
-            if (actions.has(action) && conflicts.length > 0) {
-                throw new Error(`Cannot expose '${pluralName}': ${action} parameters and context parameters share the names ${conflicts.join(", ")}`)
-            }
         }
 
         const parameters = (schema: (typeof schemas)["readQuery"]) =>

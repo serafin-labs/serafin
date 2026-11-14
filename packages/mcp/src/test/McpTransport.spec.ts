@@ -1,6 +1,6 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
-import { Api } from "@serafin/api"
+import { Api, HttpError, RestTransport } from "@serafin/api"
 import { conflictError, defaultSchemaBuilders } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { expect } from "chai"
@@ -8,6 +8,12 @@ import express from "express"
 import type { AddressInfo } from "node:net"
 import { McpTransport } from "../McpTransport.js"
 import { call, connect, EchoPipeline, echoModel, echoSchemaBuilders, expressVersions, library, setup } from "./fixtures.js"
+
+async function serveOnce(app: ReturnType<typeof express>) {
+    const server = app.listen(0, "127.0.0.1")
+    await new Promise((resolve) => server.once("listening", resolve))
+    return { server, url: `http://127.0.0.1:${(server.address() as AddressInfo).port}` }
+}
 
 describe("McpTransport", function () {
     describe("tools", function () {
@@ -96,11 +102,54 @@ describe("McpTransport", function () {
             const context = SchemaBuilder.emptySchema().addString("title", {}, false)
             expect(() =>
                 api.use(new EchoPipeline(echoSchemaBuilders({ context, readQuery: echoSchemaBuilders().readQuery.addString("title", {}, false) })), "book"),
-            ).to.throw("Cannot expose 'books' as tools: find_books and the context share the arguments title")
+            ).to.throw("Cannot expose 'books' as tools: several arguments of find_books are named title")
             const values = SchemaBuilder.emptySchema().addString("values", {}, false)
             expect(() => setup().api.use(new EchoPipeline(echoSchemaBuilders({ context: values })), "book", { actions: ["create"] })).to.throw(
-                "create_books and the context share the arguments values",
+                "several arguments of create_books are named values",
             )
+            const patchQuery = echoSchemaBuilders().patchQuery.addString("values", {}, false)
+            expect(() => setup().api.use(new EchoPipeline(echoSchemaBuilders({ patchQuery })), "book", { actions: ["patch"] })).to.throw(
+                "several arguments of patch_book are named values",
+            )
+        })
+
+        it("refuses a pipeline through every transport when one of them refuses it", async function () {
+            const { api, app } = setup()
+            api.configure(new RestTransport())
+            const patchQuery = echoSchemaBuilders().patchQuery.addString("values", {}, false)
+            expect(() => api.use(new EchoPipeline(echoSchemaBuilders({ patchQuery })), "book")).to.throw("several arguments of patch_book")
+            expect(api.pipelines).to.eql([])
+            const { server, url } = await serveOnce(app)
+            try {
+                expect((await fetch(`${url}/v1/books`)).status).to.eql(404)
+            } finally {
+                server.close()
+            }
+        })
+
+        it("names the tools on several resources apart when the names only differ by invalid characters", async function () {
+            const { api, transport } = setup({ byQuery: true })
+            api.use(new EchoPipeline(echoSchemaBuilders()), "sheep!", "sheep?")
+            const { tools } = await (await connect(transport)).listTools()
+            expect(tools.map((t) => t.name)).to.include.members(["delete_sheep_", "delete_many_sheep_", "patch_sheep_", "patch_many_sheep_"])
+        })
+
+        it("lets the internal context be chosen", async function () {
+            const { api, transport } = setup({ isInternal: (name) => name === "lang" })
+            api.use(new EchoPipeline(echoSchemaBuilders()), "item")
+            const client = await connect(transport)
+            const { tools } = await client.listTools()
+            expect(tools[0]!.inputSchema.properties).to.have.keys("id", "name", "_user")
+            expect((await call(client, "find_items", { lang: "en" })).json.message).to.eql("Unknown argument: lang")
+        })
+
+        it("lets pipes add properties to the meta of the results", async function () {
+            const { api, transport } = setup()
+            api.use(new EchoPipeline(echoSchemaBuilders(), () => ({ data: [], meta: { added: true } })), "item")
+            const client = await connect(transport)
+            const { tools } = await client.listTools()
+            expect(tools[0]!.outputSchema!.properties!.meta).not.to.have.any.keys("additionalProperties", "unevaluatedProperties")
+            expect((await call(client, "find_items")).result.structuredContent).to.eql({ data: [], meta: { added: true } })
         })
 
         it("refuses tools that already exist", function () {
@@ -202,6 +251,7 @@ describe("McpTransport", function () {
             expect((await call(client, "delete_book")).json.message).to.eql("Missing argument: id")
             expect((await call(client, "patch_book", { id: "1" })).json.message).to.eql("Missing argument: values")
             expect((await call(client, "delete_book", { id: ["1", "2"] })).json.message).to.eql("The id must be a single value")
+            expect((await call(client, "find_books", { constructor: "x", toString: "y" })).json.message).to.eql("Unknown arguments: constructor, toString")
         })
 
         it("runs the tools in the context of the arguments, merged with the internal context", async function () {
@@ -212,6 +262,16 @@ describe("McpTransport", function () {
             expect(json.data[0].args).to.eql([{ id: ["1"] }, { lang: "fr", _user: "u1" }])
             const created = await call(client, "create_items", { values: [{ name: "x" }], lang: "en" })
             expect(created.json.data[0].args).to.eql([[{ name: "x" }], {}, { lang: "fr", _user: "u1" }])
+        })
+
+        it("waits for the internal context, and answers its errors", async function () {
+            const { api, transport } = setup({ context: async () => ({ _user: "u2" }) })
+            api.use(new EchoPipeline(echoSchemaBuilders()), "item")
+            expect((await call(await connect(transport), "find_items")).json.data[0].args[1]).to.eql({ _user: "u2" })
+
+            const failing = setup({ context: () => Promise.reject(new HttpError(401, "Sign in first")) })
+            failing.api.use(new EchoPipeline(echoSchemaBuilders()), "item")
+            expect((await call(await connect(failing.transport), "find_items")).json).to.eql({ code: 401, name: "Unauthorized", message: "Sign in first" })
         })
 
         it("calls the tools without arguments", async function () {
@@ -249,11 +309,32 @@ describe("McpTransport", function () {
 
             const tiny = setup({ maxCharacters: 10 })
             tiny.api.use(new EchoPipeline(echoSchemaBuilders({ model: echoModel }), () => ({ data: titles, meta: {} })), "item")
-            expect((await call(await connect(tiny.transport), "find_items")).json).to.eql({ data: [], meta: {}, truncated: { returned: 0, total: 10 } })
+            expect((await call(await connect(tiny.transport), "find_items")).json).to.eql({
+                data: [titles[0]],
+                meta: {},
+                truncated: { returned: 1, total: 10 },
+            })
 
             const unlimited = setup({ maxCharacters: Infinity })
             unlimited.api.use(new EchoPipeline(echoSchemaBuilders({ model: echoModel }), () => ({ data: titles, meta: {} })), "item")
             expect((await call(await connect(unlimited.transport), "find_items")).json.data).to.have.length(10)
+        })
+
+        it("says that a write is done when its results are left out", async function () {
+            const titles = Array.from({ length: 10 }, (_, i) => ({ id: `${i}`, text: "x".repeat(100) }))
+            const { api, transport } = setup({ maxCharacters: 500 })
+            api.use(new EchoPipeline(echoSchemaBuilders({ model: echoModel }), () => ({ data: titles, meta: {} })), "item")
+            const { result } = await call(await connect(transport), "delete_item", { id: "1" })
+            expect(result.content[1]).to.eql({
+                type: "text",
+                text: "The 10 resources were deleted, but only 3 of them are returned, to stay under 500 characters.",
+            })
+        })
+
+        it("refuses a maxCharacters that is not a positive number", function () {
+            for (const maxCharacters of [0, -1, NaN]) {
+                expect(() => new McpTransport({ maxCharacters })).to.throw(`maxCharacters must be a positive number, or Infinity, got ${maxCharacters}`)
+            }
         })
     })
 
@@ -344,6 +425,7 @@ describe("McpTransport", function () {
                     const get = await fetch(`${url}/v1/mcp`, { headers: { Accept: "text/event-stream" } })
                     expect(get.status).to.eql(405)
                     expect(get.headers.get("allow")).to.eql("POST")
+                    expect((await fetch(`${url}/v1/mcp`, { method: "DELETE" })).status).to.eql(405)
                 } finally {
                     close(server)
                 }
@@ -359,6 +441,26 @@ describe("McpTransport", function () {
                     await client.connect(new StreamableHTTPClientTransport(new URL(`${url}/v1/agents`)))
                     expect((await call(client, "find_books", { id: ["2"] })).json.data).to.have.length(1)
                     await client.close()
+                } finally {
+                    close(server)
+                }
+            })
+
+            it("refuses web pages of origins that are not allowed", async function () {
+                const { api, app } = setup({ allowedOrigins: ["https://agent.example.com"] }, express)
+                api.use(library().books, "book")
+                const { server, url } = await serve(app)
+                const list = (origin: string) =>
+                    fetch(`${url}/v1/mcp`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Origin: origin },
+                        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+                    })
+                try {
+                    const refused = await list("http://evil.localhost:3000")
+                    expect(refused.status).to.eql(403)
+                    expect((await refused.json()).error.message).to.eql("The origin http://evil.localhost:3000 is not allowed")
+                    expect((await list("https://agent.example.com")).status).to.eql(200)
                 } finally {
                     close(server)
                 }

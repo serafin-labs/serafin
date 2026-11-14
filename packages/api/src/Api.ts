@@ -83,6 +83,9 @@ export class Api {
      */
     configure(transport: TransportInterface): this {
         transport.init(this)
+        for (const exposed of this.exposed.values()) {
+            transport.validate?.(exposed)
+        }
         this.transports.push(transport)
         for (const exposed of this.exposed.values()) {
             transport.use(exposed)
@@ -103,6 +106,10 @@ export class Api {
             throw new Error(`A pipeline is already exposed as '${pluralName}'`)
         }
         const exposed: ExposedPipeline = { pipeline, name, pluralName, ...(actions ? { actions } : {}) }
+        // every transport validates the pipeline first, so a refused pipeline is exposed through none of them
+        for (const transport of this.transports) {
+            transport.validate?.(exposed)
+        }
         for (const transport of this.transports) {
             transport.use(exposed)
         }
