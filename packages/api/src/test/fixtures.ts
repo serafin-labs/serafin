@@ -1,15 +1,47 @@
 import { defaultSchemaBuilders, MemoryPipeline, PipelineAbstract, type SchemaBuildersInterface } from "@serafin/pipeline"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { use } from "chai"
-import chaiHttp, { request } from "chai-http"
+import chaiHttp, { request as chaiRequest } from "chai-http"
 import express5 from "express"
 import express4 from "express4"
+import http from "node:http"
 import { Api } from "../Api.js"
 import { RestTransport, type RestOptions } from "../rest/RestTransport.js"
 
 use(chaiHttp)
 
-export { request }
+/**
+ * The `request` of chai-http, with the server of an application listening on the loopback address only.
+ *
+ * chai-http listens on every address but sends to 127.0.0.1, where another process may listen on the same port,
+ * and answer instead of the application. Listening on 127.0.0.1 only is asynchronous: the request is built
+ * as usual, and sent once the server listens.
+ */
+export const request = {
+    execute(app: (req: http.IncomingMessage, res: http.ServerResponse) => void): ReturnType<typeof chaiRequest.execute> {
+        const listening = new Promise<ReturnType<typeof chaiRequest.execute>>((resolve) => {
+            const server = http.createServer(app).listen(0, "127.0.0.1", () => resolve(chaiRequest.execute(server)))
+        })
+        const deferred = (method: string, path: string) => {
+            const calls: [string, unknown[]][] = []
+            const send = () => listening.then((agent) => calls.reduce((test: any, [name, args]) => test[name](...args), (agent as any)[method](path)))
+            const proxy: any = new Proxy(
+                {},
+                {
+                    get: (target, name: string) =>
+                        name === "then"
+                            ? (resolve: any, reject: any) => send().then(resolve, reject)
+                            : (...args: unknown[]) => {
+                                  calls.push([name, args])
+                                  return proxy
+                              },
+                },
+            )
+            return proxy
+        }
+        return new Proxy({}, { get: (target, method: string) => (path: string) => deferred(method, path) }) as ReturnType<typeof chaiRequest.execute>
+    },
+}
 
 /**
  * Every test of the transport runs against both major versions of express the package supports.
