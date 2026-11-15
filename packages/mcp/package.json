@@ -1,6 +1,6 @@
 {
     "name": "@serafin/mcp",
-    "version": "1.0.0-alpha.1",
+    "version": "1.0.0-alpha.2",
     "description": "Expose Serafin pipelines as Model Context Protocol tools for AI agents",
     "keywords": [
         "mcp",
