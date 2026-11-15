@@ -1,8 +1,11 @@
-import Ajv2020, { type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js"
-import addFormats from "ajv-formats"
+import { Ajv2020, type ErrorObject, type ValidateFunction } from "ajv/dist/2020.js"
+import formats from "ajv-formats"
 import { httpMethods, type OpenAPIObject, type OperationObject, type ParameterObject, type PathItemObject, type ReferenceObject } from "./OpenApi.js"
 import { oas32Schema } from "./schemas/oas32Schema.js"
 import { encodePointer, normalizePathTemplate, resolveLocalPointer, templateVariables } from "./utils.js"
+
+/** The `default` of ajv-formats, which every module system finds: Node gives the CommonJS `module.exports` as the default import. */
+const addFormats = formats.default
 
 /**
  * A problem found in an OpenAPI document.

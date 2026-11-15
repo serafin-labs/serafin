@@ -31,6 +31,13 @@ export interface RestOptions<REQ extends Request = Request, RES extends Response
      */
     unknownParameters?: "reject" | "ignore"
     /**
+     * Also expose `PATCH` and `DELETE` on the collection, to patch or delete every resource matching the query string,
+     * rather than a single resource selected by its id. Off by default: a request without query string would change
+     * or delete every resource.
+     * @default false
+     */
+    byQuery?: boolean
+    /**
      * Called with the results of every successful request, before the response is sent.
      */
     onSuccess?: RestCallback<unknown, REQ, RES> | RestCallback<unknown, REQ, RES>[]
@@ -70,9 +77,9 @@ const asArray = <T>(value: T | T[] | undefined): T[] => (value === undefined ? [
  * - `GET /books/{id}` gets a book,
  * - `POST /books` creates a book, or several from a list,
  * - `PATCH /books/{id}` patches a book, with a JSON merge patch,
- * - `PATCH /books` patches the books matching the query string, when the patch query can select several,
  * - `DELETE /books/{id}` deletes a book,
- * - `DELETE /books` deletes the books matching the query string, when the delete query can select several.
+ * - `PATCH /books` and `DELETE /books` patch and delete the books matching the query string, with the `byQuery` option,
+ *   when the query can select several.
  *
  * Every response body is JSON: `{ data, meta }` on success, an `ErrorResponse` on error.
  */
@@ -120,14 +127,15 @@ export class RestTransport<REQ extends Request = Request, RES extends Response =
         const { pipeline, name, pluralName } = exposed
         const schemas = pipeline.schemaBuilders
         const actions = exposedActions(exposed)
+        const byQuery = this.options.byQuery ?? false
         const routes: Routes = {
             find: actions.has("read"),
             get: actions.has("read") && hasId(schemas.readQuery.schema),
             create: actions.has("create"),
             patchOne: actions.has("patch") && hasId(schemas.patchQuery.schema),
-            patchMany: actions.has("patch") && selectsSeveral(schemas.patchQuery.schema),
+            patchMany: byQuery && actions.has("patch") && selectsSeveral(schemas.patchQuery.schema),
             deleteOne: actions.has("delete") && hasId(schemas.deleteQuery.schema),
-            deleteMany: actions.has("delete") && selectsSeveral(schemas.deleteQuery.schema),
+            deleteMany: byQuery && actions.has("delete") && selectsSeveral(schemas.deleteQuery.schema),
         }
 
         const parameters = (schema: (typeof schemas)["readQuery"]) =>

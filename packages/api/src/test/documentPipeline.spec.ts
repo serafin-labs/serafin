@@ -7,7 +7,7 @@ import { RestTransport } from "../rest/RestTransport.js"
 import { bookModel, EchoPipeline, echoSchemaBuilders, library } from "./fixtures.js"
 
 function documented(use: (api: Api) => void) {
-    const api = new Api(express(), { basePath: "/v1", openApi: { title: "Library", version: "1.0.0" } }).configure(new RestTransport())
+    const api = new Api(express(), { basePath: "/v1", openApi: { title: "Library", version: "1.0.0" } }).configure(new RestTransport({ byQuery: true }))
     use(api)
     return api.openApi.validate()
 }
@@ -129,7 +129,9 @@ describe("OpenAPI documentation", function () {
 
     it("can be decorated by the caller", function () {
         const app = express()
-        const api = new Api(app, { openApi: { title: "Library", version: "1.0.0" } }).configure(new RestTransport()).use(library().books, "book")
+        const api = new Api(app, { openApi: { title: "Library", version: "1.0.0" } })
+            .configure(new RestTransport({ byQuery: true }))
+            .use(library().books, "book")
         api.openApi = api.openApi
             .addComponent("securitySchemes", "bearer", { type: "http", scheme: "bearer" })
             .mapOperations((operation) => ({ ...operation, security: [{ bearer: [] }] }))

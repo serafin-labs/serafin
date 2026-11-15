@@ -38,10 +38,10 @@ const userSchema = SchemaBuilder.objectSchema(
 const users = new MemoryPipeline(userSchema)
 
 // `id` is optional on create -- the pipeline hands one out
-await users.create([{ firstName: "Nico", lastName: "Degardin" }])
+await users.create([{ firstName: "Jane", lastName: "Doe" }])
 
 // an array on a property means "any of these values"
-const result = await users.read({ lastName: ["Degardin"] })
+const result = await users.read({ lastName: ["Doe"] })
 
 result.data // the users that matched
 result.meta // everything else: counts, relations, whatever a pipe added
@@ -63,7 +63,7 @@ import { Cache, openCacheScope } from "@serafin/pipeline"
 const cachedUsers = users.pipe(Cache())
 
 // within one cache scope -- typically one request -- each distinct read hits the store once
-await cachedUsers.read({ lastName: "Degardin" }, openCacheScope({}))
+await cachedUsers.read({ lastName: "Doe" }, openCacheScope({}))
 ```
 
 And link pipelines to each other with relations, resolved per request:

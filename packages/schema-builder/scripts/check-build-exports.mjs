@@ -20,5 +20,5 @@ await checkExports(import.meta, {
         `export type Patch = typeof patch.T`,
         `export const values: Patch = { age: 42 }`,
     ],
-    summary: "import, run and type-check correctly",
+    summary: "imports, runs and type-checks correctly",
 })

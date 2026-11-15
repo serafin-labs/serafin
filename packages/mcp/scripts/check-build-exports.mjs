@@ -1,10 +1,6 @@
 // Pre-publish smoke test, see scripts/check-exports.mjs at the root of the repository.
 import assert from "node:assert/strict"
-import { createRequire } from "node:module"
-import { fileURLToPath } from "node:url"
 import { checkExports, interop } from "../../../scripts/check-exports.mjs"
-
-const require = createRequire(import.meta.url)
 
 await checkExports(import.meta, {
     name: "@serafin/mcp",
@@ -58,13 +54,10 @@ await checkExports(import.meta, {
         `new Api(express(), { openApi: { title: "t", version: "1" } }).configure(mcp).use(new MemoryPipeline(SchemaBuilder.emptySchema().addString("id")), "item")`,
         `export const connected: Promise<void> = mcp.createServer().connect(new StdioServerTransport())`,
     ],
-    dependencies: ["@serafin/api", "@serafin/pipeline", "@serafin/schema-builder", "@serafin/open-api", "@modelcontextprotocol/sdk/server/stdio.js"],
     compilerOptions: {
         esModuleInterop: true,
         // the declarations of the SDK use the fetch types of the DOM library
         lib: ["esnext", "dom"],
-        typeRoots: [fileURLToPath(new URL("../node_modules/@types", import.meta.url))],
-        paths: { express: [require.resolve("@types/express/index.d.ts")] },
     },
-    summary: "import, answer an MCP client and type-check correctly",
+    summary: "imports, answers an MCP client and type-checks correctly",
 })

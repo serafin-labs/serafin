@@ -122,14 +122,14 @@ export interface Setup {
 }
 
 /**
- * An application exposing pipelines through a REST transport.
+ * An application exposing pipelines through a REST transport, with every route, the ones `byQuery` adds included.
  */
 export function setup(express: typeof express5, options: RestOptions<any, any> = {}, basePath = ""): Setup {
     const app = express()
     const logged: unknown[][] = []
     const warned: unknown[][] = []
     const api = new Api(app, { basePath, openApi: { title: "Library", version: "1.0.0" } }).configure(
-        new RestTransport({ logger: { error: (...data) => logged.push(data), warn: (...data) => warned.push(data) }, ...options }),
+        new RestTransport({ byQuery: true, logger: { error: (...data) => logged.push(data), warn: (...data) => warned.push(data) }, ...options }),
     )
     return { app, api, logged, warned }
 }

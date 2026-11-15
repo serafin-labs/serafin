@@ -19,7 +19,7 @@ yarn add @serafin/pipeline @serafin/schema-builder
 :::
 
 Models are defined with [`@serafin/schema-builder`](https://serafin-labs.github.io/schema-builder/).
-The package ships ESM and CommonJS builds with bundled types, imports no Node built-in, and is meant
+The package is an ES module with bundled types, imports no Node built-in, and is meant
 for TypeScript in `strict` mode.
 
 ## Your first pipeline
@@ -44,12 +44,12 @@ const users = new MemoryPipeline(userSchema)
 
 // create takes an array, and hands out an id when you don't
 const created = await users.create([
-    { firstName: "Nico", lastName: "Degardin" },
-    { firstName: "Seb", lastName: "De Saint-Florent", age: 42 },
+    { firstName: "Jane", lastName: "Doe" },
+    { firstName: "John", lastName: "Smith", age: 42 },
 ])
 
 // read filters; an array on a property means "any of these"
-const page = await users.read({ lastName: ["Degardin", "De Saint-Florent"], withCount: true })
+const page = await users.read({ lastName: ["Doe", "Smith"], withCount: true })
 page.data
 //   ^?
 page.meta.count
@@ -74,7 +74,7 @@ const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), f
 const users = new MemoryPipeline(userSchema)
 // ---cut---
 // @errors: 2353
-await users.read({ nickname: "nico" })
+await users.read({ nickname: "janie" })
 ```
 
 ## How a pipeline is built

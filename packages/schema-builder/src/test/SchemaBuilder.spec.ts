@@ -1830,7 +1830,7 @@ describe("Schema Builder", function () {
 
         it("emits SB.enumSchema for a schema with an `enum` keyword", function () {
             const s = SB.enumSchema(["a", "b"] as const)
-            expect(s.toTypescript()[1]).to.equal('SB.enumSchema(["a","b"], )')
+            expect(s.toTypescript()[1]).to.equal('SB.enumSchema(["a","b"])')
         })
 
         it("collapses a single-entry `type` array down to a primitive", function () {

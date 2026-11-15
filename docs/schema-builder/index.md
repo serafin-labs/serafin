@@ -30,8 +30,8 @@ features:
       title: Validation built in
       details: Validate data with Ajv (JSON Schema 2020-12 by default). Validation functions are compiled and cached automatically.
     - icon: 📦
-      title: Tiny surface, ESM + CJS
-      details: Ships dual ESM/CJS builds with full type declarations. Built on ajv, ajv-formats and lodash.
+      title: Tiny surface, ES module
+      details: Ships an ES module with full type declarations, that CommonJS projects can require too. Built on ajv, ajv-formats and lodash.
 ---
 
 ## A quick taste

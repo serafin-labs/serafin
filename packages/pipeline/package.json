@@ -30,19 +30,12 @@
         "url": "https://github.com/serafin-labs/serafin/issues"
     },
     "type": "module",
-    "main": "./lib/cjs/index.js",
-    "module": "./lib/esm/index.js",
-    "types": "./lib/cjs/index.d.ts",
+    "main": "./lib/index.js",
+    "types": "./lib/index.d.ts",
     "exports": {
         ".": {
-            "import": {
-                "types": "./lib/esm/index.d.ts",
-                "default": "./lib/esm/index.js"
-            },
-            "require": {
-                "types": "./lib/cjs/index.d.ts",
-                "default": "./lib/cjs/index.js"
-            }
+            "types": "./lib/index.d.ts",
+            "default": "./lib/index.js"
         }
     },
     "files": [
@@ -51,18 +44,17 @@
         "!**/*.tsbuildinfo",
         "!src/test"
     ],
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+    },
     "publishConfig": {
         "access": "public",
         "provenance": true
     },
     "scripts": {
-        "build": "rm -rf lib && pnpm build:esm && pnpm build:cjs && pnpm fix",
-        "build:esm": "tsc",
-        "build:cjs": "tsc --project tsconfig.cjs.json",
-        "fix": "echo '{ \"type\": \"module\" }' > lib/esm/package.json && echo '{ \"type\": \"commonjs\" }' > lib/cjs/package.json",
-        "dev": "concurrently -c auto -n '' pnpm:dev:cjs pnpm:dev:esm pnpm:dev:test",
-        "dev:cjs": "tsc --watch --preserveWatchOutput --project tsconfig.cjs.json",
-        "dev:esm": "tsc --watch --preserveWatchOutput",
+        "build": "rm -rf lib && tsc",
+        "dev": "concurrently -c auto -n '' pnpm:dev:build pnpm:dev:test",
+        "dev:build": "tsc --watch --preserveWatchOutput",
         "dev:test": "NODE_OPTIONS='--import tsx --no-warnings' mocha --reporter dot --watch --watch-files src --extension ts './src/test/**/*.spec.ts'",
         "test": "NODE_OPTIONS='--import tsx --no-warnings' mocha --recursive './src/test/**/*.spec.ts'",
         "typecheck": "tsc --project tsconfig.typecheck.json",

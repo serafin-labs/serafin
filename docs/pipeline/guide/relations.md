@@ -174,6 +174,10 @@ A related read that pages — `{ withOrders: { limit: 5 } }`, or `skip` — is m
 instead, so each user gets their own five orders rather than five shared by the whole page. `sort`
 does not prevent batching.
 
+The relation only sees the query it sends. A limit the target sets on its own, with a pipe such as
+`SetReadQueryParameterDefaultValue`, applies to the batched read as a whole. To page each resource's
+share, set the limit in the relation's query, `{ userId: ":id", limit: 20 }`.
+
 ## No cycles
 
 Pipelines are immutable, so a relation targets the pipeline **as it was when the relation was

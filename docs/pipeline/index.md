@@ -56,9 +56,9 @@ const userSchema = SB.objectSchema(
 const users = new MemoryPipeline(userSchema)
 
 // `id` is optional on create -- the pipeline hands one out
-await users.create([{ firstName: "Nico", lastName: "Degardin" }])
+await users.create([{ firstName: "Jane", lastName: "Doe" }])
 
-const result = await users.read({ lastName: ["Degardin"] })
+const result = await users.read({ lastName: ["Doe"] })
 //    ^?
 ```
 

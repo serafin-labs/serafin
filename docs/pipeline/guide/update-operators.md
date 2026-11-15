@@ -17,9 +17,9 @@ what was there.
 ```ts twoslash
 import { applyPatch } from "@serafin/pipeline"
 
-const user = { id: "1", firstName: "Nico", nickname: "nico", tags: ["a"], address: { city: "Lyon", country: "FR" } }
+const user = { id: "1", firstName: "Jane", nickname: "janie", tags: ["a"], address: { city: "Lyon", country: "FR" } }
 
-applyPatch(user, { firstName: "Nicolas" }) // firstName changed, everything else kept
+applyPatch(user, { firstName: "Janet" }) // firstName changed, everything else kept
 applyPatch(user, { nickname: null }) // nickname removed
 applyPatch(user, { address: { city: "Paris" } }) // merged: country is still "FR"
 applyPatch(user, { tags: ["c"] }) // arrays replace
@@ -78,12 +78,12 @@ than ignored:
 
 ```ts twoslash
 import { applyPatch } from "@serafin/pipeline"
-const user = { id: "1", firstName: "Nico", views: 1 }
+const user = { id: "1", firstName: "Jane", views: 1 }
 // ---cut---
 applyPatch(user, { $bit: { views: 1 } })
 // SerafinSchemaValidationError: Invalid parameters: '$bit' is not an update operator this pipeline understands
 
-applyPatch(user, { $inc: { views: 1 }, firstName: "Nicolas" })
+applyPatch(user, { $inc: { views: 1 }, firstName: "Janet" })
 // SerafinSchemaValidationError: Invalid parameters: Patch values cannot mix update operators and properties: '$inc', 'firstName'
 
 applyPatch(user, JSON.parse('{ "profile": { "__proto__": { "admin": true } } }'))

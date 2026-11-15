@@ -39,11 +39,7 @@ export class RequestParameters {
      */
     parse(req: Request, id?: string): { query: Record<string, unknown>; context: Record<string, unknown>; ignored: string[] } {
         const queryIndex = req.originalUrl.indexOf("?")
-        const parameters = qs.parse(queryIndex === -1 ? "" : req.originalUrl.slice(queryIndex + 1), {
-            depth: 10,
-            arrayLimit: 1000,
-            parameterLimit: 1000,
-        })
+        const parameters = parseQueryString(queryIndex === -1 ? "" : req.originalUrl.slice(queryIndex + 1))
         const query: Record<string, unknown> = {}
         const context: Record<string, unknown> = {}
         const unknown: string[] = []
@@ -92,4 +88,20 @@ function coerce(coercion: SchemaBuilder<any>, properties: Record<string, Schema>
         // reported by the pipeline
     }
     return values
+}
+
+/** The maximum number of parameters, and of values in a list, that a query string may hold. */
+const parameterLimit = 1000
+
+/**
+ * Parse a query string, refusing one with too many parameters: past the limit, they would be left out,
+ * and a filter left out widens a read, a patch or a delete.
+ */
+function parseQueryString(queryString: string): Record<string, unknown> {
+    try {
+        return qs.parse(queryString, { depth: 10, arrayLimit: parameterLimit, parameterLimit, throwOnLimitExceeded: true })
+    } catch {
+        // qs only throws when a limit is exceeded
+        throw new HttpError(400, `The query string cannot hold more than ${parameterLimit} parameters, or lists of more than ${parameterLimit} values`)
+    }
 }

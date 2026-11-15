@@ -44,16 +44,18 @@ function inlineAll(resources: IdentityInterface[], relations: Record<string, Rel
     const joined = Object.keys(relations).map((name) => {
         const relation = relations[name]
         const data = relation.relations ? _.keyBy(inlineAll(Object.values(relation.data), relation.relations), "id") : relation.data
-        return { name, relation, data }
+        // own keys only: ids such as `constructor` must not read the prototype
+        const get = (map: Record<string, any> | undefined, id: string) => (map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined)
+        return { name, relation, data: (id: string) => get(data, id), key: (id: string) => get(relation.index, id) }
     })
     return resources.map((resource) => {
         const inlined = { ...resource } as Record<string, unknown>
-        for (const { name, relation, data } of joined) {
-            const key = relation.index?.[resource.id]
+        for (const { name, relation, data, key: keyOf } of joined) {
+            const key = keyOf(resource.id)
             if (relation.type === RelationType.many) {
-                inlined[name] = ((key as string[]) ?? []).map((id) => data[id]).filter((entry) => entry !== undefined)
+                inlined[name] = ((key as string[]) ?? []).map((id) => data(id)).filter((entry) => entry !== undefined)
             } else if (key !== undefined) {
-                inlined[name] = data[key as string]
+                inlined[name] = data(key as string)
             }
         }
         return inlined

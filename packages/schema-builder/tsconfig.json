@@ -4,6 +4,7 @@
     "exclude": ["src/test"],
     "compilerOptions": {
         "rootDir": "src",
-        "outDir": "lib/esm"
+        "outDir": "lib",
+        "tsBuildInfoFile": "lib/tsconfig.tsbuildinfo"
     }
 }

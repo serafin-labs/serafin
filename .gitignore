@@ -16,3 +16,6 @@ docs/.vitepress/cache/
 .scratch/
 .idea/
 .history/
+
+# consumers written by check:exports while it runs
+.check-exports-*/

@@ -63,7 +63,7 @@ import { MemoryPipeline } from "@serafin/pipeline"
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema() })
 const users = new MemoryPipeline(userSchema)
 // ---cut---
-const { data } = await users.create([{ firstName: "Nico" }, { firstName: "Seb", id: "chosen" }])
+const { data } = await users.create([{ firstName: "Jane" }, { firstName: "John", id: "chosen" }])
 data[0].id // generated
 data[1].id // "chosen"
 ```
@@ -82,8 +82,8 @@ const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), f
 const users = new MemoryPipeline(userSchema)
 // ---cut---
 await users.read({}) // everything
-await users.read({ firstName: "Nico" }) // one value
-await users.read({ firstName: ["Nico", "Seb"] }) // either value
+await users.read({ firstName: "Jane" }) // one value
+await users.read({ firstName: ["Jane", "John"] }) // either value
 ```
 
 ::: warning An array means "any of", not "equals this array"
@@ -107,9 +107,9 @@ bulk operation by accident. `delete` returns what it deleted, so a pipe above ca
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline } from "@serafin/pipeline"
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema(), nickname: [SB.stringSchema(), undefined] })
-const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico", nickname: "nico" }] })
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Jane", nickname: "janie" }] })
 // ---cut---
-await users.patch({ id: "1" }, { firstName: "Nicolas" }) // set it
+await users.patch({ id: "1" }, { firstName: "Janet" }) // set it
 await users.patch({ id: "1" }, { nickname: undefined }) // leave it alone
 await users.patch({ id: "1" }, { nickname: null }) // clear it
 await users.patch({ id: ["1", "2"] }, { firstName: "same" }) // several at once

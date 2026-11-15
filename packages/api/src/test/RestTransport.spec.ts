@@ -95,6 +95,16 @@ for (const { label, express } of expressVersions) {
                 expect(id.body.message).to.eql("The id is given by the path, it cannot be a query parameter too")
             })
 
+            it("refuses a query string with too many parameters, rather than leaving the last ones out", async function () {
+                const { app, api } = setup(express)
+                api.use(library().books, "book")
+                const ids = Array.from({ length: 1000 }, (_, i) => `id=${i}`).join("&")
+                expect((await request.execute(app).get(`/books?${ids}`)).status).to.eql(200)
+                const res = await request.execute(app).delete(`/books?${ids}&title=x`)
+                expect(res.status).to.eql(400)
+                expect(res.body.message).to.eql("The query string cannot hold more than 1000 parameters, or lists of more than 1000 values")
+            })
+
             it("ignores unknown parameters when asked to, with a warning", async function () {
                 const { app, api, warned } = setup(express, { unknownParameters: "ignore" })
                 api.use(new EchoPipeline(echoSchemaBuilders()), "book")
@@ -321,6 +331,19 @@ for (const { label, express } of expressVersions) {
                 const res = await request.execute(app).post("/books").send({ title: "A" })
                 expect(res.status).to.eql(501)
                 expect(res.body.name).to.eql("NotImplemented")
+            })
+
+            it("only patches and deletes by query with the byQuery option", async function () {
+                const { app, api } = setup(express, { byQuery: false })
+                api.use(library().books, "book")
+                const collection = await request.execute(app).options("/books")
+                expect(collection.headers.allow).to.eql("GET, POST, HEAD, OPTIONS")
+                const deleted = await request.execute(app).delete("/books")
+                expect(deleted.status).to.eql(405)
+                expect((await request.execute(app).get("/books")).body.data).to.have.length.greaterThan(0)
+                expect((await request.execute(app).options("/books/1")).headers.allow).to.eql("GET, PATCH, DELETE, HEAD, OPTIONS")
+                const paths = api.openApi.document.paths!
+                expect(Object.keys(paths["/books"]!).filter((key) => key === "patch" || key === "delete")).to.eql([])
             })
 
             it("answers OPTIONS with the allowed methods", async function () {

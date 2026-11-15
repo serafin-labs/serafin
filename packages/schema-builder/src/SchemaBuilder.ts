@@ -1,8 +1,8 @@
-import Ajv from "ajv/dist/2020.js"
+import { Ajv2020 as Ajv } from "ajv/dist/2020.js"
 import type { Options, ValidateFunction } from "ajv"
 import VError from "verror"
 import _ from "lodash"
-import addFormats from "ajv-formats"
+import formats from "ajv-formats"
 import { JsonSchemaType, JsonSchemaTypesUnion } from "./JsonSchemaType.js"
 import {
     Combine,
@@ -41,7 +41,10 @@ import type { PropertyAccessorPath, ReadOnlyPropertyAccessorResolver } from "./P
 import { cloneJSON, cloneRoot, setRequired } from "./utils.js"
 import { walkJsonSchema } from "./walkJsonSchema.js"
 import { createPropertyAccessor } from "./PropertyAccessor.js"
-import { schemaToTypescript } from "./schemaToTypescript.js"
+import { schemaToTypescript, schemaVariableName } from "./schemaToTypescript.js"
+
+/** The `default` of ajv-formats, which every module system finds: Node gives the CommonJS `module.exports` as the default import. */
+const addFormats = formats.default
 
 /**
  * Represents a JSON Schema and its type.
@@ -177,7 +180,7 @@ export class SchemaBuilder<T> {
      * need isolation must clone.
      */
     private static collectObjectProperties(schema: JSONSchema | boolean): { properties: Record<string, JSONSchema>; required: string[] } {
-        if (typeof schema !== "object" || schema === null) {
+        if (typeof schema === "boolean") {
             return { properties: {}, required: [] }
         }
         const groups: { properties: Record<string, JSONSchema>; required: string[] }[] = []
@@ -267,6 +270,41 @@ export class SchemaBuilder<T> {
             }
         }
         return unique.length === 1 ? unique[0] : { [keyword]: unique }
+    }
+
+    /**
+     * Internal helper. Keeps `dependentRequired` and `dependentSchemas` in line with the properties once
+     * some were renamed or removed: `rename` gives the new name of a property, or `undefined` when it is
+     * gone. A dependency of a property that is gone, or left without any required property, is dropped.
+     */
+    private static renameDependencies(schemaObject: JSONSchema, rename: (name: string) => string | undefined) {
+        if (schemaObject.dependentRequired) {
+            const dependentRequired: Record<string, string[]> = {}
+            for (const [name, names] of Object.entries(schemaObject.dependentRequired)) {
+                const renamed = rename(name)
+                const required = names.map(rename).filter((n): n is string => n !== undefined)
+                if (renamed !== undefined && required.length > 0) {
+                    dependentRequired[renamed] = required
+                }
+            }
+            schemaObject.dependentRequired = dependentRequired
+            if (Object.keys(dependentRequired).length === 0) {
+                delete schemaObject.dependentRequired
+            }
+        }
+        if (schemaObject.dependentSchemas) {
+            const dependentSchemas: Record<string, JSONSchema | boolean> = {}
+            for (const [name, schema] of Object.entries(schemaObject.dependentSchemas)) {
+                const renamed = rename(name)
+                if (renamed !== undefined) {
+                    dependentSchemas[renamed] = schema
+                }
+            }
+            schemaObject.dependentSchemas = dependentSchemas
+            if (Object.keys(dependentSchemas).length === 0) {
+                delete schemaObject.dependentSchemas
+            }
+        }
     }
 
     /**
@@ -621,6 +659,8 @@ export class SchemaBuilder<T> {
     }> {
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
         delete schemaObject.required
+        // every property can now be left out on its own
+        delete schemaObject.dependentRequired
         // remove default values for optional properties
         for (const property in schemaObject.properties) {
             const inner = schemaObject.properties[property]
@@ -641,6 +681,7 @@ export class SchemaBuilder<T> {
         let schemaObject = cloneJSON(this.schemaObject)
         walkJsonSchema(schemaObject, (s) => {
             delete s.required
+            delete s.dependentRequired
             // optional properties can't have default values
             delete s.default
         })
@@ -667,6 +708,11 @@ export class SchemaBuilder<T> {
                     if ("enum" in cloned && cloned.enum?.indexOf(null) === -1) {
                         cloned.enum = [...cloned.enum, null]
                     }
+                    // a const only accepts its value: it becomes an enum of its value and null
+                    if ("const" in cloned && cloned.const !== null) {
+                        cloned.enum = [cloned.const!, null]
+                        delete cloned.const
+                    }
                     schemaObject.properties[propertyName] = cloned
                 } else {
                     schemaObject.properties[propertyName] = {
@@ -691,7 +737,7 @@ export class SchemaBuilder<T> {
         }
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
         if (propertyName in schemaObject.properties!) {
-            throw new VError(`Schema Builder Error: '${propertyName as string}' already exists in ${schemaObject.title || "this"} schema`)
+            throw new VError(`Schema Builder Error: '${propertyName as string}' already exists in ${this.schemaName}`)
         }
         schemaObject.properties![propertyName as string] = cloneJSON(schemaBuilder.schemaObject)
         if (isRequired === true || isRequired === undefined) {
@@ -715,9 +761,7 @@ export class SchemaBuilder<T> {
         }
         const propertyKey = propertyName as string
         if (!this.schemaObject.properties || !(propertyKey in this.schemaObject.properties)) {
-            throw new VError(
-                `Schema Builder Error: 'replaceProperty' called with unknown property '${propertyKey}' on ${this.schemaObject.title || "this"} schema`,
-            )
+            throw new VError(`Schema Builder Error: 'replaceProperty' called with unknown property '${propertyKey}' on ${this.schemaName}`)
         }
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
         if (schemaObject.required) {
@@ -753,7 +797,7 @@ export class SchemaBuilder<T> {
      */
     addAdditionalProperties<U = any>(schemaBuilder?: SchemaBuilder<U>): SchemaBuilder<T & { [P: string]: U }> {
         if (this.schemaObject.additionalProperties) {
-            throw new VError(`Schema Builder Error: additionalProperties is already set in ${this.schemaObject.title || "this"} schema.`)
+            throw new VError(`Schema Builder Error: additionalProperties is already set in ${this.schemaName}.`)
         }
         const schemaObject = cloneRoot(this.schemaObject)
         schemaObject.additionalProperties = schemaBuilder ? cloneJSON(schemaBuilder.schemaObject) : true
@@ -786,7 +830,7 @@ export class SchemaBuilder<T> {
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
         const propertiesIntersection = _.intersection(Object.keys(schemaObject.properties!), Object.keys(propertiesDefinition))
         if (propertiesIntersection.length) {
-            throw new VError(`Schema Builder Error: '${propertiesIntersection.join(", ")}' already exists in ${schemaObject.title || "this"} schema`)
+            throw new VError(`Schema Builder Error: '${propertiesIntersection.join(", ")}' already exists in ${this.schemaName}`)
         }
         const { properties: newProperties, required: newRequired } = SchemaBuilder.buildPropertiesAndRequired(propertiesDefinition)
         Object.assign(schemaObject.properties!, newProperties)
@@ -912,17 +956,18 @@ export class SchemaBuilder<T> {
         const source = propertyName as string
         const target = newPropertyName as string
         if (source === target) {
-            throw new VError(`Schema Builder Error: 'renameProperty' source and target are both '${source}' on ${this.schemaObject.title || "this"} schema`)
+            throw new VError(`Schema Builder Error: 'renameProperty' source and target are both '${source}' on ${this.schemaName}`)
         }
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
         if (!(source in schemaObject.properties!)) {
-            throw new VError(`Schema Builder Error: 'renameProperty' called with unknown property '${source}' on ${schemaObject.title || "this"} schema`)
+            throw new VError(`Schema Builder Error: 'renameProperty' called with unknown property '${source}' on ${this.schemaName}`)
         }
         if (target in schemaObject.properties!) {
-            throw new VError(`Schema Builder Error: 'renameProperty' target '${target}' already exists in ${schemaObject.title || "this"} schema`)
+            throw new VError(`Schema Builder Error: 'renameProperty' target '${target}' already exists in ${this.schemaName}`)
         }
         schemaObject.properties![target] = schemaObject.properties![source]
         delete schemaObject.properties![source]
+        SchemaBuilder.renameDependencies(schemaObject, (name) => (name === source ? target : name))
         if (schemaObject.required && schemaObject.required.indexOf(source) !== -1) {
             schemaObject.required = schemaObject.required.filter((p: string) => p !== source).concat(target)
         }
@@ -939,12 +984,13 @@ export class SchemaBuilder<T> {
             throw new VError(`Schema Builder Error: 'pickProperties' can only be used with a simple object schema (no oneOf, anyOf, allOf or not)`)
         }
         const schemaObject = cloneRoot(this.schemaObject)
-        const sourceProperties = this.schemaObject.properties || {}
+        const sourceProperties = this.ownProperties
         const propertiesMap: any = {}
         for (const property of properties) {
             propertiesMap[property] = sourceProperties[property as string]
         }
         schemaObject.properties = propertiesMap
+        SchemaBuilder.renameDependencies(schemaObject, (name) => ((properties as readonly string[]).indexOf(name) !== -1 ? name : undefined))
         if (this.schemaObject.required) {
             const filtered = this.schemaObject.required.filter((r: string) => (properties as readonly string[]).indexOf(r) !== -1)
             if (filtered.length > 0) {
@@ -974,7 +1020,7 @@ export class SchemaBuilder<T> {
         }
         const schemaObject = cloneRoot(this.schemaObject)
         const additionalProps = this.schemaObject.additionalProperties
-        const sourceProperties = this.schemaObject.properties || {}
+        const sourceProperties = this.ownProperties
         const propertiesMap: { [key: string]: boolean | JSONSchema } = {}
         for (const property of properties) {
             propertiesMap[property as string] = sourceProperties[property as string]
@@ -1012,7 +1058,7 @@ export class SchemaBuilder<T> {
      */
     omitProperties<K extends keyof T>(properties: readonly K[]): SchemaBuilder<{ [P in keyof Omit<T, K>]: Omit<T, K>[P] }> {
         this.assertSimpleObjectSchema("omitProperties")
-        let p = Object.keys(this.schemaObject.properties || {}).filter((k) => (properties as readonly string[]).indexOf(k) === -1)
+        let p = Object.keys(this.ownProperties).filter((k) => (properties as readonly string[]).indexOf(k) === -1)
         return this.pickProperties(p as any)
     }
 
@@ -1118,15 +1164,13 @@ export class SchemaBuilder<T> {
     private buildRenamedKeysSchema(methodName: string, mapKey: (key: string) => string): JSONSchema {
         this.assertSimpleObjectSchema(methodName)
         const schemaObject = cloneRoot(this.schemaObject, { properties: {} })
-        const sourceProperties = this.schemaObject.properties || {}
+        const sourceProperties = this.ownProperties
         const newProperties: Record<string, JSONSchema | boolean> = {}
         const renameMap: Record<string, string> = {}
         for (const key of Object.keys(sourceProperties)) {
             const newKey = mapKey(key)
             if (newKey in newProperties) {
-                throw new VError(
-                    `Schema Builder Error: '${methodName}' produced a duplicate property name '${newKey}' on ${this.schemaObject.title || "this"} schema`,
-                )
+                throw new VError(`Schema Builder Error: '${methodName}' produced a duplicate property name '${newKey}' on ${this.schemaName}`)
             }
             newProperties[newKey] = sourceProperties[key]
             renameMap[key] = newKey
@@ -1135,6 +1179,7 @@ export class SchemaBuilder<T> {
         if (this.schemaObject.required) {
             schemaObject.required = this.schemaObject.required.map((r: string) => renameMap[r] ?? r)
         }
+        SchemaBuilder.renameDependencies(schemaObject, (name) => renameMap[name] ?? name)
         return schemaObject
     }
 
@@ -1147,12 +1192,10 @@ export class SchemaBuilder<T> {
     renameProperties<const M extends { [P in keyof T]?: PropertyKey }, R = RenameProperties<T, M>>(map: M): SchemaBuilder<{ [P in keyof R]: R[P] }> {
         this.assertSimpleObjectSchema("renameProperties")
         const m = map as Record<string, PropertyKey>
-        const sourceProperties = this.schemaObject.properties || {}
+        const sourceProperties = this.ownProperties
         for (const key of Object.keys(m)) {
             if (!(key in sourceProperties)) {
-                throw new VError(
-                    `Schema Builder Error: 'renameProperties' called with unknown property '${key}' on ${this.schemaObject.title || "this"} schema`,
-                )
+                throw new VError(`Schema Builder Error: 'renameProperties' called with unknown property '${key}' on ${this.schemaName}`)
             }
         }
         const schemaObject = this.buildRenamedKeysSchema("renameProperties", (key) => (key in m ? String(m[key]) : key))
@@ -1270,9 +1313,7 @@ export class SchemaBuilder<T> {
             }
             const name = prefix ? `${prefix}${value.charAt(0).toUpperCase()}${value.slice(1)}${suffix}` : `${value}${suffix}`
             if (name in schemaObject.properties!) {
-                throw new VError(
-                    `Schema Builder Error: 'expandEnumToProperties' produced a duplicate property name '${name}' on ${this.schemaObject.title || "this"} schema`,
-                )
+                throw new VError(`Schema Builder Error: 'expandEnumToProperties' produced a duplicate property name '${name}' on ${this.schemaName}`)
             }
             schemaObject.properties![name] = cloneJSON(valueSchema.schemaObject)
             if (required) {
@@ -1296,9 +1337,7 @@ export class SchemaBuilder<T> {
             current = current.properties[segment as string] as JSONSchema
         }
         if (!current || typeof current === "boolean" || !Array.isArray(current.enum)) {
-            throw new VError(
-                `Schema Builder Error: '${methodName}' could not find an enum at path '${path.join(".")}' on ${this.schemaObject.title || "this"} schema`,
-            )
+            throw new VError(`Schema Builder Error: '${methodName}' could not find an enum at path '${path.join(".")}' on ${this.schemaName}`)
         }
         return current.enum as unknown[]
     }
@@ -1327,7 +1366,7 @@ export class SchemaBuilder<T> {
 
     private omitPropertiesByFlag(flag: "readOnly" | "writeOnly", methodName: string): SchemaBuilder<any> {
         this.assertSimpleObjectSchema(methodName)
-        const properties = this.schemaObject.properties || {}
+        const properties = this.ownProperties
         const keep = Object.keys(properties).filter((k) => {
             const p = properties[k]
             return !(p && typeof p === "object" && (p as JSONSchema)[flag] === true)
@@ -1344,7 +1383,7 @@ export class SchemaBuilder<T> {
      */
     pickByType<TYPE extends JSONSchemaTypeName, R = Pick<T, KeysOfType<T, JSONTypeToTS<TYPE>>>>(type: TYPE): SchemaBuilder<{ [P in keyof R]: R[P] }> {
         this.assertSimpleObjectSchema("pickByType")
-        const properties = this.schemaObject.properties || {}
+        const properties = this.ownProperties
         const keep = Object.keys(properties).filter((k) => SchemaBuilder.schemaMatchesType(properties[k], type))
         return this.pickProperties(keep as any) as any
     }
@@ -1357,13 +1396,13 @@ export class SchemaBuilder<T> {
      */
     omitByType<TYPE extends JSONSchemaTypeName, R = Omit<T, KeysOfType<T, JSONTypeToTS<TYPE>>>>(type: TYPE): SchemaBuilder<{ [P in keyof R]: R[P] }> {
         this.assertSimpleObjectSchema("omitByType")
-        const properties = this.schemaObject.properties || {}
+        const properties = this.ownProperties
         const remove = Object.keys(properties).filter((k) => SchemaBuilder.schemaMatchesType(properties[k], type))
         return this.omitProperties(remove as any) as any
     }
 
     private static schemaMatchesType(schema: JSONSchema | boolean, type: JSONSchemaTypeName): boolean {
-        if (!schema || typeof schema === "boolean") {
+        if (typeof schema === "boolean") {
             return false
         }
         const matches = (t: JSONSchemaTypeName | undefined) => t === type || (type === "number" && t === "integer")
@@ -1376,7 +1415,7 @@ export class SchemaBuilder<T> {
      */
     propertyNamesEnum<S = StringKeys<T>>(): SchemaBuilder<S> {
         this.assertSimpleObjectSchema("propertyNamesEnum")
-        return SchemaBuilder.enumSchema(Object.keys(this.schemaObject.properties || {})) as any
+        return SchemaBuilder.enumSchema(Object.keys(this.ownProperties)) as any
     }
 
     /**
@@ -1385,7 +1424,7 @@ export class SchemaBuilder<T> {
      */
     propertyNamesArray<S = StringKeys<T>>(): SchemaBuilder<S[]> {
         this.assertSimpleObjectSchema("propertyNamesArray")
-        return SchemaBuilder.arraySchema(SchemaBuilder.enumSchema(Object.keys(this.schemaObject.properties || {}))) as any
+        return SchemaBuilder.arraySchema(SchemaBuilder.enumSchema(Object.keys(this.ownProperties))) as any
     }
 
     /**
@@ -1678,7 +1717,7 @@ export class SchemaBuilder<T> {
         if (!this.isObjectSchema || this.hasSchemasCombinationKeywords || typeof this.schemaObject === "boolean") {
             throw new VError(`Schema Builder Error: 'getSubschema' can only be used with an object schema that does not use oneOf, anyOf, allOf or not`)
         }
-        const properties = this.schemaObject.properties || {}
+        const properties = this.ownProperties
         const propertyKey = propertyName as string
         if (propertyKey in properties) {
             return new SchemaBuilder<NonNullable<T[K]>>(properties[propertyKey] as JSONSchema)
@@ -1692,7 +1731,7 @@ export class SchemaBuilder<T> {
         }
         const known = Object.keys(properties)
         throw new VError(
-            `Schema Builder Error: 'getSubschema' called with unknown property '${propertyKey}' on ${this.schemaObject.title || "this"} schema. Known properties: ${known.length ? known.join(", ") : "(none)"}.`,
+            `Schema Builder Error: 'getSubschema' called with unknown property '${propertyKey}' on ${this.schemaName}. Known properties: ${known.length ? known.join(", ") : "(none)"}.`,
         )
     }
 
@@ -1743,6 +1782,20 @@ export class SchemaBuilder<T> {
     }
 
     /**
+     * The properties of the schema, or none.
+     */
+    private get ownProperties(): NonNullable<JSONSchema["properties"]> {
+        return this.schemaObject.properties || {}
+    }
+
+    /**
+     * How error messages name the schema: by its title, or as "this schema".
+     */
+    private get schemaName(): string {
+        return `${this.schemaObject.title || "this"} schema`
+    }
+
+    /**
      * true if the schema represent an object
      */
     get isObjectSchema() {
@@ -1772,7 +1825,7 @@ export class SchemaBuilder<T> {
 
     get properties(): string[] | null {
         if (this.isObjectSchema && !this.hasSchemasCombinationKeywords) {
-            return Object.keys(this.schemaObject.properties || {})
+            return Object.keys(this.ownProperties)
         }
         return null
     }
@@ -2171,7 +2224,7 @@ export class SchemaBuilder<T> {
      * @returns The generated variable name for the schema based on its "title" and the typescript code that should produce an equivalent schema
      */
     toTypescript(customizeOutput?: (output: string, s: SchemaBuilder<any>) => string) {
-        return [this.schemaObject.title ? `${_.lowerFirst(this.schemaObject.title)}Schema` : "schema", schemaToTypescript(this, true, customizeOutput)] as const
+        return [schemaVariableName(this.schemaObject.title), schemaToTypescript(this, true, customizeOutput)] as const
     }
 
     /**

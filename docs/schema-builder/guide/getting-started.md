@@ -18,7 +18,7 @@ yarn add @serafin/schema-builder
 
 :::
 
-The package ships both **ESM** and **CommonJS** builds with bundled type declarations, so it works whether your project uses `import` or `require`.
+The package is an **ES module** with bundled type declarations. CommonJS projects load it with `require`, on Node.js 20.19, 22.12 or later.
 
 ```ts twoslash
 import { SB } from "@serafin/schema-builder"

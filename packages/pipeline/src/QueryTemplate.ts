@@ -18,10 +18,11 @@ export class QueryTemplate {
     }
 
     /**
-     * Whether `resource` holds every field the template reads, so `hydrate` won't throw.
+     * Whether `resource` relates to anything: it holds every field the template reads, so `hydrate`
+     * won't throw, and none of them is `null`, such as a foreign key that is not set.
      */
     static canHydrate(query: object, resource: any): boolean {
-        return Object.values(QueryTemplate.getTemplatedParts(query)).every((o: string) => resource[o.substring(1)] !== undefined)
+        return Object.values(QueryTemplate.getTemplatedParts(query)).every((o: string) => resource[o.substring(1)] != null)
     }
 
     static getTemplatedParts(queryTemplate: object) {

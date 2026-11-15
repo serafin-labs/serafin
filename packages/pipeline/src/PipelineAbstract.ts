@@ -2,7 +2,7 @@ import _ from "lodash"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { notImplementedError, error, validationError } from "./error.js"
 import { IdentityInterface } from "./IdentityInterface.js"
-import { SchemaBuildersInterface, schemaBuildersInterfaceKeys } from "./SchemaBuildersInterface.js"
+import { SchemaBuildersInterface, schemaBuildersInterfaceKeys, withoutId } from "./SchemaBuildersInterface.js"
 import { Pipe, PipeActionsInterface, PipeCapabilitiesInterface } from "./PipeInterface.js"
 import { NestedRelations, Relation, RelationMeta } from "./Relation.js"
 import { ResultsInterface } from "./ResultsInterface.js"
@@ -63,6 +63,18 @@ function withRelationMeta(result: any, name: string, relationMeta: any) {
 function nestedRelationsSchema(pipeline: ReadOnlyPipelineInterface<any, any, any>) {
     const relations = (pipeline.schemaBuilders.meta.schema as any).properties?.relations
     return relations ? new SchemaBuilder(relations) : SchemaBuilder.emptySchema()
+}
+
+/**
+ * The query a client may pass to a relation: the read query of the target, without the properties
+ * the relation sets itself, which the client cannot change.
+ */
+function relationOptionQuery<Q>(readQuery: SchemaBuilder<Q>, query: object): SchemaBuilder<Q> {
+    const set = Object.keys(query).filter((name) => readQuery.properties?.includes(name))
+    if (set.length === 0 || readQuery.hasAdditionalProperties) {
+        return withoutId(readQuery)
+    }
+    return withoutId(readQuery.omitProperties(set as (keyof Q)[]) as unknown as SchemaBuilder<Q>)
 }
 
 function withoutRelationOption(params: any, relationOption: string) {
@@ -299,13 +311,13 @@ export abstract class PipelineAbstract<
         // plus an index from each holding resource to the related id(s).
         const relationMetaSchema = SchemaBuilder.emptySchema()
             .addString("type")
-            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(withoutId(pipeline.schemaBuilders.model)))
             .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.arraySchema(SchemaBuilder.stringSchema())))
             .addProperty("relations", nestedRelationsSchema(pipeline), false)
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
-            pipeline.schemaBuilders.readQuery,
+            relationOptionQuery(pipeline.schemaBuilders.readQuery, query),
         )
         const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.many> = new Relation(
             this,
@@ -399,13 +411,13 @@ export abstract class PipelineAbstract<
         // plus an index from each holding resource to the related id(s).
         const relationMetaSchema = SchemaBuilder.emptySchema()
             .addString("type")
-            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(pipeline.schemaBuilders.model))
+            .addProperty("data", SchemaBuilder.emptySchema().addAdditionalProperties(withoutId(pipeline.schemaBuilders.model)))
             .addProperty("index", SchemaBuilder.emptySchema().addAdditionalProperties(SchemaBuilder.stringSchema()))
             .addProperty("relations", nestedRelationsSchema(pipeline), false)
         const relationOption = `with${_.upperFirst(name)}` as `with${Capitalize<NameKey>}`
         const relationOptionSchema = SchemaBuilder.oneOf(
             SchemaBuilder.booleanSchema({ description: `If set to 'true', the result will include the property '${name}'` }),
-            pipeline.schemaBuilders.readQuery,
+            relationOptionQuery(pipeline.schemaBuilders.readQuery, query),
         )
         const relation: Relation<M, NameKey, RelationModel, ReadQuery, ReadMeta, RelationType.one> = new Relation(this, name, pipeline, query, RelationType.one)
         const newPipeline = (

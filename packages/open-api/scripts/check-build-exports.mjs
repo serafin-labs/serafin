@@ -25,5 +25,5 @@ await checkExports(import.meta, {
         `const operation: OperationObject = { responses: { 200: { content: { "application/json": { schema: builder.ref("schemas", "Item") } } } } }`,
         `export const document = builder.addOperation("/items", "get", operation).mapOperations((o) => ({ ...o, deprecated: true })).validate().document`,
     ],
-    summary: "import, run and type-check correctly",
+    summary: "imports, runs and type-checks correctly",
 })

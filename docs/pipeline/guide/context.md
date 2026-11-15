@@ -40,7 +40,7 @@ a security control; `_userId` a client can set is a hole.
 ## What travels invisibly
 
 Two things ride on the context under `Symbol.for` keys, invisible to `Object.keys`, to validation and
-to implementations, and shared by ESM and CJS copies of the library in one process:
+to implementations, and shared by every copy of the library in one process:
 
 - the **relation depth counter**, enforcing `maximumRelationDepth`;
 - the **cache scope**, when one is open — see [Caching](./caching).

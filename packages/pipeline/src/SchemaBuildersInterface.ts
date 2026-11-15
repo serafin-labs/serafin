@@ -62,15 +62,17 @@ export const schemaBuildersInterfaceKeys = [
 export type DefaultPatchValues<M extends IdentityInterface> = DeepPartial<Nullable<Omit<M, "id">>>
 
 export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBuilder: SchemaBuilder<M>) {
-    const patchValues: SchemaBuilder<DefaultPatchValues<M>> = modelSchemaBuilder.omitProperties(["id"]).toNullable().toDeepOptionals()
+    // the schemas derived from the model are other schemas, so they cannot hold its `$id`
+    const derived = withoutId(modelSchemaBuilder)
+    const patchValues: SchemaBuilder<DefaultPatchValues<M>> = derived.omitProperties(["id"]).toNullable().toDeepOptionals()
     return {
         model: modelSchemaBuilder,
-        createValues: modelSchemaBuilder.setOptionalProperties(["id"]),
+        createValues: derived.setOptionalProperties(["id"]),
         createOptions: SchemaBuilder.emptySchema(),
-        readQuery: modelSchemaBuilder.transformPropertiesToArray().toOptionals(),
-        patchQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
+        readQuery: derived.transformPropertiesToArray().toOptionals(),
+        patchQuery: derived.pickProperties(["id"]).transformPropertiesToArray(),
         patchValues,
-        deleteQuery: modelSchemaBuilder.pickProperties(["id"]).transformPropertiesToArray(),
+        deleteQuery: derived.pickProperties(["id"]).transformPropertiesToArray(),
         readMeta: SchemaBuilder.emptySchema(),
         createMeta: SchemaBuilder.emptySchema(),
         patchMeta: SchemaBuilder.emptySchema(),
@@ -78,4 +80,12 @@ export function defaultSchemaBuilders<M extends IdentityInterface>(modelSchemaBu
         context: SchemaBuilder.emptySchema(),
         meta: SchemaBuilder.emptySchema(),
     }
+}
+
+/**
+ * The schema without its `$id`, to derive another schema from it or to embed it in another schema:
+ * two different schemas with the same `$id`, or the same one embedded twice, cannot be compiled.
+ */
+export function withoutId<T>(schema: SchemaBuilder<T>): SchemaBuilder<T> {
+    return schema.schema.$id === undefined ? schema : (schema.setId(null) as unknown as SchemaBuilder<T>)
 }

@@ -3,10 +3,10 @@ import { transformerTwoslash } from "@shikijs/vitepress-twoslash"
 import { fileURLToPath } from "node:url"
 
 // Twoslash code blocks type-check against the built declarations of the packages:
-// `pnpm build` must have produced their `lib/esm/` before building the docs.
+// `pnpm build` must have produced their `lib/` before building the docs.
 const packages = ["schema-builder", "pipeline", "open-api", "api", "mcp"]
 const declarations = Object.fromEntries(
-    packages.map((name) => [`@serafin/${name}`, [fileURLToPath(new URL(`../../packages/${name}/lib/esm/index.d.ts`, import.meta.url))]]),
+    packages.map((name) => [`@serafin/${name}`, [fileURLToPath(new URL(`../../packages/${name}/lib/index.d.ts`, import.meta.url))]]),
 )
 
 // Deployed to GitHub Pages at https://serafin-labs.github.io/serafin/

@@ -1,10 +1,6 @@
 // Pre-publish smoke test, see scripts/check-exports.mjs at the root of the repository.
 import assert from "node:assert/strict"
-import { createRequire } from "node:module"
-import { fileURLToPath } from "node:url"
 import { checkExports, interop } from "../../../scripts/check-exports.mjs"
-
-const require = createRequire(import.meta.url)
 
 await checkExports(import.meta, {
     name: "@serafin/api",
@@ -66,11 +62,8 @@ await checkExports(import.meta, {
         `api.openApi = api.openApi.mapOperations((operation) => ({ ...operation, deprecated: true }))`,
         `export const error: ErrorResponse = { code: 400, name: "BadRequest", message: "m" }`,
     ],
-    dependencies: ["@serafin/pipeline", "@serafin/schema-builder", "@serafin/open-api"],
     compilerOptions: {
         esModuleInterop: true,
-        typeRoots: [fileURLToPath(new URL("../node_modules/@types", import.meta.url))],
-        paths: { express: [require.resolve("@types/express/index.d.ts")] },
     },
-    summary: "import, serve requests and type-check correctly",
+    summary: "imports, serves requests and type-checks correctly",
 })

@@ -1,6 +1,7 @@
 import { expect } from "chai"
 import { SchemaBuilder } from "@serafin/schema-builder"
 import { MemoryPipeline } from "../pipeline/MemoryPipeline.js"
+import { inlineRelations } from "../inlineRelations.js"
 
 const companySchema = SchemaBuilder.emptySchema().addString("id").addString("name").addArray("tagIds", SchemaBuilder.stringSchema(), {}, false)
 const employeeSchema = SchemaBuilder.emptySchema()
@@ -117,6 +118,68 @@ describe("Relation keys", function () {
             const result = await p.read({ id: ["e1", "e2"], withBoss: true })
             expect(result.meta.relations!.boss).to.eql({ type: "one", data: {}, index: {} })
             expect(target.reads).to.eql([])
+        })
+    })
+
+    describe("what the relation sets itself", function () {
+        it("cannot be changed by the query of the relation", async function () {
+            const p = companies().addRelationWithMany("employees", employees(), { companyId: ":id" })
+            const option = (p.schemaBuilders.readQuery.schema as any).properties.withEmployees.oneOf[1]
+            expect(option.properties).not.to.have.property("companyId")
+            let error: any
+            await p.read({ withEmployees: { companyId: "c2" } as any }).catch((e) => (error = e))
+            expect(error?.message).to.include("Validation failed")
+        })
+    })
+
+    describe("a key that is null", function () {
+        it("relates to nothing, and leaves the resource out of the index", async function () {
+            const people = new MemoryPipeline(SchemaBuilder.emptySchema().addString("id").addProperty("bossId", SchemaBuilder.stringSchema({}, true)), {
+                initialData: [
+                    { id: "p1", bossId: null },
+                    { id: "p2", bossId: "p1" },
+                ],
+            })
+            const p = people.addRelationWithOne("boss", people, { id: ":bossId" })
+            const result = await p.read({ withBoss: true })
+            expect(result.meta.relations!.boss!.index).to.eql({ p2: "p1" })
+        })
+    })
+
+    describe("ids named as the properties of objects", function () {
+        it("are keys like any other", async function () {
+            const people = new MemoryPipeline(SchemaBuilder.emptySchema().addString("id").addString("bossId", {}, false), {
+                initialData: [{ id: "__proto__" }, { id: "constructor", bossId: "__proto__" }, { id: "toString", bossId: "constructor" }],
+            })
+            const p = people.addRelationWithOne("boss", people, { id: ":bossId" }).addRelationWithMany("reports", people, { bossId: ":id" })
+            const result = await p.read({ withBoss: true, withReports: true })
+            const boss = result.meta.relations!.boss!
+            expect(Object.keys(boss.data).sort()).to.eql(["__proto__", "constructor"])
+            expect(Object.getPrototypeOf(boss.index)).to.equal(null)
+            expect(JSON.parse(JSON.stringify(boss.index))).to.eql({ constructor: "__proto__", toString: "constructor" })
+            const inlined = inlineRelations(result).data as any[]
+            expect(inlined.map((person) => person.boss?.id)).to.eql([undefined, "__proto__", "constructor"])
+            expect(inlined.map((person) => person.reports.map((report: any) => report.id))).to.eql([["constructor"], ["toString"], []])
+        })
+
+        it("are not read on the prototype of a meta that went through JSON", function () {
+            const meta = JSON.parse('{"relations":{"boss":{"type":"one","data":{},"index":{}}}}')
+            expect((inlineRelations({ data: [{ id: "constructor" }], meta }).data[0] as any).boss).to.equal(undefined)
+        })
+    })
+
+    describe("a target whose model has an $id", function () {
+        it("can be the target of several relations", async function () {
+            const users = new MemoryPipeline(SchemaBuilder.emptySchema().addString("id").addString("name").setId("https://example.com/user"), {
+                initialData: [{ id: "u1", name: "Jane" }],
+            })
+            const docSchema = SchemaBuilder.emptySchema().addString("id").addString("authorId").addString("editorId")
+            const docs = new MemoryPipeline(docSchema, { initialData: [{ id: "d1", authorId: "u1", editorId: "u1" }] })
+                .addRelationWithOne("author", users, { id: ":authorId" })
+                .addRelationWithOne("editor", users, { id: ":editorId" })
+            const result = await docs.read({ withAuthor: true, withEditor: { name: "Jane" } })
+            expect(result.meta.relations!.author!.index).to.eql({ d1: "u1" })
+            expect(result.meta.relations!.editor!.index).to.eql({ d1: "u1" })
         })
     })
 })

@@ -37,6 +37,5 @@ await checkExports(import.meta, {
         ),
         `export const pipeline = new MemoryPipeline(model)`,
     ],
-    dependencies: ["@serafin/schema-builder"],
-    summary: "import, run and type-check correctly",
+    summary: "imports, runs and type-checks correctly",
 })

@@ -81,7 +81,7 @@ importers:
   packages/api:
     dependencies:
       qs:
-        specifier: ^6.14.0
+        specifier: ^6.14.1
         version: 6.16.1
       verror:
         specifier: 'catalog:'

@@ -56,6 +56,11 @@ export type NestedRelations<META> = META extends { relations?: infer REL } ? REL
 type AnyRelations = Record<string, RelationMeta<any, any, any>>
 
 /**
+ * A map keyed by resource ids, without prototype: ids such as `__proto__` or `constructor` are keys like any other.
+ */
+const byId = (): Record<string, any> => Object.create(null)
+
+/**
  * Merge nested relations into an accumulator. Groups read separately can return the same nested
  * resources, so a relation already present is merged into rather than replaced. Copies are made, so
  * a read result shared through a cache is never mutated.
@@ -63,7 +68,7 @@ type AnyRelations = Record<string, RelationMeta<any, any, any>>
 function mergeRelations(into: AnyRelations, from: AnyRelations) {
     for (const name of Object.keys(from)) {
         const source = from[name]
-        const target = (into[name] ??= { type: source.type, data: {}, index: {} })
+        const target = (into[name] ??= { type: source.type, data: byId(), index: byId() })
         Object.assign(target.data, source.data)
         Object.assign(target.index, source.index)
         if (source.relations) {
@@ -119,7 +124,7 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
      * relate to, and is left out of the index rather than failing the whole page.
      */
     async resolve(resources: M[], query?: Partial<ReadQuery>, context?: any): Promise<RelationMeta<R, Type, AnyRelations>> {
-        const meta: RelationMeta<R, Type, AnyRelations> = { type: this.type, data: {}, index: {} }
+        const meta: RelationMeta<R, Type, AnyRelations> = { type: this.type, data: byId(), index: byId() }
 
         // Group by hydrated query, so resources pointing at the same target are read once.
         const groups = new Map<string, { query: any; resources: M[] }>()
@@ -235,7 +240,8 @@ export class Relation<M extends IdentityInterface, NameKey extends string, R ext
                 hydrated[field] = [hydrated[field]]
             }
         }
-        return { ...hydrated, ...(query || {}) }
+        // the query of the relation wins, so a client cannot widen the relation or point it elsewhere
+        return { ...(query || {}), ...hydrated }
     }
 
     private assign(resource: M, data: R[]) {

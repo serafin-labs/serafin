@@ -5,6 +5,19 @@ import { JSONSchema } from "./JsonSchema.js"
 type CustomizeOutput = ((output: string, s: SchemaBuilder<any>) => string) | undefined
 
 /**
+ * The variable name of a schema in the generated code: its title in camel case, made a valid identifier,
+ * followed by `Schema`. "Book list" gives `bookListSchema`, and a schema without a title `schema`.
+ */
+export function schemaVariableName(title: string | undefined): string {
+    const words = (title ?? "").split(/[^\p{ID_Continue}$]+/u).filter((word) => word !== "")
+    if (words.length === 0) {
+        return "schema"
+    }
+    const name = words.map((word, i) => (i === 0 ? _.lowerFirst(word) : _.upperFirst(word))).join("")
+    return `${/^[\p{ID_Start}$_]/u.test(name) ? "" : "_"}${name}Schema`
+}
+
+/**
  * Generate the typescript code equivalent of the given schema.
  *
  * This is the recursive implementation backing `SchemaBuilder.prototype.toTypescript`.
@@ -51,8 +64,8 @@ export function schemaToTypescript(builder: SchemaBuilder<any>, processNamedSche
         }
         if (residual.contains !== undefined) {
             const opts: string[] = []
-            if (residual.minContains !== undefined) opts.push(`minContains: ${residual.minContains}`)
-            if (residual.maxContains !== undefined) opts.push(`maxContains: ${residual.maxContains}`)
+            if (residual.minContains !== undefined) opts.push(`minContains: ${JSON.stringify(residual.minContains)}`)
+            if (residual.maxContains !== undefined) opts.push(`maxContains: ${JSON.stringify(residual.maxContains)}`)
             const optsArg = opts.length ? `, { ${opts.join(", ")} }` : ""
             parts.push(`.setContains(${codeFor(residual.contains)}${optsArg})`)
             delete residual.contains
@@ -102,7 +115,7 @@ export function schemaToTypescript(builder: SchemaBuilder<any>, processNamedSche
     const o = customizeOutput ?? ((output: string, s: SchemaBuilder<any>) => output)
     if (!processNamedSchema && builder.schema.title) {
         // Named schema should be handled separately. Generate its variable name instead of its schema code.
-        return o(`${_.lowerFirst(builder.schema.title)}Schema`, builder)
+        return o(schemaVariableName(builder.schema.title), builder)
     }
     let { type, ...rest0 } = builder.schema
     const { chain: extrasChain, residual: restOfSchemaObject } = extractExtras(rest0)
@@ -110,7 +123,7 @@ export function schemaToTypescript(builder: SchemaBuilder<any>, processNamedSche
         let isNull = false
         if (restOfSchemaObject.enum) {
             const { enum: enumSchemaObject, ...restOfSchemaObjectForEnum } = restOfSchemaObject
-            return o(`SB.enumSchema(${JSON.stringify(enumSchemaObject)}, ${optionalStringify(restOfSchemaObjectForEnum)})`, builder)
+            return o(`SB.enumSchema(${JSON.stringify(enumSchemaObject)}${optionalStringify(restOfSchemaObjectForEnum, false, ", ")})${extrasChain}`, builder)
         }
         if (Array.isArray(type)) {
             if (type.length === 0) {
@@ -187,7 +200,7 @@ export function schemaToTypescript(builder: SchemaBuilder<any>, processNamedSche
                         `SB.objectSchema(${JSON.stringify(restOfSchemaObjectForObject)}, {${Object.entries(properties ?? {})
                             .map((v) => {
                                 const propertySchemaCode = schemaToTypescript(getSchemaBuilder(v[1]), false, customizeOutput)
-                                return `"${v[0]}": ${required?.includes(v[0]) ? propertySchemaCode : `[${propertySchemaCode}, undefined]`}`
+                                return `${JSON.stringify(v[0])}: ${required?.includes(v[0]) ? propertySchemaCode : `[${propertySchemaCode}, undefined]`}`
                             })
                             .join(", ")}}${isNull ? ", true" : ""})${
                             additionalProperties

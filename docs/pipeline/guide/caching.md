@@ -9,7 +9,7 @@ import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline, Cache, openCacheScope } from "@serafin/pipeline"
 
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema() })
-const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico" }] }).pipe(Cache())
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Jane" }] }).pipe(Cache())
 
 await users.read({ id: "1" }) // no scope: straight through, every time
 
@@ -60,11 +60,11 @@ if the write throws, since it may have changed something.
 import { SchemaBuilder as SB } from "@serafin/schema-builder"
 import { MemoryPipeline, Cache, openCacheScope, flushCacheScope } from "@serafin/pipeline"
 const userSchema = SB.objectSchema({ title: "User" }, { id: SB.stringSchema(), firstName: SB.stringSchema() })
-const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Nico" }] }).pipe(Cache())
+const users = new MemoryPipeline(userSchema, { initialData: [{ id: "1", firstName: "Jane" }] }).pipe(Cache())
 // ---cut---
 const context = openCacheScope({})
 await users.read({}, context) // cached
-await users.patch({ id: "1" }, { firstName: "Nicolas" }, context) // scope emptied
+await users.patch({ id: "1" }, { firstName: "Janet" }, context) // scope emptied
 await users.read({}, context) // read again, and correct
 
 // for data changed some other way -- a raw query, a bulk import
