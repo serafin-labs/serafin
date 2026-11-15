@@ -32,7 +32,3 @@ jobs:
                   version-script: pnpm run version
                   publish-script: pnpm run release
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-              env:
-                  # Only to publish a package for the first time, as trusted publishing can only be set up
-                  # for a package that exists. Remove the secret once every package has a trusted publisher.
-                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
