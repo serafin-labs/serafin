@@ -1,5 +1,11 @@
 # @serafin/open-api
 
+## 3.2.0-alpha.2
+
+### Patch Changes
+
+- 22ccd18: The package is an ES module only, so an application never loads two copies of it. CommonJS projects `require` it on Node.js 20.19, 22.12 or later, which `engines` now declares. The declarations type-check with `moduleResolution: nodenext` and `skipLibCheck: false`.
+
 ## 3.2.0-alpha.1
 
 ### Minor Changes

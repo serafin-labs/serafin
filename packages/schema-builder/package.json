@@ -1,6 +1,6 @@
 {
     "name": "@serafin/schema-builder",
-    "version": "1.0.0-alpha.1",
+    "version": "1.0.0-alpha.2",
     "description": "A Typescript JSON Schema library that creates a schema and its type at the same time",
     "keywords": [
         "json-schema",
